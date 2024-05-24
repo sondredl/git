@@ -1,7 +1,7 @@
 #ifndef TR2_CTR_H
 #define TR2_CTR_H
 
-#include "trace2.h"
+#include "components/trace2.h"
 #include "trace2/tr2_tgt.h"
 
 /*

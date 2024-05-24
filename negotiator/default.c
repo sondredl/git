@@ -1,17 +1,17 @@
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "default.h"
-#include "../commit.h"
-#include "../fetch-negotiator.h"
-#include "../prio-queue.h"
-#include "../refs.h"
-#include "../repository.h"
-#include "../tag.h"
+#include "components/commit.h"
+#include "components/fetch-negotiator.h"
+#include "components/prio-queue.h"
+#include "components/refs.h"
+#include "components/repository.h"
+#include "components/tag.h"
 
 /* Remember to update object flag allocation in object.h */
-#define COMMON		(1U << 2)
-#define COMMON_REF	(1U << 3)
-#define SEEN		(1U << 4)
-#define POPPED		(1U << 5)
+#define COMMON (1U << 2)
+#define COMMON_REF (1U << 3)
+#define SEEN (1U << 4)
+#define POPPED (1U << 5)
 
 static int marked;
 
@@ -20,8 +20,8 @@ struct negotiation_state {
 	int non_common_revs;
 };
 
-static void rev_list_push(struct negotiation_state *ns,
-			  struct commit *commit, int mark)
+static void rev_list_push(struct negotiation_state *ns, struct commit *commit,
+			  int mark)
 {
 	if (!(commit->object.flags & mark)) {
 		commit->object.flags |= mark;
@@ -37,10 +37,10 @@ static void rev_list_push(struct negotiation_state *ns,
 }
 
 static int clear_marks(const char *refname, const struct object_id *oid,
-		       int flag UNUSED,
-		       void *cb_data UNUSED)
+		       int flag UNUSED, void *cb_data UNUSED)
 {
-	struct object *o = deref_tag(the_repository, parse_object(the_repository, oid), refname, 0);
+	struct object *o = deref_tag(
+		the_repository, parse_object(the_repository, oid), refname, 0);
 
 	if (o && o->type == OBJ_COMMIT)
 		clear_commit_marks((struct commit *)o,
@@ -54,7 +54,7 @@ static int clear_marks(const char *refname, const struct object_id *oid,
  * when only the server does not yet know that they are common).
  */
 static void mark_common(struct negotiation_state *ns, struct commit *commit,
-		int ancestors_only, int dont_parse)
+			int ancestors_only, int dont_parse)
 {
 	struct prio_queue queue = { NULL };
 
@@ -65,7 +65,8 @@ static void mark_common(struct negotiation_state *ns, struct commit *commit,
 	if (!ancestors_only) {
 		commit->object.flags |= COMMON;
 
-		if ((commit->object.flags & SEEN) && !(commit->object.flags & POPPED))
+		if ((commit->object.flags & SEEN) &&
+		    !(commit->object.flags & POPPED))
 			ns->non_common_revs--;
 	}
 	while ((commit = prio_queue_get(&queue))) {
@@ -80,9 +81,8 @@ static void mark_common(struct negotiation_state *ns, struct commit *commit,
 				if (repo_parse_commit(the_repository, commit))
 					continue;
 
-			for (parents = commit->parents;
-					parents;
-					parents = parents->next) {
+			for (parents = commit->parents; parents;
+			     parents = parents->next) {
 				struct commit *p = parents->item;
 
 				if (p->object.flags & COMMON)
@@ -90,7 +90,8 @@ static void mark_common(struct negotiation_state *ns, struct commit *commit,
 
 				p->object.flags |= COMMON;
 
-				if ((p->object.flags & SEEN) && !(p->object.flags & POPPED))
+				if ((p->object.flags & SEEN) &&
+				    !(p->object.flags & POPPED))
 					ns->non_common_revs--;
 
 				prio_queue_put(&queue, parents->item);

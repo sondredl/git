@@ -12,7 +12,7 @@
 #include "components/lockfile.h"
 #include "components/iterator.h"
 #include "components/refs.h"
-#include "components/refs/refs-internal.h"
+#include "refs/refs-internal.h"
 #include "components/run-command.h"
 #include "components/hook.h"
 #include "components/object-name.h"

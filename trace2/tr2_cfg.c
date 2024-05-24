@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "strbuf.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/strbuf.h"
+#include "components/trace2.h"
 #include "trace2/tr2_cfg.h"
 #include "trace2/tr2_sysenv.h"
-#include "wildmatch.h"
+#include "components/wildmatch.h"
 
 static struct strbuf **tr2_cfg_patterns;
 static int tr2_cfg_count_patterns;

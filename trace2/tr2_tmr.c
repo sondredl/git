@@ -1,8 +1,8 @@
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "trace2/tr2_tgt.h"
 #include "trace2/tr2_tls.h"
 #include "trace2/tr2_tmr.h"
-#include "trace.h"
+#include "components/trace.h"
 
 #define MY_MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MY_MIN(a, b) ((a) < (b) ? (a) : (b))

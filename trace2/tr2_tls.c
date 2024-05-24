@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "strbuf.h"
-#include "thread-utils.h"
-#include "trace.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
+#include "components/thread-utils.h"
+#include "components/trace.h"
 #include "trace2/tr2_tls.h"
 
 /*

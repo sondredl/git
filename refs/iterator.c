@@ -3,10 +3,10 @@
  * documentation about the design and use of reference iterators.
  */
 
-#include "git-compat-util.h"
-#include "refs.h"
+#include "components/git-compat-util.h"
+#include "components/refs.h"
 #include "refs/refs-internal.h"
-#include "iterator.h"
+#include "components/iterator.h"
 
 int ref_iterator_advance(struct ref_iterator *ref_iterator)
 {

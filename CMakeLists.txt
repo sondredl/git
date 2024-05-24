@@ -10,12 +10,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Add source directories
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/compat/win32)
+include_directories(${PROJECT_SOURCE_DIR}/compat/poll)
 
 # Specify the executable and source files
 # This should be updated with the actual source files
 set(SOURCES
-    src/main.cpp
-    src/other_source.cpp
+    common-main.c
+    # compat/win32/syslog.h
     # Add all other necessary source files here
 )
 
@@ -31,7 +33,7 @@ find_package(CURL REQUIRED)
 find_package(ZLIB REQUIRED)
 
 # Link libraries to the executable
-target_link_libraries(git-for-windows OpenSSL::SSL OpenSSL::Crypto CURL::libcurl ZLIB::ZLIB)
+target_link_libraries(git-for-windows OpenSSL::SSL OpenSSL::Crypto CURL::libcurl ZLIB::ZLIB compat syslog)
 
 # Optionally, specify other linker and compiler options
 target_compile_options(git-for-windows PRIVATE -Wall -Wextra)

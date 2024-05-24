@@ -826,7 +826,6 @@ int git_munmap(void *start, size_t length);
 
 #else /* NO_MMAP || USE_WIN32_MMAP */
 
-// #include <C:git-sdk-64/usr/include/sys/mman.h>
 #include <sys/mman.h>
 
 #endif /* NO_MMAP || USE_WIN32_MMAP */
@@ -919,7 +918,7 @@ char *gitstrcasestr(const char *haystack, const char *needle);
 #endif
 
 #ifdef NO_STRLCPY
-	#define strlcpy gitstrlcpy
+#define strlcpy gitstrlcpy
 size_t gitstrlcpy(char *, const char *, size_t);
 #endif
 
@@ -1383,10 +1382,7 @@ int git_qsort_s(void *base, size_t nmemb, size_t size,
 } while (0)
 
 #ifndef REG_STARTEND
-	#define REG_STARTEND (1 << 2)
-#endif
-#ifndef REG_STARTEND
-	#error "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
+#error "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
 #endif
 
 static inline int regexec_buf(const regex_t *preg, const char *buf, size_t size,

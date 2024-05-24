@@ -1,30 +1,30 @@
-#include "../git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "win32.h"
 #include <aclapi.h>
 #include <sddl.h>
 #include <conio.h>
 #include <wchar.h>
 #include <winioctl.h>
-#include "../strbuf.h"
-#include "../run-command.h"
-#include "../abspath.h"
-#include "../alloc.h"
+#include "components/strbuf.h"
+#include "components/run-command.h"
+#include "components/abspath.h"
+#include "components/alloc.h"
 #include "win32/exit-process.h"
 #include "win32/lazyload.h"
-#include "../config.h"
-#include "../environment.h"
-#include "../trace2.h"
-#include "../symlinks.h"
-#include "../wrapper.h"
+#include "components/config.h"
+#include "components/environment.h"
+#include "components/trace2.h"
+#include "components/symlinks.h"
+#include "components/wrapper.h"
 #include "dir.h"
-#include "gettext.h"
+#include "components/gettext.h"
 #define SECURITY_WIN32
 #include <sspi.h>
-#include "../write-or-die.h"
-#include "../repository.h"
+#include "components/write-or-die.h"
+#include "components/repository.h"
 #include "win32/fscache.h"
-#include "../attr.h"
-#include "../string-list.h"
+#include "components/attr.h"
+#include "components/string-list.h"
 #include "win32/wsl.h"
 
 #define HCAST(type, handle) ((type)(intptr_t)handle)
@@ -1590,7 +1590,7 @@ static const char *quote_arg_msvc(const char *arg)
 	return q;
 }
 
-#include "quote.h"
+#include "components/quote.h"
 
 static const char *quote_arg_msys2(const char *arg)
 {
@@ -1929,6 +1929,7 @@ static inline int match_last_path_component(const char *path, size_t *len,
 	if (*len < component_len + 1 ||
 	    !is_dir_sep(path[*len - component_len - 1]) ||
 	    fspathncmp(path + *len - component_len, component, component_len))
+	    // strncmp(path + *len - component_len, component, component_len))
 		return 0;
 	*len -= component_len + 1;
 	/* chomp off repeated dir separators */
@@ -1970,6 +1971,7 @@ static int is_msys2_sh(const char *cmd)
 			sh = path_lookup("sh", 0);
 
 		return !fspathcmp(cmd, sh);
+		// return !strncmp(cmd, sh);
 	}
 
 	return 0;

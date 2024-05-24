@@ -1382,7 +1382,10 @@ int git_qsort_s(void *base, size_t nmemb, size_t size,
 } while (0)
 
 #ifndef REG_STARTEND
-#error "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
+	#define REG_STARTEND (1 << 2)
+#endif
+#ifndef REG_STARTEND
+	#error "Git requires REG_STARTEND support. Compile with NO_REGEX=NeedsStartEnd"
 #endif
 
 static inline int regexec_buf(const regex_t *preg, const char *buf, size_t size,

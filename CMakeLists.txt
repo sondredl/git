@@ -80,31 +80,31 @@ project(git
 macro(parse_makefile_for_sources list_var regex)
 	file(STRINGS ${CMAKE_SOURCE_DIR}/Makefile ${list_var} REGEX "^${regex} \\+=(.*)")
 	string(REPLACE "${regex} +=" "" ${list_var} ${${list_var}})
-	string(REPLACE "$(COMPAT_OBJS)" "" ${list_var} ${${list_var}}) #remove "$(COMPAT_OBJS)" This is only for libgit.
-	string(STRIP ${${list_var}} ${list_var}) #remove trailing/leading whitespaces
-	string(REPLACE ".o" ".c;" ${list_var} ${${list_var}}) #change .o to .c, ; is for converting the string into a list
-	list(TRANSFORM ${list_var} STRIP) #remove trailing/leading whitespaces for each element in list
-	list(REMOVE_ITEM ${list_var} "") #remove empty list elements
+	string(REPLACE "$(COMPAT_OBJS)" "" ${list_var} ${${list_var}}) 	#remove "$(COMPAT_OBJS)" This is only for libgit.
+	string(STRIP ${${list_var}} ${list_var})						#remove trailing/leading whitespaces
+	string(REPLACE ".o" ".c;" ${list_var} ${${list_var}}) 			#change .o to .c, ; is for converting the string into a list
+	list(TRANSFORM ${list_var} STRIP) 								#remove trailing/leading whitespaces for each element in list
+	list(REMOVE_ITEM ${list_var} "") 								#remove empty list elements
 endmacro()
 
 macro(parse_makefile_for_scripts list_var regex lang)
 	file(STRINGS ${CMAKE_SOURCE_DIR}/Makefile ${list_var} REGEX "^${regex} \\+=(.*)")
 	string(REPLACE "${regex} +=" "" ${list_var} ${${list_var}})
-	string(STRIP ${${list_var}} ${list_var}) #remove trailing/leading whitespaces
-	string(REPLACE " " ";" ${list_var} ${${list_var}}) #convert string to a list
-	if(NOT ${lang}) #exclude for SCRIPT_LIB
-		list(TRANSFORM ${list_var} REPLACE "${lang}" "") #do the replacement
+	string(STRIP ${${list_var}} ${list_var}) 				#remove trailing/leading whitespaces
+	string(REPLACE " " ";" ${list_var} ${${list_var}}) 		#convert string to a list
+	if(NOT ${lang}) 										#exclude for SCRIPT_LIB
+		list(TRANSFORM ${list_var} REPLACE "${lang}" "") 	#do the replacement
 	endif()
 endmacro()
 
 macro(parse_makefile_for_executables list_var regex)
 	file(STRINGS ${CMAKE_SOURCE_DIR}/Makefile ${list_var} REGEX "^${regex} \\+= git-(.*)")
 	string(REPLACE "${regex} +=" "" ${list_var} ${${list_var}})
-	string(STRIP ${${list_var}} ${list_var}) #remove trailing/leading whitespaces
-	string(REPLACE "git-" "" ${list_var} ${${list_var}}) #strip `git-` prefix
-	string(REPLACE "\$X" ";" ${list_var} ${${list_var}}) #strip $X, ; is for converting the string into a list
-	list(TRANSFORM ${list_var} STRIP) #remove trailing/leading whitespaces for each element in list
-	list(REMOVE_ITEM ${list_var} "") #remove empty list elements
+	string(STRIP ${${list_var}} ${list_var}) 				#remove trailing/leading whitespaces
+	string(REPLACE "git-" "" ${list_var} ${${list_var}}) 	#strip `git-` prefix
+	string(REPLACE "\$X" ";" ${list_var} ${${list_var}}) 	#strip $X, ; is for converting the string into a list
+	list(TRANSFORM ${list_var} STRIP)						#remove trailing/leading whitespaces for each element in list
+	list(REMOVE_ITEM ${list_var} "") 						#remove empty list elements
 endmacro()
 
 include(CheckTypeSize)

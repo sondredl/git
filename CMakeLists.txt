@@ -7,6 +7,9 @@ project(GitForWindows VERSION 2.0)
 # set(CMAKE_CXX_STANDARD 11)
 # set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Add definition for NO_REGEX
+add_definitions(-DNO_REGEX=NeedsStartEnd) 
+
 # Add source directories
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/include)
@@ -489,7 +492,8 @@ find_package(ZLIB REQUIRED)
 target_link_libraries(git-for-windows OpenSSL::SSL OpenSSL::Crypto CURL::libcurl ZLIB::ZLIB compat syslog)
 
 # Optionally, specify other linker and compiler options
-target_compile_options(git-for-windows PRIVATE -Wall -Wextra)
+target_compile_options(git-for-windows PRIVATE -w -Wall -Wextra NO_REGEX=NeedsStartEnd)
+# target_compile_definitions(git-compat-util PRIVATE  NO_REGEX=NeedsStartEnd)
 
 # Add custom commands if needed
 # For example, to handle custom build steps from the Makefile
@@ -524,3 +528,8 @@ install(DIRECTORY include/ DESTINATION include)
 #     add_compile_options(/w)
 # endif()
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+
+set( NO_REGEX
+	COMPAT_CFLAGS += -Icompat/regex
+	COMPAT_OBJS += compat/regex/regex.o
+) 

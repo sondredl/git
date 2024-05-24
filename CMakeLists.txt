@@ -12,7 +12,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/compat/win32)
 include_directories(${PROJECT_SOURCE_DIR}/compat/poll)
-include_directories(${GIT_SDK})
+include_directories(${GIT_SDK}) # TODO -> fix env var as include directory
 
 # Specify the executable and source files
 # This should be updated with the actual source files

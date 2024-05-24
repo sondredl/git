@@ -1,27 +1,27 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "commit.h"
-#include "date.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-store-ll.h"
-#include "pkt-line.h"
-#include "sideband.h"
-#include "run-command.h"
-#include "remote.h"
-#include "connect.h"
-#include "send-pack.h"
-#include "transport.h"
-#include "version.h"
-#include "oid-array.h"
-#include "gpg-interface.h"
-#include "shallow.h"
-#include "parse-options.h"
-#include "trace2.h"
-#include "write-or-die.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/commit.h"
+#include "components/date.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-store-ll.h"
+#include "components/pkt-line.h"
+#include "components/sideband.h"
+#include "components/run-command.h"
+#include "components/remote.h"
+#include "components/connect.h"
+#include "components/send-pack.h"
+#include "components/transport.h"
+#include "components/version.h"
+#include "components/oid-array.h"
+#include "components/gpg-interface.h"
+#include "components/shallow.h"
+#include "components/parse-options.h"
+#include "components/trace2.h"
+#include "components/write-or-die.h"
 
-int option_parse_push_signed(const struct option *opt,
-			     const char *arg, int unset)
+int option_parse_push_signed(const struct option *opt, const char *arg,
+			     int unset)
 {
 	if (unset) {
 		*(int *)(opt->value) = SEND_PACK_PUSH_CERT_NEVER;
@@ -47,7 +47,7 @@ static void feed_object(const struct object_id *oid, FILE *fh, int negative)
 	if (negative &&
 	    !repo_has_object_file_with_flags(the_repository, oid,
 					     OBJECT_INFO_SKIP_FETCH_OBJECT |
-					     OBJECT_INFO_QUICK))
+						     OBJECT_INFO_QUICK))
 		return;
 
 	if (negative)
@@ -152,9 +152,11 @@ static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
 static int receive_unpack_status(struct packet_reader *reader)
 {
 	if (packet_reader_read(reader) != PACKET_READ_NORMAL)
-		return error(_("unexpected flush packet while reading remote unpack status"));
+		return error(_(
+			"unexpected flush packet while reading remote unpack status"));
 	if (!skip_prefix(reader->line, "unpack ", &reader->line))
-		return error(_("unable to parse remote unpack status: %s"), reader->line);
+		return error(_("unable to parse remote unpack status: %s"),
+			     reader->line);
 	if (strcmp(reader->line, "ok"))
 		return error(_("remote unpack failed: %s"), reader->line);
 	return 0;
@@ -180,7 +182,8 @@ static int receive_status(struct packet_reader *reader, struct ref *refs)
 		head = reader->line;
 		p = strchr(head, ' ');
 		if (!p) {
-			error("invalid status line from remote: %s", reader->line);
+			error("invalid status line from remote: %s",
+			      reader->line);
 			ret = -1;
 			break;
 		}
@@ -279,7 +282,8 @@ static int sideband_demux(int in UNUSED, int out, void *data)
 	return ret;
 }
 
-static int advertise_shallow_grafts_cb(const struct commit_graft *graft, void *cb)
+static int advertise_shallow_grafts_cb(const struct commit_graft *graft,
+				       void *cb)
 {
 	struct strbuf *sb = cb;
 	if (graft->nr_parent == -1)
@@ -297,7 +301,8 @@ static void advertise_shallow_grafts_buf(struct strbuf *sb)
 #define CHECK_REF_NO_PUSH -1
 #define CHECK_REF_STATUS_REJECTED -2
 #define CHECK_REF_UPTODATE -3
-static int check_to_send_update(const struct ref *ref, const struct send_pack_args *args)
+static int check_to_send_update(const struct ref *ref,
+				const struct send_pack_args *args)
 {
 	if (!ref->peer_ref && !args->send_mirror)
 		return CHECK_REF_NO_PUSH;
@@ -363,7 +368,7 @@ static int generate_push_cert(struct strbuf *req_buf,
 	if (push_cert_nonce[0])
 		strbuf_addf(&cert, "nonce %s\n", push_cert_nonce);
 	if (args->push_options)
-		for_each_string_list_item(item, args->push_options)
+		for_each_string_list_item (item, args->push_options)
 			strbuf_addf(&cert, "push-option %s\n", item->string);
 	strbuf_addstr(&cert, "\n");
 
@@ -371,10 +376,8 @@ static int generate_push_cert(struct strbuf *req_buf,
 		if (check_to_send_update(ref, args) < 0)
 			continue;
 		update_seen = 1;
-		strbuf_addf(&cert, "%s %s %s\n",
-			    oid_to_hex(&ref->old_oid),
-			    oid_to_hex(&ref->new_oid),
-			    ref->name);
+		strbuf_addf(&cert, "%s %s %s\n", oid_to_hex(&ref->old_oid),
+			    oid_to_hex(&ref->new_oid), ref->name);
 	}
 	if (!update_seen)
 		goto free_return;
@@ -385,8 +388,7 @@ static int generate_push_cert(struct strbuf *req_buf,
 	packet_buf_write(req_buf, "push-cert%c%s", 0, cap_string);
 	for (cp = cert.buf; cp < cert.buf + cert.len; cp = np) {
 		np = next_line(cp, cert.buf + cert.len - cp);
-		packet_buf_write(req_buf,
-				 "%.*s", (int)(np - cp), cp);
+		packet_buf_write(req_buf, "%.*s", (int)(np - cp), cp);
 	}
 	packet_buf_write(req_buf, "push-cert-end\n");
 
@@ -408,10 +410,8 @@ static void reject_invalid_nonce(const char *nonce, int len)
 
 	for (i = 0; i < len; i++) {
 		int ch = nonce[i] & 0xFF;
-		if (isalnum(ch) ||
-		    ch == '-' || ch == '.' ||
-		    ch == '/' || ch == '+' ||
-		    ch == '=' || ch == '_')
+		if (isalnum(ch) || ch == '-' || ch == '.' || ch == '/' ||
+		    ch == '+' || ch == '=' || ch == '_')
 			continue;
 		die("the receiving end asked to sign an invalid nonce <%.*s>",
 		    len, nonce);
@@ -432,7 +432,8 @@ static void get_commons_through_negotiation(const char *url,
 	strvec_pushl(&child.args, "fetch", "--negotiate-only", NULL);
 	for (ref = remote_refs; ref; ref = ref->next) {
 		if (!is_null_oid(&ref->new_oid))
-			strvec_pushf(&child.args, "--negotiation-tip=%s", oid_to_hex(&ref->new_oid));
+			strvec_pushf(&child.args, "--negotiation-tip=%s",
+				     oid_to_hex(&ref->new_oid));
 	}
 	strvec_push(&child.args, url);
 
@@ -459,14 +460,13 @@ static void get_commons_through_negotiation(const char *url,
 		 * The information that push negotiation provides is useful but
 		 * not mandatory.
 		 */
-		warning(_("push negotiation failed; proceeding anyway with push"));
+		warning(_(
+			"push negotiation failed; proceeding anyway with push"));
 	}
 }
 
-int send_pack(struct send_pack_args *args,
-	      int fd[], struct child_process *conn,
-	      struct ref *remote_refs,
-	      struct oid_array *extra_have)
+int send_pack(struct send_pack_args *args, int fd[], struct child_process *conn,
+	      struct ref *remote_refs, struct oid_array *extra_have)
 {
 	struct oid_array commons = OID_ARRAY_INIT;
 	int in = fd[0];
@@ -495,7 +495,8 @@ int send_pack(struct send_pack_args *args,
 	int use_bitmaps;
 
 	if (!remote_refs) {
-		fprintf(stderr, "No refs in common and none specified; doing nothing.\n"
+		fprintf(stderr,
+			"No refs in common and none specified; doing nothing.\n"
 			"Perhaps you should specify a branch.\n");
 		return 0;
 	}
@@ -503,7 +504,8 @@ int send_pack(struct send_pack_args *args,
 	git_config_get_bool("sendpack.sideband", &use_sideband);
 	git_config_get_bool("push.negotiate", &push_negotiate);
 	if (push_negotiate)
-		get_commons_through_negotiation(args->url, remote_refs, &commons);
+		get_commons_through_negotiation(args->url, remote_refs,
+						&commons);
 
 	if (!git_config_get_bool("push.usebitmaps", &use_bitmaps))
 		args->disable_bitmaps = !use_bitmaps;
@@ -533,7 +535,8 @@ int send_pack(struct send_pack_args *args,
 	if (server_supports("push-options"))
 		push_options_supported = 1;
 
-	if (!server_supports_hash(the_hash_algo->name, &object_format_supported))
+	if (!server_supports_hash(the_hash_algo->name,
+				  &object_format_supported))
 		die(_("the receiving end does not support this repository's hash algorithm"));
 
 	if (args->push_cert != SEND_PACK_PUSH_CERT_NEVER) {
@@ -606,7 +609,8 @@ int send_pack(struct send_pack_args *args,
 			if (use_atomic) {
 				strbuf_release(&req_buf);
 				strbuf_release(&cap_buf);
-				reject_atomic_push(remote_refs, args->send_mirror);
+				reject_atomic_push(remote_refs,
+						   args->send_mirror);
 				error("atomic push failed for ref %s. status: %d\n",
 				      ref->name, ref->status);
 				return args->porcelain ? 0 : -1;
@@ -643,14 +647,13 @@ int send_pack(struct send_pack_args *args,
 			old_hex = oid_to_hex(&ref->old_oid);
 			new_hex = oid_to_hex(&ref->new_oid);
 			if (!cmds_sent) {
-				packet_buf_write(&req_buf,
-						 "%s %s %s%c%s",
+				packet_buf_write(&req_buf, "%s %s %s%c%s",
 						 old_hex, new_hex, ref->name, 0,
 						 cap_buf.buf);
 				cmds_sent = 1;
 			} else {
-				packet_buf_write(&req_buf, "%s %s %s",
-						 old_hex, new_hex, ref->name);
+				packet_buf_write(&req_buf, "%s %s %s", old_hex,
+						 new_hex, ref->name);
 			}
 		}
 
@@ -658,14 +661,16 @@ int send_pack(struct send_pack_args *args,
 		struct string_list_item *item;
 
 		packet_buf_flush(&req_buf);
-		for_each_string_list_item(item, args->push_options)
+		for_each_string_list_item (item, args->push_options)
 			packet_buf_write(&req_buf, "%s", item->string);
 	}
 
 	if (args->stateless_rpc) {
-		if (!args->dry_run && (cmds_sent || is_repository_shallow(the_repository))) {
+		if (!args->dry_run &&
+		    (cmds_sent || is_repository_shallow(the_repository))) {
 			packet_buf_flush(&req_buf);
-			send_sideband(out, -1, req_buf.buf, req_buf.len, LARGE_PACKET_MAX);
+			send_sideband(out, -1, req_buf.buf, req_buf.len,
+				      LARGE_PACKET_MAX);
 		}
 	} else {
 		write_or_die(out, req_buf.buf, req_buf.len);
@@ -687,10 +692,11 @@ int send_pack(struct send_pack_args *args,
 
 	packet_reader_init(&reader, in, NULL, 0,
 			   PACKET_READ_CHOMP_NEWLINE |
-			   PACKET_READ_DIE_ON_ERR_PACKET);
+				   PACKET_READ_DIE_ON_ERR_PACKET);
 
 	if (need_pack_data && cmds_sent) {
-		if (pack_objects(out, remote_refs, extra_have, &commons, args) < 0) {
+		if (pack_objects(out, remote_refs, extra_have, &commons, args) <
+		    0) {
 			if (args->stateless_rpc)
 				close(out);
 			if (git_connection_is_socket(conn))

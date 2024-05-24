@@ -1,4 +1,4 @@
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 
 /*
  * When linking the fuzzers, we link against common-main.o to pick up some
@@ -8,7 +8,8 @@
  * executed.
  */
 
-int cmd_main(int argc, const char **argv) {
+int cmd_main(int argc, const char **argv)
+{
 	BUG("We should not execute cmd_main() from a fuzz target");
 	return 1;
 }

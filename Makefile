@@ -963,8 +963,10 @@ SOURCES_CMD = ( \
 	)
 FOUND_SOURCE_FILES := $(filter-out $(GENERATED_H),$(shell $(SOURCES_CMD)))
 
-FOUND_C_SOURCES = $(filter %.c,$(FOUND_SOURCE_FILES))
-FOUND_H_SOURCES = $(filter %.h,$(FOUND_SOURCE_FILES))
+# FOUND_C_SOURCES = $(filter %.c,$(FOUND_SOURCE_FILES))
+FOUND_C_SOURCES = $(filter components%.c,$(FOUND_SOURCE_FILES))
+FOUND_H_SOURCES = $(filter components/%.h,$(FOUND_SOURCE_FILES))
+# FOUND_H_SOURCES = $(filter %.h,$(FOUND_SOURCE_FILES))
 
 COCCI_SOURCES = $(filter-out $(THIRD_PARTY_SOURCES),$(FOUND_C_SOURCES))
 

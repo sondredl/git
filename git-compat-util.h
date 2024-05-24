@@ -918,7 +918,7 @@ char *gitstrcasestr(const char *haystack, const char *needle);
 #endif
 
 #ifdef NO_STRLCPY
-#define strlcpy gitstrlcpy
+	#define strlcpy gitstrlcpy
 size_t gitstrlcpy(char *, const char *, size_t);
 #endif
 

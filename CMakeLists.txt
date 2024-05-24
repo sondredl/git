@@ -11,238 +11,238 @@ project(GitForWindows VERSION 2.0)
 add_definitions(-DNO_REGEX=NeedsStartEnd) 
 
 # Add source directories
-include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/compat/win32)
 include_directories(${PROJECT_SOURCE_DIR}/compat/poll)
 include_directories(${GIT_SDK}) # TODO -> fix env var as include directory
+	# abspath.h
+	# add-interactive.h
+	# advice.h
+	# alias.h
+	# alloc.h
+	# apply.h
+	# archive.h
+	# attr.h
+	# banned.h
+	# base85.h
+	# bisect.h
+	# blame.h
+	# blob.h
+	# bloom.h
+	# branch.h
+	# builtin.h
+	# bulk-checkin.h
+	# bundle-uri.h
+	# bundle.h
+	# cache-tree.h
+	# cbtree.h
+	# chdir-notify.h
+	# checkout.h
+	# chunk-format.h
+	# color.h
+	# column.h
+	# commit-graph.h
+	# commit-reach.h
+	# commit-slab-decl.h
+	# commit-slab-impl.h
+	# commit-slab.h
+	# commit.h
+	# config.h
+	# connect.h
+	# connected.h
+	# convert.h
+	# copy.h
+	# credential.h
+	# csum-file.h
+	# date.h
+	# decorate.h
+	# delta-islands.h
+	# delta.h
+	# diagnose.h
+	# diff-merges.h
+	# diff.h
+	# diffcore.h
+	# dir-iterator.h
+	# dir.h
+	# editor.h
+	# entry.h
+	# environment.h
+	# exec-cmd.h
+	# fetch-negotiator.h
+	# fetch-pack.h
+	# fmt-merge-msg.h
+	# fsck.h
+	# fsmonitor--daemon.h
+	# fsmonitor-ipc.h
+	# fsmonitor-ll.h
+	# fsmonitor-path-utils.h
+	# fsmonitor-settings.h
+	# fsmonitor.h
+	# gettext.h
+	# git-compat-util.h
+	# git-curl-compat.h
+	# git-zlib.h
+	# gpg-interface.h
+	# graph.h
+	# grep.h
+	# hash-ll.h
+	# hash-lookup.h
+	# hash.h
+	# hashmap.h
+	# help.h
+	# hex-ll.h
+	# hex.h
+	# hook.h
+	# http.h
+	# ident.h
+	# iterator.h
+	# json-writer.h
+	# khash.h
+	# kwset.h
+	# levenshtein.h
+	# line-log.h
+	# line-range.h
+	# linear-assignment.h
+	# list-objects-filter-options.h
+	# list-objects-filter.h
+	# list-objects.h
+	# list.h
+	# lockfile.h
+	# log-tree.h
+	# loose.h
+	# ls-refs.h
+	# mailinfo.h
+	# mailmap.h
+	# match-trees.h
+	# mem-pool.h
+	# merge-blobs.h
+	# merge-ll.h
+	# merge-ort-wrappers.h
+	# merge-ort.h
+	# merge-recursive.h
+	# merge.h
+	# mergesort.h
+	# midx.h
+	# name-hash.h
+	# notes-cache.h
+	# notes-merge.h
+	# notes-utils.h
+	# notes.h
+	# object-file-convert.h
+	# object-file.h
+	# object-name.h
+	# object-store-ll.h
+	# object-store.h
+	# object.h
+	# oid-array.h
+	# oidmap.h
+	# oidset.h
+	# oidtree.h
+	# pack-bitmap.h
+	# pack-mtimes.h
+	# pack-objects.h
+	# pack-revindex.h
+	# pack.h
+	# packfile.h
+	# pager.h
+	# parallel-checkout.h
+	# parse-options.h
+	# parse.h
+	# patch-ids.h
+	# path.h
+	# pathspec.h
+	# pkt-line.h
+	# preload-index.h
+	# pretty.h
+	# prio-queue.h
+	# progress.h
+	# promisor-remote.h
+	# prompt.h
+	# protocol-caps.h
+	# protocol.h
+	# prune-packed.h
+	# quote.h
+	# range-diff.h
+	# reachable.h
+	# read-cache-ll.h
+	# read-cache.h
+	# rebase-interactive.h
+	# rebase.h
+	# ref-filter.h
+	# reflog-walk.h
+	# reflog.h
+	# refs.h
+	# refspec.h
+	# remote.h
+	# replace-object.h
+	# repository.h
+	# rerere.h
+	# reset.h
+	# resolve-undo.h
+	# revision.h
+	# run-command.h
+	# sane-ctype.h
+	# send-pack.h
+	# sequencer.h
+	# serve.h
+	# server-info.h
+	# setup.h
+	# sha1dc_git.h
+	# shallow.h
+	# shortlog.h
+	# sideband.h
+	# sigchain.h
+	# simple-ipc.h
+	# sparse-index.h
+	# split-index.h
+	# statinfo.h
+	# strbuf.h
+	# streaming.h
+	# string-list.h
+	# strmap.h
+	# strvec.h
+	# sub-process.h
+	# submodule-config.h
+	# submodule.h
+	# symlinks.h
+	# tag.h
+	# tar.h
+	# tempfile.h
+	# thread-utils.h
+	# tmp-objdir.h
+	# trace.h
+	# trace2.h
+	# trailer.h
+	# transport-internal.h
+	# transport.h
+	# tree-walk.h
+	# tree.h
+	# unicode-width.h
+	# unix-socket.h
+	# unix-stream-server.h
+	# unpack-trees.h
+	# upload-pack.h
+	# url.h
+	# urlmatch.h
+	# userdiff.h
+	# utf8.h
+	# varint.h
+	# version.h
+	# versioncmp.h
+	# walker.h
+	# wildmatch.h
+	# worktree.h
+	# wrapper.h
+	# write-or-die.h
+	# ws.h
+	# wt-status.h
+	# xdiff-interface.h
 
 # Specify the executable and source files
 # This should be updated with the actual source files
 set(SOURCES
 	common-main.c
-	abspath.h
-	add-interactive.h
-	advice.h
-	alias.h
-	alloc.h
-	apply.h
-	archive.h
-	attr.h
-	banned.h
-	base85.h
-	bisect.h
-	blame.h
-	blob.h
-	bloom.h
-	branch.h
-	builtin.h
-	bulk-checkin.h
-	bundle-uri.h
-	bundle.h
-	cache-tree.h
-	cbtree.h
-	chdir-notify.h
-	checkout.h
-	chunk-format.h
-	color.h
-	column.h
-	commit-graph.h
-	commit-reach.h
-	commit-slab-decl.h
-	commit-slab-impl.h
-	commit-slab.h
-	commit.h
-	config.h
-	connect.h
-	connected.h
-	convert.h
-	copy.h
-	credential.h
-	csum-file.h
-	date.h
-	decorate.h
-	delta-islands.h
-	delta.h
-	diagnose.h
-	diff-merges.h
-	diff.h
-	diffcore.h
-	dir-iterator.h
-	dir.h
-	editor.h
-	entry.h
-	environment.h
-	exec-cmd.h
-	fetch-negotiator.h
-	fetch-pack.h
-	fmt-merge-msg.h
-	fsck.h
-	fsmonitor--daemon.h
-	fsmonitor-ipc.h
-	fsmonitor-ll.h
-	fsmonitor-path-utils.h
-	fsmonitor-settings.h
-	fsmonitor.h
-	gettext.h
-	git-compat-util.h
-	git-curl-compat.h
-	git-zlib.h
-	gpg-interface.h
-	graph.h
-	grep.h
-	hash-ll.h
-	hash-lookup.h
-	hash.h
-	hashmap.h
-	help.h
-	hex-ll.h
-	hex.h
-	hook.h
-	http.h
-	ident.h
-	iterator.h
-	json-writer.h
-	khash.h
-	kwset.h
-	levenshtein.h
-	line-log.h
-	line-range.h
-	linear-assignment.h
-	list-objects-filter-options.h
-	list-objects-filter.h
-	list-objects.h
-	list.h
-	lockfile.h
-	log-tree.h
-	loose.h
-	ls-refs.h
-	mailinfo.h
-	mailmap.h
-	match-trees.h
-	mem-pool.h
-	merge-blobs.h
-	merge-ll.h
-	merge-ort-wrappers.h
-	merge-ort.h
-	merge-recursive.h
-	merge.h
-	mergesort.h
-	midx.h
-	name-hash.h
-	notes-cache.h
-	notes-merge.h
-	notes-utils.h
-	notes.h
-	object-file-convert.h
-	object-file.h
-	object-name.h
-	object-store-ll.h
-	object-store.h
-	object.h
-	oid-array.h
-	oidmap.h
-	oidset.h
-	oidtree.h
-	pack-bitmap.h
-	pack-mtimes.h
-	pack-objects.h
-	pack-revindex.h
-	pack.h
-	packfile.h
-	pager.h
-	parallel-checkout.h
-	parse-options.h
-	parse.h
-	patch-ids.h
-	path.h
-	pathspec.h
-	pkt-line.h
-	preload-index.h
-	pretty.h
-	prio-queue.h
-	progress.h
-	promisor-remote.h
-	prompt.h
-	protocol-caps.h
-	protocol.h
-	prune-packed.h
-	quote.h
-	range-diff.h
-	reachable.h
-	read-cache-ll.h
-	read-cache.h
-	rebase-interactive.h
-	rebase.h
-	ref-filter.h
-	reflog-walk.h
-	reflog.h
-	refs.h
-	refspec.h
-	remote.h
-	replace-object.h
-	repository.h
-	rerere.h
-	reset.h
-	resolve-undo.h
-	revision.h
-	run-command.h
-	sane-ctype.h
-	send-pack.h
-	sequencer.h
-	serve.h
-	server-info.h
-	setup.h
-	sha1dc_git.h
-	shallow.h
-	shortlog.h
-	sideband.h
-	sigchain.h
-	simple-ipc.h
-	sparse-index.h
-	split-index.h
-	statinfo.h
-	strbuf.h
-	streaming.h
-	string-list.h
-	strmap.h
-	strvec.h
-	sub-process.h
-	submodule-config.h
-	submodule.h
-	symlinks.h
-	tag.h
-	tar.h
-	tempfile.h
-	thread-utils.h
-	tmp-objdir.h
-	trace.h
-	trace2.h
-	trailer.h
-	transport-internal.h
-	transport.h
-	tree-walk.h
-	tree.h
-	unicode-width.h
-	unix-socket.h
-	unix-stream-server.h
-	unpack-trees.h
-	upload-pack.h
-	url.h
-	urlmatch.h
-	userdiff.h
-	utf8.h
-	varint.h
-	version.h
-	versioncmp.h
-	walker.h
-	wildmatch.h
-	worktree.h
-	wrapper.h
-	write-or-die.h
-	ws.h
-	wt-status.h
-	xdiff-interface.h
 	abspath.c
 	add-interactive.c
 	add-patch.c
@@ -533,3 +533,4 @@ set( NO_REGEX
 	COMPAT_CFLAGS += -Icompat/regex
 	COMPAT_OBJS += compat/regex/regex.o
 ) 
+add_subdirectory(contrib/buildsystems)

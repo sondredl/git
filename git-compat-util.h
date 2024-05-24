@@ -826,7 +826,8 @@ int git_munmap(void *start, size_t length);
 
 #else /* NO_MMAP || USE_WIN32_MMAP */
 
-#include <C:git-sdk-64/usr/include/sys/mman.h>
+// #include <C:git-sdk-64/usr/include/sys/mman.h>
+#include <sys/mman.h>
 
 #endif /* NO_MMAP || USE_WIN32_MMAP */
 

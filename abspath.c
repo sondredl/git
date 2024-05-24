@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/strbuf.h"
 
 /*
  * Do not use this for inspecting *tracked* content.  When path is a

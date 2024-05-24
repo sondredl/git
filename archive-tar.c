@@ -1,21 +1,21 @@
 /*
  * Copyright (c) 2005, 2006 Rene Scharfe
  */
-#include "git-compat-util.h"
-#include "config.h"
-#include "gettext.h"
-#include "git-zlib.h"
-#include "hex.h"
-#include "tar.h"
-#include "archive.h"
-#include "object-store-ll.h"
-#include "strbuf.h"
-#include "streaming.h"
-#include "run-command.h"
-#include "write-or-die.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/git-zlib.h"
+#include "components/hex.h"
+#include "components/tar.h"
+#include "components/archive.h"
+#include "components/object-store-ll.h"
+#include "components/strbuf.h"
+#include "components/streaming.h"
+#include "components/run-command.h"
+#include "components/write-or-die.h"
 
-#define RECORDSIZE	(512)
-#define BLOCKSIZE	(RECORDSIZE * 20)
+#define RECORDSIZE (512)
+#define BLOCKSIZE (RECORDSIZE * 20)
 
 static char block[BLOCKSIZE];
 static unsigned long offset;
@@ -92,7 +92,7 @@ static void finish_record(void)
 {
 	unsigned long tail;
 	tail = offset % RECORDSIZE;
-	if (tail)  {
+	if (tail) {
 		memset(block + offset, 0, RECORDSIZE - tail);
 		offset += RECORDSIZE - tail;
 	}
@@ -165,13 +165,13 @@ static void strbuf_append_ext_header(struct strbuf *sb, const char *keyword,
 		len++;
 
 	strbuf_grow(sb, len);
-	strbuf_addf(sb, "%"PRIuMAX" %s=", (uintmax_t)len, keyword);
+	strbuf_addf(sb, "%" PRIuMAX " %s=", (uintmax_t)len, keyword);
 	strbuf_add(sb, value, valuelen);
 	strbuf_addch(sb, '\n');
 
 	if (len != sb->len - orig_len)
-		BUG("pax extended header length miscalculated as %"PRIuMAX
-		    ", should be %"PRIuMAX,
+		BUG("pax extended header length miscalculated as %" PRIuMAX
+		    ", should be %" PRIuMAX,
 		    (uintmax_t)len, (uintmax_t)(sb->len - orig_len));
 }
 
@@ -179,13 +179,12 @@ static void strbuf_append_ext_header(struct strbuf *sb, const char *keyword,
  * Like strbuf_append_ext_header, but for numeric values.
  */
 static void strbuf_append_ext_header_uint(struct strbuf *sb,
-					  const char *keyword,
-					  uintmax_t value)
+					  const char *keyword, uintmax_t value)
 {
 	char buf[40]; /* big enough for 2^128 in decimal, plus NUL */
 	int len;
 
-	len = xsnprintf(buf, sizeof(buf), "%"PRIuMAX, value);
+	len = xsnprintf(buf, sizeof(buf), "%" PRIuMAX, value);
 	strbuf_append_ext_header(sb, keyword, buf, len);
 }
 
@@ -216,12 +215,14 @@ static size_t get_path_prefix(const char *path, size_t pathlen, size_t maxlen)
 }
 
 static void prepare_header(struct archiver_args *args,
-			   struct ustar_header *header,
-			   unsigned int mode, unsigned long size)
+			   struct ustar_header *header, unsigned int mode,
+			   unsigned long size)
 {
 	xsnprintf(header->mode, sizeof(header->mode), "%07o", mode & 07777);
-	xsnprintf(header->size, sizeof(header->size), "%011"PRIoMAX , S_ISREG(mode) ? (uintmax_t)size : (uintmax_t)0);
-	xsnprintf(header->mtime, sizeof(header->mtime), "%011lo", (unsigned long) args->time);
+	xsnprintf(header->size, sizeof(header->size), "%011" PRIoMAX,
+		  S_ISREG(mode) ? (uintmax_t)size : (uintmax_t)0);
+	xsnprintf(header->mtime, sizeof(header->mtime), "%011lo",
+		  (unsigned long)args->time);
 
 	xsnprintf(header->uid, sizeof(header->uid), "%07o", 0);
 	xsnprintf(header->gid, sizeof(header->gid), "%07o", 0);
@@ -233,7 +234,8 @@ static void prepare_header(struct archiver_args *args,
 	memcpy(header->magic, "ustar", 6);
 	memcpy(header->version, "00", 2);
 
-	xsnprintf(header->chksum, sizeof(header->chksum), "%07o", ustar_header_chksum(header));
+	xsnprintf(header->chksum, sizeof(header->chksum), "%07o",
+		  ustar_header_chksum(header));
 }
 
 static void write_extended_header(struct archiver_args *args,
@@ -245,17 +247,17 @@ static void write_extended_header(struct archiver_args *args,
 	memset(&header, 0, sizeof(header));
 	*header.typeflag = TYPEFLAG_EXT_HEADER;
 	mode = 0100666;
-	xsnprintf(header.name, sizeof(header.name), "%s.paxheader", oid_to_hex(oid));
+	xsnprintf(header.name, sizeof(header.name), "%s.paxheader",
+		  oid_to_hex(oid));
 	prepare_header(args, &header, mode, size);
 	write_blocked(&header, sizeof(header));
 	write_blocked(buffer, size);
 }
 
 static int write_tar_entry(struct archiver_args *args,
-			   const struct object_id *oid,
-			   const char *path, size_t pathlen,
-			   unsigned int mode,
-			   void *buffer, unsigned long size)
+			   const struct object_id *oid, const char *path,
+			   size_t pathlen, unsigned int mode, void *buffer,
+			   unsigned long size)
 {
 	struct ustar_header header;
 	struct strbuf ext_header = STRBUF_INIT;
@@ -274,12 +276,12 @@ static int write_tar_entry(struct archiver_args *args,
 		*header.typeflag = TYPEFLAG_REG;
 		mode = (mode | ((mode & 0100) ? 0777 : 0666)) & ~tar_umask;
 	} else {
-		return error(_("unsupported file mode: 0%o (SHA1: %s)"),
-			     mode, oid_to_hex(oid));
+		return error(_("unsupported file mode: 0%o (SHA1: %s)"), mode,
+			     oid_to_hex(oid));
 	}
 	if (pathlen > sizeof(header.name)) {
-		size_t plen = get_path_prefix(path, pathlen,
-					      sizeof(header.prefix));
+		size_t plen =
+			get_path_prefix(path, pathlen, sizeof(header.prefix));
 		size_t rest = pathlen - plen - 1;
 		if (plen > 0 && rest <= sizeof(header.name)) {
 			memcpy(header.prefix, path, plen);
@@ -287,8 +289,8 @@ static int write_tar_entry(struct archiver_args *args,
 		} else {
 			xsnprintf(header.name, sizeof(header.name), "%s.data",
 				  oid_to_hex(oid));
-			strbuf_append_ext_header(&ext_header, "path",
-						 path, pathlen);
+			strbuf_append_ext_header(&ext_header, "path", path,
+						 pathlen);
 		}
 	} else
 		memcpy(header.name, path, pathlen);
@@ -298,7 +300,7 @@ static int write_tar_entry(struct archiver_args *args,
 			xsnprintf(header.linkname, sizeof(header.linkname),
 				  "see %s.paxheader", oid_to_hex(oid));
 			strbuf_append_ext_header(&ext_header, "linkpath",
-			                         buffer, size);
+						 buffer, size);
 		} else
 			memcpy(header.linkname, buffer, size);
 	}
@@ -335,11 +337,9 @@ static void write_global_extended_header(struct archiver_args *args)
 
 	if (oid)
 		strbuf_append_ext_header(&ext_header, "comment",
-					 oid_to_hex(oid),
-					 the_hash_algo->hexsz);
+					 oid_to_hex(oid), the_hash_algo->hexsz);
 	if (args->time > USTAR_MAX_MTIME) {
-		strbuf_append_ext_header_uint(&ext_header, "mtime",
-					      args->time);
+		strbuf_append_ext_header_uint(&ext_header, "mtime", args->time);
 		args->time = USTAR_MAX_MTIME;
 	}
 

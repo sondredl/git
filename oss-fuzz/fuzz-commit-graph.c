@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "commit-graph.h"
-#include "repository.h"
+#include "components/git-compat-util.h"
+#include "components/commit-graph.h"
+#include "components/repository.h"
 
 struct commit_graph *parse_commit_graph(struct repo_settings *s,
 					void *graph_map, size_t graph_size);

@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "exec-cmd.h"
-#include "gettext.h"
-#include "attr.h"
-#include "repository.h"
-#include "setup.h"
-#include "strbuf.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/exec-cmd.h"
+#include "components/gettext.h"
+#include "components/attr.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
+#include "components/trace2.h"
 
 /*
  * Many parts of Git have subprograms communicate via pipe, expect the

@@ -4,6 +4,7 @@ project(gitTwo VERSION 2.0)
 
 # add_subdirectory(contrib/buildsystems)
 set(CMAKE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
+add_subdirectory(components)
 
 option(USE_VCPKG "Whether or not to use vcpkg for obtaining dependencies.  Only applicable to Windows platforms" ON)
 if(NOT WIN32)
@@ -653,6 +654,7 @@ include_directories(${CMAKE_BINARY_DIR})
 #build
 #libgit
 parse_makefile_for_sources(libgit_SOURCES "LIB_OBJS")
+# parse_makefile_for_sources(libgit_SOURCES "COMPONENTS")
 
 list(TRANSFORM libgit_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
 list(TRANSFORM compat_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")

@@ -1,20 +1,20 @@
 /*
  * Copyright (c) 2011, Google Inc.
  */
-#include "git-compat-util.h"
-#include "bulk-checkin.h"
-#include "environment.h"
-#include "gettext.h"
-#include "hex.h"
-#include "lockfile.h"
-#include "repository.h"
-#include "csum-file.h"
-#include "pack.h"
-#include "strbuf.h"
-#include "tmp-objdir.h"
-#include "packfile.h"
-#include "object-file.h"
-#include "object-store-ll.h"
+#include "components/git-compat-util.h"
+#include "components/bulk-checkin.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/lockfile.h"
+#include "components/repository.h"
+#include "components/csum-file.h"
+#include "components/pack.h"
+#include "components/strbuf.h"
+#include "components/tmp-objdir.h"
+#include "components/packfile.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
 
 static int odb_transaction_nesting;
 
@@ -31,12 +31,10 @@ static struct bulk_checkin_packfile {
 	uint32_t nr_written;
 } bulk_checkin_packfile;
 
-static void finish_tmp_packfile(struct strbuf *basename,
-				const char *pack_tmp_name,
-				struct pack_idx_entry **written_list,
-				uint32_t nr_written,
-				struct pack_idx_option *pack_idx_opts,
-				unsigned char hash[])
+static void
+finish_tmp_packfile(struct strbuf *basename, const char *pack_tmp_name,
+		    struct pack_idx_entry **written_list, uint32_t nr_written,
+		    struct pack_idx_option *pack_idx_opts, unsigned char hash[])
 {
 	char *idx_tmp_name = NULL;
 
@@ -62,9 +60,11 @@ static void flush_bulk_checkin_packfile(struct bulk_checkin_packfile *state)
 		goto clear_exit;
 	} else if (state->nr_written == 1) {
 		finalize_hashfile(state->f, hash, FSYNC_COMPONENT_PACK,
-				  CSUM_HASH_IN_STREAM | CSUM_FSYNC | CSUM_CLOSE);
+				  CSUM_HASH_IN_STREAM | CSUM_FSYNC |
+					  CSUM_CLOSE);
 	} else {
-		int fd = finalize_hashfile(state->f, hash, FSYNC_COMPONENT_PACK, 0);
+		int fd = finalize_hashfile(state->f, hash, FSYNC_COMPONENT_PACK,
+					   0);
 		fixup_pack_header_footer(fd, hash, state->pack_tmp_name,
 					 state->nr_written, hash,
 					 state->offset);
@@ -73,9 +73,8 @@ static void flush_bulk_checkin_packfile(struct bulk_checkin_packfile *state)
 
 	strbuf_addf(&packname, "%s/pack/pack-%s.", get_object_directory(),
 		    hash_to_hex(hash));
-	finish_tmp_packfile(&packname, state->pack_tmp_name,
-			    state->written, state->nr_written,
-			    &state->pack_idx_opts, hash);
+	finish_tmp_packfile(&packname, state->pack_tmp_name, state->written,
+			    state->nr_written, &state->pack_idx_opts, hash);
 	for (i = 0; i < state->nr_written; i++)
 		free(state->written[i]);
 
@@ -122,7 +121,8 @@ static void flush_batch_fsync(void)
 	bulk_fsync_objdir = NULL;
 }
 
-static int already_written(struct bulk_checkin_packfile *state, struct object_id *oid)
+static int already_written(struct bulk_checkin_packfile *state,
+			   struct object_id *oid)
 {
 	int i;
 
@@ -169,13 +169,15 @@ static int stream_blob_to_pack(struct bulk_checkin_packfile *state,
 
 	git_deflate_init(&s, pack_compression_level);
 
-	hdrlen = encode_in_pack_object_header(obuf, sizeof(obuf), OBJ_BLOB, size);
+	hdrlen = encode_in_pack_object_header(obuf, sizeof(obuf), OBJ_BLOB,
+					      size);
 	s.next_out = obuf + hdrlen;
 	s.avail_out = sizeof(obuf) - hdrlen;
 
 	while (status != Z_STREAM_END) {
 		if (size && !s.avail_in) {
-			ssize_t rsize = size < sizeof(ibuf) ? size : sizeof(ibuf);
+			ssize_t rsize = size < sizeof(ibuf) ? size :
+							      sizeof(ibuf);
 			ssize_t read_result = read_in_full(fd, ibuf, rsize);
 			if (read_result < 0)
 				die_errno("failed to read from '%s'", path);
@@ -188,7 +190,8 @@ static int stream_blob_to_pack(struct bulk_checkin_packfile *state,
 				if (rsize < hsize)
 					hsize = rsize;
 				if (hsize)
-					the_hash_algo->update_fn(ctx, ibuf, hsize);
+					the_hash_algo->update_fn(ctx, ibuf,
+								 hsize);
 				*already_hashed_to = offset;
 			}
 			s.next_in = ibuf;
@@ -203,9 +206,9 @@ static int stream_blob_to_pack(struct bulk_checkin_packfile *state,
 				size_t written = s.next_out - obuf;
 
 				/* would we bust the size limit? */
-				if (state->nr_written &&
-				    pack_size_limit_cfg &&
-				    pack_size_limit_cfg < state->offset + written) {
+				if (state->nr_written && pack_size_limit_cfg &&
+				    pack_size_limit_cfg <
+					    state->offset + written) {
 					git_deflate_abort(&s);
 					return -1;
 				}
@@ -247,23 +250,22 @@ static void prepare_to_stream(struct bulk_checkin_packfile *state,
 }
 
 static int deflate_blob_to_pack(struct bulk_checkin_packfile *state,
-				struct object_id *result_oid,
-				int fd, size_t size,
-				const char *path, unsigned flags)
+				struct object_id *result_oid, int fd,
+				size_t size, const char *path, unsigned flags)
 {
 	off_t seekback, already_hashed_to;
 	git_hash_ctx ctx;
 	unsigned char obuf[16384];
 	unsigned header_len;
-	struct hashfile_checkpoint checkpoint = {0};
+	struct hashfile_checkpoint checkpoint = { 0 };
 	struct pack_idx_entry *idx = NULL;
 
 	seekback = lseek(fd, 0, SEEK_CUR);
-	if (seekback == (off_t) -1)
+	if (seekback == (off_t)-1)
 		return error("cannot find the current offset");
 
-	header_len = format_object_header((char *)obuf, sizeof(obuf),
-					  OBJ_BLOB, size);
+	header_len = format_object_header((char *)obuf, sizeof(obuf), OBJ_BLOB,
+					  size);
 	the_hash_algo->init_fn(&ctx);
 	the_hash_algo->update_fn(&ctx, obuf, header_len);
 	the_hash_algo->init_fn(&checkpoint.ctx);
@@ -281,8 +283,8 @@ static int deflate_blob_to_pack(struct bulk_checkin_packfile *state,
 			idx->offset = state->offset;
 			crc32_begin(state->f);
 		}
-		if (!stream_blob_to_pack(state, &ctx, &already_hashed_to,
-					 fd, size, path, flags))
+		if (!stream_blob_to_pack(state, &ctx, &already_hashed_to, fd,
+					 size, path, flags))
 			break;
 		/*
 		 * Writing this object to the current pack will make
@@ -294,7 +296,7 @@ static int deflate_blob_to_pack(struct bulk_checkin_packfile *state,
 		hashfile_truncate(state->f, &checkpoint);
 		state->offset = checkpoint.offset;
 		flush_bulk_checkin_packfile(state);
-		if (lseek(fd, seekback, SEEK_SET) == (off_t) -1)
+		if (lseek(fd, seekback, SEEK_SET) == (off_t)-1)
 			return error("cannot seek back");
 	}
 	the_hash_algo->final_oid_fn(result_oid, &ctx);
@@ -308,8 +310,7 @@ static int deflate_blob_to_pack(struct bulk_checkin_packfile *state,
 		free(idx);
 	} else {
 		oidcpy(&idx->oid, result_oid);
-		ALLOC_GROW(state->written,
-			   state->nr_written + 1,
+		ALLOC_GROW(state->written, state->nr_written + 1,
 			   state->alloc_written);
 		state->written[state->nr_written++] = idx;
 	}
@@ -341,16 +342,15 @@ void fsync_loose_object_bulk_checkin(int fd, const char *filename)
 	 * before renaming the objects to their final names as part of
 	 * flush_batch_fsync.
 	 */
-	if (!bulk_fsync_objdir ||
-	    git_fsync(fd, FSYNC_WRITEOUT_ONLY) < 0) {
+	if (!bulk_fsync_objdir || git_fsync(fd, FSYNC_WRITEOUT_ONLY) < 0) {
 		if (errno == ENOSYS)
-			warning(_("core.fsyncMethod = batch is unsupported on this platform"));
+			warning(_(
+				"core.fsyncMethod = batch is unsupported on this platform"));
 		fsync_or_die(fd, filename);
 	}
 }
 
-int index_blob_bulk_checkin(struct object_id *oid,
-			    int fd, size_t size,
+int index_blob_bulk_checkin(struct object_id *oid, int fd, size_t size,
 			    const char *path, unsigned flags)
 {
 	int status = deflate_blob_to_pack(&bulk_checkin_packfile, oid, fd, size,

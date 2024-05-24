@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "compat/terminal.h"
-#include "gettext.h"
-#include "sigchain.h"
-#include "strbuf.h"
-#include "run-command.h"
-#include "string-list.h"
-#include "hashmap.h"
+#include "components/gettext.h"
+#include "components/sigchain.h"
+#include "components/strbuf.h"
+#include "components/run-command.h"
+#include "components/string-list.h"
+#include "components/hashmap.h"
 
 #if defined(HAVE_DEV_TTY) || defined(GIT_WINDOWS_NATIVE)
 

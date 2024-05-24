@@ -1,6 +1,6 @@
 #include "components/git-compat-util.h"
 #include "components/diagnose.h"
-#include "components/compat/disk.h"
+#include "compat/disk.h"
 #include "components/archive.h"
 #include "components/dir.h"
 #include "components/help.h"

@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "hash.h"
-#include "oidmap.h"
+#include "components/git-compat-util.h"
+#include "components/hash.h"
+#include "components/oidmap.h"
 
 static int oidmap_neq(const void *hashmap_cmp_fn_data UNUSED,
 		      const struct hashmap_entry *e1,

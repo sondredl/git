@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "line-range.h"
-#include "xdiff-interface.h"
-#include "userdiff.h"
+#include "components/git-compat-util.h"
+#include "components/line-range.h"
+#include "components/xdiff-interface.h"
+#include "components/userdiff.h"
 
 /*
  * Parse one item in the -L option

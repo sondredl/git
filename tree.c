@@ -1,13 +1,13 @@
-#include "git-compat-util.h"
-#include "hex.h"
-#include "tree.h"
-#include "object-name.h"
-#include "object-store-ll.h"
-#include "commit.h"
-#include "alloc.h"
-#include "tree-walk.h"
-#include "repository.h"
-#include "environment.h"
+#include "components/git-compat-util.h"
+#include "components/hex.h"
+#include "components/tree.h"
+#include "components/object-name.h"
+#include "components/object-store-ll.h"
+#include "components/commit.h"
+#include "components/alloc.h"
+#include "components/tree-walk.h"
+#include "components/repository.h"
+#include "components/environment.h"
 
 const char *tree_type = "tree";
 

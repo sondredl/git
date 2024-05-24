@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "prio-queue.h"
+#include "components/git-compat-util.h"
+#include "components/prio-queue.h"
 
 static inline int compare(struct prio_queue *queue, int i, int j)
 {

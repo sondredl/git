@@ -21,12 +21,12 @@
  *  along with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "environment.h"
-#include "quote.h"
-#include "setup.h"
-#include "trace.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/environment.h"
+#include "components/quote.h"
+#include "components/setup.h"
+#include "components/trace.h"
 
 struct trace_key trace_default_key = { "GIT_TRACE", 0, 0, 0 };
 struct trace_key trace_perf_key = TRACE_KEY_INIT(PERFORMANCE);

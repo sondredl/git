@@ -1,12 +1,12 @@
 /*
  * Various trivial helper wrappers around standard functions
  */
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "parse.h"
-#include "gettext.h"
-#include "strbuf.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/parse.h"
+#include "components/gettext.h"
+#include "components/strbuf.h"
+#include "components/trace2.h"
 
 #ifdef HAVE_RTLGENRANDOM
 /* This is required to get access to RtlGenRandom. */

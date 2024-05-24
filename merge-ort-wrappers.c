@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "hash.h"
-#include "merge-ort.h"
-#include "merge-ort-wrappers.h"
-#include "read-cache-ll.h"
-#include "tree.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/hash.h"
+#include "components/merge-ort.h"
+#include "components/merge-ort-wrappers.h"
+#include "components/read-cache-ll.h"
+#include "components/tree.h"
 
-#include "commit.h"
+#include "components/commit.h"
 
 static int unclean(struct merge_options *opt, struct tree *head)
 {

@@ -17,8 +17,8 @@
    License along with the GNU C Library; if not, see
    <http://www.gnu.org/licenses/>.  */
 
-#include "git-compat-util.h"
-#include <gettext.h>
+#include "components/git-compat-util.h"
+#include <components/gettext.h>
 #include "obstack.h"
 
 /* NOTE BEFORE MODIFYING THIS FILE: This version number must be

@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "oid-array.h"
-#include "hash-lookup.h"
+#include "components/git-compat-util.h"
+#include "components/oid-array.h"
+#include "components/hash-lookup.h"
 
 void oid_array_append(struct oid_array *array, const struct object_id *oid)
 {

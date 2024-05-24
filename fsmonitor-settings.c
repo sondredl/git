@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "gettext.h"
-#include "repository.h"
-#include "fsmonitor-ipc.h"
-#include "fsmonitor-settings.h"
-#include "fsmonitor-path-utils.h"
-#include "advice.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/repository.h"
+#include "components/fsmonitor-ipc.h"
+#include "components/fsmonitor-settings.h"
+#include "components/fsmonitor-path-utils.h"
+#include "components/advice.h"
 
 /*
  * We keep this structure defintion private and have getters

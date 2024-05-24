@@ -2,21 +2,21 @@
  * The Scalar command-line interface.
  */
 
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "config.h"
-#include "run-command.h"
-#include "simple-ipc.h"
-#include "fsmonitor-ipc.h"
-#include "fsmonitor-settings.h"
-#include "refs.h"
-#include "dir.h"
-#include "packfile.h"
-#include "help.h"
-#include "setup.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/config.h"
+#include "components/run-command.h"
+#include "components/simple-ipc.h"
+#include "components/fsmonitor-ipc.h"
+#include "components/fsmonitor-settings.h"
+#include "components/refs.h"
+#include "components/dir.h"
+#include "components/packfile.h"
+#include "components/help.h"
+#include "components/setup.h"
+#include "components/trace2.h"
 
 static void setup_enlistment_directory(int argc, const char **argv,
 				       const char * const *usagestr,

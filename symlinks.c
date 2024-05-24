@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "setup.h"
-#include "symlinks.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/setup.h"
+#include "components/symlinks.h"
 
 static int threaded_check_leading_path(struct cache_def *cache, const char *name,
 				       int len, int warn_on_lstat_err);

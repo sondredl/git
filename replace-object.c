@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "hex.h"
-#include "oidmap.h"
-#include "object-store-ll.h"
-#include "replace-object.h"
-#include "refs.h"
-#include "repository.h"
-#include "commit.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/oidmap.h"
+#include "components/object-store-ll.h"
+#include "components/replace-object.h"
+#include "components/refs.h"
+#include "components/repository.h"
+#include "components/commit.h"
 
 static int register_replace_ref(struct repository *r,
 				const char *refname,

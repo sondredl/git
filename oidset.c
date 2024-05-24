@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "oidset.h"
-#include "hex.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/oidset.h"
+#include "components/hex.h"
+#include "components/strbuf.h"
 
 void oidset_init(struct oidset *set, size_t initial_size)
 {

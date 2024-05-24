@@ -2,12 +2,12 @@
  * Copyright (c) 2010 Ævar Arnfjörð Bjarmason
  */
 
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "environment.h"
-#include "exec-cmd.h"
-#include "gettext.h"
-#include "utf8.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/environment.h"
+#include "components/exec-cmd.h"
+#include "components/gettext.h"
+#include "components/utf8.h"
 
 #ifndef NO_GETTEXT
 #	include <libintl.h>

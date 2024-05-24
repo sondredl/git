@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "dir.h"
-#include "hash.h"
-#include "read-cache.h"
-#include "resolve-undo.h"
-#include "sparse-index.h"
-#include "string-list.h"
+#include "components/git-compat-util.h"
+#include "components/dir.h"
+#include "components/hash.h"
+#include "components/read-cache.h"
+#include "components/resolve-undo.h"
+#include "components/sparse-index.h"
+#include "components/string-list.h"
 
 /* The only error case is to run out of memory in string-list */
 void record_resolve_undo(struct index_state *istate, struct cache_entry *ce)

@@ -1,9 +1,9 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "userdiff.h"
-#include "attr.h"
-#include "strbuf.h"
-#include "environment.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/userdiff.h"
+#include "components/attr.h"
+#include "components/strbuf.h"
+#include "components/environment.h"
 
 static struct userdiff_driver *drivers;
 static int ndrivers;

@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "copy.h"
-#include "pkt-line.h"
-#include "gettext.h"
-#include "hex.h"
-#include "run-command.h"
-#include "sideband.h"
-#include "trace.h"
-#include "write-or-die.h"
+#include "components/git-compat-util.h"
+#include "components/copy.h"
+#include "components/pkt-line.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/run-command.h"
+#include "components/sideband.h"
+#include "components/trace.h"
+#include "components/write-or-die.h"
 
 char packet_buffer[LARGE_PACKET_MAX];
 static const char *packet_trace_prefix = "git";

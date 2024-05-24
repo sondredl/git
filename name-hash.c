@@ -5,16 +5,16 @@
  *
  * Copyright (C) 2008 Linus Torvalds
  */
-#include "git-compat-util.h"
-#include "environment.h"
-#include "gettext.h"
-#include "name-hash.h"
-#include "object.h"
-#include "read-cache-ll.h"
-#include "thread-utils.h"
-#include "trace.h"
-#include "trace2.h"
-#include "sparse-index.h"
+#include "components/git-compat-util.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/name-hash.h"
+#include "components/object.h"
+#include "components/read-cache-ll.h"
+#include "components/thread-utils.h"
+#include "components/trace.h"
+#include "components/trace2.h"
+#include "components/sparse-index.h"
 
 struct dir_entry {
 	struct hashmap_entry ent;

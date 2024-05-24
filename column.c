@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "column.h"
-#include "string-list.h"
-#include "pager.h"
-#include "parse-options.h"
-#include "run-command.h"
-#include "utf8.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/column.h"
+#include "components/string-list.h"
+#include "components/pager.h"
+#include "components/parse-options.h"
+#include "components/run-command.h"
+#include "components/utf8.h"
 
 #define XY2LINEAR(d, x, y) (COL_LAYOUT((d)->colopts) == COL_COLUMN ? \
 			    (x) * (d)->rows + (y) : \

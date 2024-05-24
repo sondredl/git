@@ -1,8 +1,8 @@
-#include "git-compat-util.h"
-#include "dir.h"
-#include "iterator.h"
-#include "dir-iterator.h"
-#include "string-list.h"
+#include "components/git-compat-util.h"
+#include "components/dir.h"
+#include "components/iterator.h"
+#include "components/dir-iterator.h"
+#include "components/string-list.h"
 
 struct dir_iterator_level {
 	DIR *dir;

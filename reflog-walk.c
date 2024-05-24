@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "commit.h"
-#include "refs.h"
-#include "diff.h"
-#include "repository.h"
-#include "revision.h"
-#include "string-list.h"
-#include "reflog-walk.h"
+#include "components/git-compat-util.h"
+#include "components/commit.h"
+#include "components/refs.h"
+#include "components/diff.h"
+#include "components/repository.h"
+#include "components/revision.h"
+#include "components/string-list.h"
+#include "components/reflog-walk.h"
 
 struct complete_reflogs {
 	char *ref;

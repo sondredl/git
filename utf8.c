@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "strbuf.h"
-#include "utf8.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
+#include "components/utf8.h"
 
 /* This code is originally from https://www.cl.cam.ac.uk/~mgk25/ucs/ */
 

@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "thread-utils.h"
+#include "components/git-compat-util.h"
+#include "components/thread-utils.h"
 
 #if defined(hpux) || defined(__hpux) || defined(_hpux)
 #  include <sys/pstat.h>

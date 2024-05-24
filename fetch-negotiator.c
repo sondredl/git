@@ -1,9 +1,9 @@
-#include "git-compat-util.h"
-#include "fetch-negotiator.h"
+#include "components/git-compat-util.h"
+#include "components/fetch-negotiator.h"
 #include "negotiator/default.h"
 #include "negotiator/skipping.h"
 #include "negotiator/noop.h"
-#include "repository.h"
+#include "components/repository.h"
 
 void fetch_negotiator_init(struct repository *r,
 			   struct fetch_negotiator *negotiator)

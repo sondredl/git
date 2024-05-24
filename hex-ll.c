@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "hex-ll.h"
+#include "components/git-compat-util.h"
+#include "components/hex-ll.h"
 
 const signed char hexval_table[256] = {
 	 -1, -1, -1, -1, -1, -1, -1, -1,		/* 00-07 */

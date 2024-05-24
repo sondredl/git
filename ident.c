@@ -5,13 +5,13 @@
  *
  * Copyright (C) 2005 Linus Torvalds
  */
-#include "git-compat-util.h"
-#include "ident.h"
-#include "config.h"
-#include "date.h"
-#include "gettext.h"
-#include "mailmap.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/ident.h"
+#include "components/config.h"
+#include "components/date.h"
+#include "components/gettext.h"
+#include "components/mailmap.h"
+#include "components/strbuf.h"
 
 static struct strbuf git_default_name = STRBUF_INIT;
 static struct strbuf git_default_email = STRBUF_INIT;

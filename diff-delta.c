@@ -11,8 +11,8 @@
  * published by the Free Software Foundation.
  */
 
-#include "git-compat-util.h"
-#include "delta.h"
+#include "components/git-compat-util.h"
+#include "components/delta.h"
 
 /* maximum hash entry list for the same hash bucket */
 #define HASH_LIMIT 64

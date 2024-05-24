@@ -9,15 +9,15 @@
  */
 
 #define GIT_TEST_PROGRESS_ONLY
-#include "git-compat-util.h"
-#include "pager.h"
-#include "progress.h"
-#include "repository.h"
-#include "strbuf.h"
-#include "trace.h"
-#include "trace2.h"
-#include "utf8.h"
-#include "parse.h"
+#include "components/git-compat-util.h"
+#include "components/pager.h"
+#include "components/progress.h"
+#include "components/repository.h"
+#include "components/strbuf.h"
+#include "components/trace.h"
+#include "components/trace2.h"
+#include "components/utf8.h"
+#include "components/parse.h"
 
 #define TP_IDX_MAX      8
 

@@ -516,10 +516,11 @@ install(DIRECTORY include/ DESTINATION include)
 # Set any necessary build flags
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -some_flag")
 
-add_compile_options(-Wunused-parameter)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-w)
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    add_compile_options(/w)
-endif()
+###################### warning flags ##########################
+# add_compile_options(-Wunused-parameter)
+# if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+#     add_compile_options(-w)
+# elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+#     add_compile_options(/w)
+# endif()
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")

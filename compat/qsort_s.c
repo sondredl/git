@@ -1,4 +1,4 @@
-#include "../git-compat-util.h"
+#include "components/git-compat-util.h"
 
 /*
  * A merge sort implementation, simplified from the qsort implementation

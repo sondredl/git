@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "fsmonitor-ll.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/fsmonitor-ll.h"
 #include "fsm-listen.h"
-#include "fsmonitor--daemon.h"
-#include "gettext.h"
-#include "simple-ipc.h"
-#include "trace2.h"
+#include "components/fsmonitor--daemon.h"
+#include "components/gettext.h"
+#include "components/simple-ipc.h"
+#include "components/trace2.h"
 
 /*
  * The documentation of ReadDirectoryChangesW() states that the maximum

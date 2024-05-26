@@ -4,24 +4,25 @@
  * Copyright (c) 2006 Junio C Hamano
  */
 #define USE_THE_INDEX_VARIABLE
-#include "builtin.h"
-#include "config.h"
+
+#include "components/builtin.h"
+#include "components/config.h"
 #include "ewah/ewok.h"
-#include "lockfile.h"
-#include "color.h"
-#include "commit.h"
-#include "gettext.h"
-#include "tag.h"
-#include "diff.h"
-#include "diff-merges.h"
-#include "diffcore.h"
-#include "preload-index.h"
-#include "read-cache-ll.h"
-#include "revision.h"
-#include "log-tree.h"
-#include "setup.h"
-#include "oid-array.h"
-#include "tree.h"
+#include "components/lockfile.h"
+#include "components/color.h"
+#include "components/commit.h"
+#include "components/gettext.h"
+#include "components/tag.h"
+#include "components/diff.h"
+#include "components/diff-merges.h"
+#include "components/diffcore.h"
+#include "components/preload-index.h"
+#include "components/read-cache-ll.h"
+#include "components/revision.h"
+#include "components/log-tree.h"
+#include "components/setup.h"
+#include "components/oid-array.h"
+#include "components/tree.h"
 
 #define DIFF_NO_INDEX_EXPLICIT 1
 #define DIFF_NO_INDEX_IMPLICIT 2

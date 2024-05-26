@@ -1,7 +1,7 @@
-#include "builtin.h"
-#include "gettext.h"
-#include "repository.h"
-#include "apply.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/repository.h"
+#include "components/apply.h"
 
 static const char * const apply_usage[] = {
 	N_("git apply [<options>] [<patch>...]"),

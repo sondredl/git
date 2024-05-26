@@ -7,10 +7,10 @@
  *
  * Pretend we resolved the heads, but declare our tree trumps everybody else.
  */
-#include "git-compat-util.h"
-#include "builtin.h"
-#include "diff.h"
-#include "repository.h"
+#include "components/git-compat-util.h"
+#include "components/builtin.h"
+#include "components/diff.h"
+#include "components/repository.h"
 
 static const char builtin_merge_ours_usage[] =
 	"git merge-ours <base>... -- HEAD <remote>...";

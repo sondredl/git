@@ -3,9 +3,9 @@
  *
  * Copyright (C) 2006 Ryan Anderson
  */
-#include "git-compat-util.h"
-#include "builtin.h"
-#include "strvec.h"
+#include "components/git-compat-util.h"
+#include "components/builtin.h"
+#include "components/strvec.h"
 
 int cmd_annotate(int argc, const char **argv, const char *prefix)
 {

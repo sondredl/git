@@ -3,20 +3,19 @@
  */
 
 #define USE_THE_INDEX_VARIABLE
-#include "git-compat-util.h"
-
-#include "builtin.h"
-#include "environment.h"
-#include "hex.h"
-#include "lockfile.h"
-#include "merge-ort.h"
-#include "object-name.h"
-#include "parse-options.h"
-#include "refs.h"
-#include "revision.h"
-#include "strmap.h"
-#include <oidset.h>
-#include <tree.h>
+#include "components/git-compat-util.h"
+#include "components/builtin.h"
+#include "components/environment.h"
+#include "components/hex.h"
+#include "components/lockfile.h"
+#include "components/merge-ort.h"
+#include "components/object-name.h"
+#include "components/parse-options.h"
+#include "components/refs.h"
+#include "components/revision.h"
+#include "components/strmap.h"
+#include <components/oidset.h>
+#include <components/tree.h>
 
 static const char *short_commit_name(struct commit *commit)
 {

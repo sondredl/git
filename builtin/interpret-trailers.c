@@ -5,13 +5,13 @@
  *
  */
 
-#include "builtin.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "string-list.h"
-#include "tempfile.h"
-#include "trailer.h"
-#include "config.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/string-list.h"
+#include "components/tempfile.h"
+#include "components/trailer.h"
+#include "components/config.h"
 
 static const char * const git_interpret_trailers_usage[] = {
 	N_("git interpret-trailers [--in-place] [--trim-empty]\n"

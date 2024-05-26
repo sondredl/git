@@ -4,19 +4,19 @@
  * Copyright (C) Linus Torvalds, 2005
  * Copyright (C) Junio C Hamano, 2005
  */
-#include "builtin.h"
-#include "abspath.h"
-#include "config.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-file.h"
-#include "object-store-ll.h"
-#include "blob.h"
-#include "quote.h"
-#include "parse-options.h"
-#include "setup.h"
-#include "strbuf.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/abspath.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
+#include "components/blob.h"
+#include "components/quote.h"
+#include "components/parse-options.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
+#include "components/write-or-die.h"
 
 /*
  * This is to create corrupt objects for debugging and as such it

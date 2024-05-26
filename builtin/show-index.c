@@ -1,10 +1,10 @@
-#include "builtin.h"
-#include "gettext.h"
-#include "hash.h"
-#include "hex.h"
-#include "pack.h"
-#include "parse-options.h"
-#include "repository.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/hash.h"
+#include "components/hex.h"
+#include "components/pack.h"
+#include "components/parse-options.h"
+#include "components/repository.h"
 
 static const char *const show_index_usage[] = {
 	"git show-index [--object-format=<hash-algorithm>]",

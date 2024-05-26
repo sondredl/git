@@ -1,7 +1,7 @@
-#include "builtin.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "prune-packed.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/prune-packed.h"
 
 static const char * const prune_packed_usage[] = {
 	"git prune-packed [-n | --dry-run] [-q | --quiet]",

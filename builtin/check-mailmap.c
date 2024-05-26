@@ -1,12 +1,12 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "ident.h"
-#include "mailmap.h"
-#include "parse-options.h"
-#include "strbuf.h"
-#include "string-list.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/ident.h"
+#include "components/mailmap.h"
+#include "components/parse-options.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
+#include "components/write-or-die.h"
 
 static int use_stdin;
 static const char * const check_mailmap_usage[] = {

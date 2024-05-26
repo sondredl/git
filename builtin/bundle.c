@@ -1,12 +1,12 @@
-#include "builtin.h"
-#include "abspath.h"
-#include "gettext.h"
-#include "setup.h"
-#include "strvec.h"
-#include "parse-options.h"
-#include "pkt-line.h"
-#include "repository.h"
-#include "bundle.h"
+#include "components/builtin.h"
+#include "components/abspath.h"
+#include "components/gettext.h"
+#include "components/setup.h"
+#include "components/strvec.h"
+#include "components/parse-options.h"
+#include "components/pkt-line.h"
+#include "components/repository.h"
+#include "components/bundle.h"
 
 /*
  * Basic handler for bundle files to connect repositories via sneakernet.

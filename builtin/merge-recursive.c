@@ -1,10 +1,10 @@
-#include "builtin.h"
-#include "advice.h"
-#include "gettext.h"
-#include "hash.h"
-#include "merge-recursive.h"
-#include "object-name.h"
-#include "repository.h"
+#include "components/builtin.h"
+#include "components/advice.h"
+#include "components/gettext.h"
+#include "components/hash.h"
+#include "components/merge-recursive.h"
+#include "components/object-name.h"
+#include "components/repository.h"
 
 static const char builtin_merge_recursive_usage[] =
 	"git %s <base>... -- <head> <remote> ...";

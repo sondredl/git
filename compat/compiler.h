@@ -1,7 +1,7 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-#include "strbuf.h"
+#include "components/strbuf.h"
 
 #ifdef __GLIBC__
 #include <gnu/libc-version.h>

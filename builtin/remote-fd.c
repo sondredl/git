@@ -1,5 +1,5 @@
-#include "builtin.h"
-#include "transport.h"
+#include "components/builtin.h"
+#include "components/transport.h"
 
 static const char usage_msg[] =
 	"git remote-fd <remote> <url>";

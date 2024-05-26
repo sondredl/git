@@ -1,7 +1,7 @@
-#include "builtin.h"
-#include "transport.h"
-#include "run-command.h"
-#include "pkt-line.h"
+#include "components/builtin.h"
+#include "components/transport.h"
+#include "components/run-command.h"
+#include "components/pkt-line.h"
 
 static const char usage_msg[] =
 	"git remote-ext <remote> <url>";

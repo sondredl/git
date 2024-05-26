@@ -1,14 +1,14 @@
 /*
  * Copyright (c) 2006 Franck Bui-Huu
  */
-#include "builtin.h"
-#include "archive.h"
-#include "path.h"
-#include "pkt-line.h"
-#include "sideband.h"
-#include "repository.h"
-#include "run-command.h"
-#include "strvec.h"
+#include "components/builtin.h"
+#include "components/archive.h"
+#include "components/path.h"
+#include "components/pkt-line.h"
+#include "components/sideband.h"
+#include "components/repository.h"
+#include "components/run-command.h"
+#include "components/strvec.h"
 
 static const char upload_archive_usage[] =
 	"git upload-archive <repository>";

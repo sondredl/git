@@ -1,9 +1,9 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "run-command.h"
-#include "parse-options.h"
-#include "strbuf.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/run-command.h"
+#include "components/parse-options.h"
+#include "components/strbuf.h"
 
 #define VERIFY_PACK_VERBOSE 01
 #define VERIFY_PACK_STAT_ONLY 02

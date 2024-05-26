@@ -1,6 +1,5 @@
 #define USE_THE_INDEX_VARIABLE
 #include "test-tool.h"
-#include "components/"
 #include "components/read-cache-ll.h"
 #include "components/repository.h"
 #include "components/setup.h"

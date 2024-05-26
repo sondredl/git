@@ -1,13 +1,13 @@
 #include "test-tool.h"
-#include "hex.h"
-#include "refs.h"
-#include "setup.h"
-#include "worktree.h"
-#include "object-store-ll.h"
-#include "path.h"
-#include "repository.h"
-#include "strbuf.h"
-#include "revision.h"
+#include "components/hex.h"
+#include "components/refs.h"
+#include "components/setup.h"
+#include "components/worktree.h"
+#include "components/object-store-ll.h"
+#include "components/path.h"
+#include "components/repository.h"
+#include "components/strbuf.h"
+#include "components/revision.h"
 
 struct flag_definition {
 	const char *name;

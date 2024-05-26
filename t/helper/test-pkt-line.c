@@ -1,5 +1,5 @@
 #include "git-compat-util.h"
-#include "components/test-tool.h"
+#include "test-tool.h"
 #include "components/pkt-line.h"
 #include "components/sideband.h"
 #include "components/write-or-die.h"

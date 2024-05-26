@@ -1,12 +1,12 @@
 #define USE_THE_INDEX_VARIABLE
 #include "test-tool.h"
-#include "hash.h"
-#include "hex.h"
-#include "tree.h"
-#include "cache-tree.h"
-#include "read-cache-ll.h"
-#include "repository.h"
-#include "setup.h"
+#include "components/hash.h"
+#include "components/hex.h"
+#include "components/tree.h"
+#include "components/cache-tree.h"
+#include "components/read-cache-ll.h"
+#include "components/repository.h"
+#include "components/setup.h"
 
 static void dump_one(struct cache_tree *it, const char *pfx, const char *x)
 {

@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "serve.h"
-#include "setup.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/serve.h"
+#include "components/setup.h"
 
 static char const * const serve_usage[] = {
 	N_("test-tool serve-v2 [<options>]"),

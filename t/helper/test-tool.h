@@ -1,7 +1,7 @@
 #ifndef TEST_TOOL_H
 #define TEST_TOOL_H
 
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 
 int cmd__advise_if_enabled(int argc, const char **argv);
 int cmd__bitmap(int argc, const char **argv);

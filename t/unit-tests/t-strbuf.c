@@ -1,5 +1,5 @@
 #include "test-lib.h"
-#include "strbuf.h"
+#include "components/strbuf.h"
 
 /* wrapper that supplies tests with an empty, initialized strbuf */
 static void setup(void (*f)(struct strbuf*, void*), void *data)

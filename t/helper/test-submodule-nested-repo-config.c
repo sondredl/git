@@ -1,7 +1,7 @@
 #include "test-tool.h"
-#include "repository.h"
-#include "setup.h"
-#include "submodule-config.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/submodule-config.h"
 
 static void die_usage(const char **argv, const char *msg)
 {

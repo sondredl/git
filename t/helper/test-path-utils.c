@@ -1,13 +1,13 @@
 #include "test-tool.h"
-#include "abspath.h"
-#include "environment.h"
-#include "path.h"
-#include "read-cache-ll.h"
-#include "setup.h"
-#include "string-list.h"
-#include "trace.h"
-#include "utf8.h"
-#include "copy.h"
+#include "components/abspath.h"
+#include "components/environment.h"
+#include "components/path.h"
+#include "components/read-cache-ll.h"
+#include "components/setup.h"
+#include "components/string-list.h"
+#include "components/trace.h"
+#include "components/utf8.h"
+#include "components/copy.h"
 
 /*
  * A "string_list_each_func_t" function that normalizes an entry from

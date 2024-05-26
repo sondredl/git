@@ -9,11 +9,11 @@
  */
 
 #include "test-tool.h"
-#include "commit.h"
-#include "diff.h"
-#include "repository.h"
-#include "revision.h"
-#include "setup.h"
+#include "components/commit.h"
+#include "components/diff.h"
+#include "components/repository.h"
+#include "components/revision.h"
+#include "components/setup.h"
 
 static void print_commit(struct commit *commit)
 {

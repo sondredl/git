@@ -1,13 +1,13 @@
 #include "test-tool.h"
-#include "commit.h"
-#include "commit-reach.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-name.h"
-#include "ref-filter.h"
-#include "setup.h"
-#include "string-list.h"
-#include "tag.h"
+#include "components/commit.h"
+#include "components/commit-reach.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-name.h"
+#include "components/ref-filter.h"
+#include "components/setup.h"
+#include "components/string-list.h"
+#include "components/tag.h"
 
 static void print_sorted_commit_ids(struct commit_list *list)
 {

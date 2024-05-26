@@ -1,9 +1,9 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "strbuf.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "utf8.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/utf8.h"
 
 int cmd__iconv(int argc, const char **argv)
 {

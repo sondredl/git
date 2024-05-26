@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "hex.h"
-#include "oidtree.h"
-#include "setup.h"
-#include "strbuf.h"
+#include "components/hex.h"
+#include "components/oidtree.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
 
 static enum cb_next print_oid(const struct object_id *oid, void *data UNUSED)
 {

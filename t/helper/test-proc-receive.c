@@ -1,10 +1,10 @@
 #include "test-tool.h"
-#include "connect.h"
-#include "hex.h"
-#include "parse-options.h"
-#include "pkt-line.h"
-#include "setup.h"
-#include "sigchain.h"
+#include "components/connect.h"
+#include "components/hex.h"
+#include "components/parse-options.h"
+#include "components/pkt-line.h"
+#include "components/setup.h"
+#include "components/sigchain.h"
 
 static const char *proc_receive_usage[] = {
 	"test-tool proc-receive [<options>]",

@@ -1,5 +1,5 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 
 #if defined(GIT_WINDOWS_NATIVE)
 #include "lazyload.h"

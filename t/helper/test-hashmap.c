@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "hashmap.h"
-#include "strbuf.h"
-#include "string-list.h"
+#include "components/git-compat-util.h"
+#include "components/hashmap.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
 
 struct test_entry
 {

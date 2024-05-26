@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
 
 #ifdef GIT_WINDOWS_NATIVE
 static const char *usage_string = "<pipe-filename>";

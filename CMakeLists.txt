@@ -4,7 +4,10 @@ project(gitTwo VERSION 2.0)
 
 # add_subdirectory(contrib/buildsystems)
 set(CMAKE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
-add_subdirectory(components)
+# add_subdirectory(components)
+
+add_compile_options(-Wimplicit-function-declaration)
+add_compile_options(-Wno-implicit-function-declaration)
 
 option(USE_VCPKG "Whether or not to use vcpkg for obtaining dependencies.  Only applicable to Windows platforms" ON)
 if(NOT WIN32)

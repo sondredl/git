@@ -1,5 +1,5 @@
 #include "test-lib.h"
-#include "mem-pool.h"
+#include "components/mem-pool.h"
 
 static void setup_static(void (*f)(struct mem_pool *), size_t block_alloc)
 {

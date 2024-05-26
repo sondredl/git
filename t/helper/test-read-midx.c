@@ -1,12 +1,12 @@
 #include "test-tool.h"
-#include "hex.h"
-#include "midx.h"
-#include "repository.h"
-#include "object-store-ll.h"
-#include "pack-bitmap.h"
-#include "packfile.h"
-#include "setup.h"
-#include "gettext.h"
+#include "components/hex.h"
+#include "components/midx.h"
+#include "components/repository.h"
+#include "components/object-store-ll.h"
+#include "components/pack-bitmap.h"
+#include "components/packfile.h"
+#include "components/setup.h"
+#include "components/gettext.h"
 
 static int read_midx_file(const char *object_dir, int show_objects)
 {

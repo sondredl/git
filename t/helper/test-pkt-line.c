@@ -1,9 +1,9 @@
 #include "git-compat-util.h"
-#include "test-tool.h"
-#include "pkt-line.h"
-#include "sideband.h"
-#include "write-or-die.h"
-#include "parse-options.h"
+#include "components/test-tool.h"
+#include "components/pkt-line.h"
+#include "components/sideband.h"
+#include "components/write-or-die.h"
+#include "components/parse-options.h"
 
 static void pack_line(const char *line)
 {

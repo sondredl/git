@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "hex.h"
-#include "repository.h"
-#include "object-store-ll.h"
-#include "setup.h"
+#include "components/hex.h"
+#include "components/repository.h"
+#include "components/object-store-ll.h"
+#include "components/setup.h"
 
 /*
  * Prints the size of the object corresponding to the given hash in a specific

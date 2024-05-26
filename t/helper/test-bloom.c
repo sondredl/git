@@ -1,9 +1,9 @@
 #include "test-tool.h"
-#include "bloom.h"
-#include "hex.h"
-#include "commit.h"
-#include "repository.h"
-#include "setup.h"
+#include "components/bloom.h"
+#include "components/hex.h"
+#include "components/commit.h"
+#include "components/repository.h"
+#include "components/setup.h"
 
 static struct bloom_filter_settings settings = DEFAULT_BLOOM_FILTER_SETTINGS;
 

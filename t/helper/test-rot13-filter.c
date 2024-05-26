@@ -37,10 +37,10 @@
  */
 
 #include "test-tool.h"
-#include "pkt-line.h"
-#include "string-list.h"
-#include "strmap.h"
-#include "parse-options.h"
+#include "components/pkt-line.h"
+#include "components/string-list.h"
+#include "components/strmap.h"
+#include "components/parse-options.h"
 
 static FILE *logfile;
 static int always_delay, has_clean_cap, has_smudge_cap;

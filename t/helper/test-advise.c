@@ -1,7 +1,7 @@
 #include "test-tool.h"
-#include "advice.h"
-#include "config.h"
-#include "setup.h"
+#include "components/advice.h"
+#include "components/config.h"
+#include "components/setup.h"
 
 int cmd__advise_if_enabled(int argc, const char **argv)
 {

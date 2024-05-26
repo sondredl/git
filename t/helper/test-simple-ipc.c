@@ -3,13 +3,13 @@
  */
 
 #include "test-tool.h"
-#include "gettext.h"
-#include "simple-ipc.h"
-#include "parse-options.h"
-#include "thread-utils.h"
-#include "strvec.h"
-#include "run-command.h"
-#include "trace2.h"
+#include "components/gettext.h"
+#include "components/simple-ipc.h"
+#include "components/parse-options.h"
+#include "components/thread-utils.h"
+#include "components/strvec.h"
+#include "components/run-command.h"
+#include "components/trace2.h"
 
 #ifndef SUPPORTS_SIMPLE_IPC
 int cmd__simple_ipc(int argc, const char **argv)

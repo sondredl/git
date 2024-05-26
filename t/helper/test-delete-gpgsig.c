@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "gpg-interface.h"
-#include "strbuf.h"
+#include "components/gpg-interface.h"
+#include "components/strbuf.h"
 
 
 int cmd__delete_gpgsig(int argc, const char **argv)

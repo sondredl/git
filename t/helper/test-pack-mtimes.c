@@ -1,10 +1,10 @@
 #include "test-tool.h"
-#include "hex.h"
-#include "strbuf.h"
-#include "object-store-ll.h"
-#include "packfile.h"
-#include "pack-mtimes.h"
-#include "setup.h"
+#include "components/hex.h"
+#include "components/strbuf.h"
+#include "components/object-store-ll.h"
+#include "components/packfile.h"
+#include "components/pack-mtimes.h"
+#include "components/setup.h"
 
 static void dump_mtimes(struct packed_git *p)
 {

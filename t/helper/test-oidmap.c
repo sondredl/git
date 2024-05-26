@@ -1,11 +1,11 @@
 #include "test-tool.h"
-#include "hex.h"
-#include "object-name.h"
-#include "oidmap.h"
-#include "repository.h"
-#include "setup.h"
-#include "strbuf.h"
-#include "string-list.h"
+#include "components/hex.h"
+#include "components/object-name.h"
+#include "components/oidmap.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
 
 /* key is an oid and value is a name (could be a refname for example) */
 struct test_entry {

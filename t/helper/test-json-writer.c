@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "json-writer.h"
-#include "string-list.h"
+#include "components/json-writer.h"
+#include "components/string-list.h"
 
 static const char *expect_obj1 = "{\"a\":\"abc\",\"b\":42,\"c\":true}";
 static const char *expect_obj2 = "{\"a\":-1,\"b\":2147483647,\"c\":0}";

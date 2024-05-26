@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "strbuf.h"
-#include "string-list.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
 
 /*
  * Parse an argument into a string list.  arg should either be a

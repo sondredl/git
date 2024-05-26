@@ -1,7 +1,7 @@
 #include "test-tool.h"
-#include "setup.h"
-#include "userdiff.h"
-#include "config.h"
+#include "components/setup.h"
+#include "components/userdiff.h"
+#include "components/config.h"
 
 static int driver_cb(struct userdiff_driver *driver,
 		     enum userdiff_driver_type type, void *priv)

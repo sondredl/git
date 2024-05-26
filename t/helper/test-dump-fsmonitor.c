@@ -1,7 +1,7 @@
 #include "test-tool.h"
-#include "read-cache-ll.h"
-#include "repository.h"
-#include "setup.h"
+#include "components/read-cache-ll.h"
+#include "components/repository.h"
+#include "components/setup.h"
 
 int cmd__dump_fsmonitor(int ac UNUSED, const char **av UNUSED)
 {

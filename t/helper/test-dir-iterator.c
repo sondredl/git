@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "strbuf.h"
-#include "iterator.h"
-#include "dir-iterator.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
+#include "components/iterator.h"
+#include "components/dir-iterator.h"
 
 static const char *error_name(int error_number)
 {

@@ -5,7 +5,7 @@
  */
 
 #include "test-tool.h"
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 
 int cmd__genrandom(int argc, const char **argv)
 {

@@ -1,9 +1,9 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "repository.h"
-#include "midx.h"
-#include "fsmonitor-ipc.h"
-#include "fsmonitor-settings.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/repository.h"
+#include "components/midx.h"
+#include "components/fsmonitor-ipc.h"
+#include "components/fsmonitor-settings.h"
 
 static void repo_cfg_bool(struct repository *r, const char *key, int *dest,
 			  int def)

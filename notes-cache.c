@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "notes-cache.h"
-#include "object-store-ll.h"
-#include "pretty.h"
-#include "repository.h"
-#include "commit.h"
-#include "refs.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/notes-cache.h"
+#include "components/object-store-ll.h"
+#include "components/pretty.h"
+#include "components/repository.h"
+#include "components/commit.h"
+#include "components/refs.h"
+#include "components/strbuf.h"
 
 static int notes_cache_match_validity(struct repository *r,
 				      const char *ref,

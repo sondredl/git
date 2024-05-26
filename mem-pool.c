@@ -2,10 +2,10 @@
  * Memory Pool implementation logic.
  */
 
-#include "git-compat-util.h"
-#include "mem-pool.h"
-#include "gettext.h"
-#include "trace.h"
+#include "components/git-compat-util.h"
+#include "components/mem-pool.h"
+#include "components/gettext.h"
+#include "components/trace.h"
 
 static struct trace_key trace_mem_pool = TRACE_KEY_INIT(MEMPOOL);
 #define BLOCK_GROWTH_SIZE (1024 * 1024 - sizeof(struct mp_block))

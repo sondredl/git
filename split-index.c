@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "hash.h"
-#include "mem-pool.h"
-#include "read-cache-ll.h"
-#include "split-index.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/hash.h"
+#include "components/mem-pool.h"
+#include "components/read-cache-ll.h"
+#include "components/split-index.h"
+#include "components/strbuf.h"
 #include "ewah/ewok.h"
 
 struct split_index *init_split_index(struct index_state *istate)

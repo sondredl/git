@@ -3,15 +3,15 @@
  *
  * Copyright (C) Linus Torvalds, 2005
  */
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-name.h"
-#include "object-store-ll.h"
-#include "repository.h"
-#include "commit.h"
-#include "parse-options.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-name.h"
+#include "components/object-store-ll.h"
+#include "components/repository.h"
+#include "components/commit.h"
+#include "components/parse-options.h"
 
 static const char * const commit_tree_usage[] = {
 	N_("git commit-tree <tree> [(-p <parent>)...]"),

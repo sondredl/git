@@ -1,7 +1,7 @@
-#include "../../git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "../win32.h"
-#include "../../repository.h"
-#include "config.h"
+#include "components/repository.h"
+#include "components/config.h"
 #include "ntifs.h"
 #include "wsl.h"
 

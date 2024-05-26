@@ -1,10 +1,10 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "strbuf.h"
-#include "parse-options.h"
-#include "string-list.h"
-#include "column.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/strbuf.h"
+#include "components/parse-options.h"
+#include "components/string-list.h"
+#include "components/column.h"
 
 static const char * const builtin_column_usage[] = {
 	N_("git column [<options>]"),

@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "object-store-ll.h"
-#include "reflog.h"
-#include "refs.h"
-#include "revision.h"
-#include "tree.h"
-#include "tree-walk.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/object-store-ll.h"
+#include "components/reflog.h"
+#include "components/refs.h"
+#include "components/revision.h"
+#include "components/tree.h"
+#include "components/tree-walk.h"
 
 /* Remember to update object flag allocation in object.h */
 #define INCOMPLETE	(1u<<10)

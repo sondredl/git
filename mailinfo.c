@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "gettext.h"
-#include "hex-ll.h"
-#include "utf8.h"
-#include "strbuf.h"
-#include "mailinfo.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/hex-ll.h"
+#include "components/utf8.h"
+#include "components/strbuf.h"
+#include "components/mailinfo.h"
 
 static void cleanup_space(struct strbuf *sb)
 {

@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "sigchain.h"
+#include "components/git-compat-util.h"
+#include "components/sigchain.h"
 
 #define SIGCHAIN_MAX_SIGNALS 32
 

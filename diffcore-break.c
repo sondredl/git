@@ -1,11 +1,11 @@
 /*
  * Copyright (C) 2005 Junio C Hamano
  */
-#include "git-compat-util.h"
-#include "diffcore.h"
-#include "hash.h"
-#include "object.h"
-#include "promisor-remote.h"
+#include "components/git-compat-util.h"
+#include "components/diffcore.h"
+#include "components/hash.h"
+#include "components/object.h"
+#include "components/promisor-remote.h"
 
 static int should_break(struct repository *r,
 			struct diff_filespec *src,

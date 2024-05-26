@@ -1,18 +1,18 @@
-#include "git-compat-util.h"
-#include "environment.h"
-#include "hex.h"
-#include "lockfile.h"
-#include "tree.h"
-#include "tree-walk.h"
-#include "cache-tree.h"
-#include "bulk-checkin.h"
-#include "object-file.h"
-#include "object-store-ll.h"
-#include "read-cache-ll.h"
-#include "replace-object.h"
-#include "promisor-remote.h"
-#include "trace.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/environment.h"
+#include "components/hex.h"
+#include "components/lockfile.h"
+#include "components/tree.h"
+#include "components/tree-walk.h"
+#include "components/cache-tree.h"
+#include "components/bulk-checkin.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
+#include "components/read-cache-ll.h"
+#include "components/replace-object.h"
+#include "components/promisor-remote.h"
+#include "components/trace.h"
+#include "components/trace2.h"
 
 #ifndef DEBUG_CACHE_TREE
 #define DEBUG_CACHE_TREE 0
@@ -42,8 +42,8 @@ void cache_tree_free(struct cache_tree **it_p)
 	*it_p = NULL;
 }
 
-static int subtree_name_cmp(const char *one, int onelen,
-			    const char *two, int twolen)
+static int subtree_name_cmp(const char *one, int onelen, const char *two,
+			    int twolen)
 {
 	if (onelen < twolen)
 		return -1;
@@ -61,8 +61,8 @@ int cache_tree_subtree_pos(struct cache_tree *it, const char *path, int pathlen)
 	while (lo < hi) {
 		int mi = lo + (hi - lo) / 2;
 		struct cache_tree_sub *mdl = down[mi];
-		int cmp = subtree_name_cmp(path, pathlen,
-					   mdl->name, mdl->namelen);
+		int cmp = subtree_name_cmp(path, pathlen, mdl->name,
+					   mdl->namelen);
 		if (!cmp)
 			return mi;
 		if (cmp < 0)
@@ -70,13 +70,11 @@ int cache_tree_subtree_pos(struct cache_tree *it, const char *path, int pathlen)
 		else
 			lo = mi + 1;
 	}
-	return -lo-1;
+	return -lo - 1;
 }
 
-static struct cache_tree_sub *find_subtree(struct cache_tree *it,
-					   const char *path,
-					   int pathlen,
-					   int create)
+static struct cache_tree_sub *
+find_subtree(struct cache_tree *it, const char *path, int pathlen, int create)
 {
 	struct cache_tree_sub *down;
 	int pos = cache_tree_subtree_pos(it, path, pathlen);
@@ -85,7 +83,7 @@ static struct cache_tree_sub *find_subtree(struct cache_tree *it,
 	if (!create)
 		return NULL;
 
-	pos = -pos-1;
+	pos = -pos - 1;
 	ALLOC_GROW(it->down, it->subtree_nr + 1, it->subtree_alloc);
 	it->subtree_nr++;
 
@@ -174,8 +172,8 @@ static int verify_cache(struct index_state *istate, int flags)
 				fprintf(stderr, "...\n");
 				break;
 			}
-			fprintf(stderr, "%s: unmerged (%s)\n",
-				ce->name, oid_to_hex(&ce->oid));
+			fprintf(stderr, "%s: unmerged (%s)\n", ce->name,
+				oid_to_hex(&ce->oid));
 		}
 	}
 	if (funny)
@@ -203,8 +201,8 @@ static int verify_cache(struct index_state *istate, int flags)
 				fprintf(stderr, "...\n");
 				break;
 			}
-			fprintf(stderr, "You have both %s and %s\n",
-				this_name, next_name);
+			fprintf(stderr, "You have both %s and %s\n", this_name,
+				next_name);
 		}
 	}
 	if (funny)
@@ -234,7 +232,8 @@ int cache_tree_fully_valid(struct cache_tree *it)
 	int i;
 	if (!it)
 		return 0;
-	if (it->entry_count < 0 || !repo_has_object_file(the_repository, &it->oid))
+	if (it->entry_count < 0 ||
+	    !repo_has_object_file(the_repository, &it->oid))
 		return 0;
 	for (i = 0; i < it->subtree_nr; i++) {
 		if (!cache_tree_fully_valid(it->down[i]->cache_tree))
@@ -245,16 +244,13 @@ int cache_tree_fully_valid(struct cache_tree *it)
 
 static int must_check_existence(const struct cache_entry *ce)
 {
-	return !(repo_has_promisor_remote(the_repository) && ce_skip_worktree(ce));
+	return !(repo_has_promisor_remote(the_repository) &&
+		 ce_skip_worktree(ce));
 }
 
-static int update_one(struct cache_tree *it,
-		      struct cache_entry **cache,
-		      int entries,
-		      const char *base,
-		      int baselen,
-		      int *skip_count,
-		      int flags)
+static int update_one(struct cache_tree *it, struct cache_entry **cache,
+		      int entries, const char *base, int baselen,
+		      int *skip_count, int flags)
 {
 	struct strbuf buffer;
 	int missing_ok = flags & WRITE_TREE_MISSING_OK;
@@ -276,8 +272,7 @@ static int update_one(struct cache_tree *it,
 	if (entries > 0) {
 		const struct cache_entry *ce = cache[0];
 
-		if (S_ISSPARSEDIR(ce->ce_mode) &&
-		    ce->ce_namelen == baselen &&
+		if (S_ISSPARSEDIR(ce->ce_mode) && ce->ce_namelen == baselen &&
 		    !strncmp(ce->name, base, baselen)) {
 			it->entry_count = 1;
 			oidcpy(&it->oid, &ce->oid);
@@ -285,7 +280,8 @@ static int update_one(struct cache_tree *it,
 		}
 	}
 
-	if (0 <= it->entry_count && repo_has_object_file(the_repository, &it->oid))
+	if (0 <= it->entry_count &&
+	    repo_has_object_file(the_repository, &it->oid))
 		return it->entry_count;
 
 	/*
@@ -325,11 +321,8 @@ static int update_one(struct cache_tree *it,
 		sub = find_subtree(it, path + baselen, sublen, 1);
 		if (!sub->cache_tree)
 			sub->cache_tree = cache_tree();
-		subcnt = update_one(sub->cache_tree,
-				    cache + i, entries - i,
-				    path,
-				    baselen + sublen + 1,
-				    &subskip,
+		subcnt = update_one(sub->cache_tree, cache + i, entries - i,
+				    path, baselen + sublen + 1, &subskip,
 				    flags);
 		if (subcnt < 0)
 			return subcnt;
@@ -380,8 +373,7 @@ static int update_one(struct cache_tree *it,
 				to_invalidate = 1;
 				expected_missing = 1;
 			}
-		}
-		else {
+		} else {
 			oid = &ce->oid;
 			mode = ce->ce_mode;
 			entlen = pathlen - baselen;
@@ -389,14 +381,15 @@ static int update_one(struct cache_tree *it,
 		}
 
 		ce_missing_ok = mode == S_IFGITLINK || missing_ok ||
-			!must_check_existence(ce);
+				!must_check_existence(ce);
 		if (is_null_oid(oid) ||
-		    (!ce_missing_ok && !repo_has_object_file(the_repository, oid))) {
+		    (!ce_missing_ok &&
+		     !repo_has_object_file(the_repository, oid))) {
 			strbuf_release(&buffer);
 			if (expected_missing)
 				return -1;
-			return error("invalid object %06o %s for '%.*s'",
-				mode, oid_to_hex(oid), entlen+baselen, path);
+			return error("invalid object %06o %s for '%.*s'", mode,
+				     oid_to_hex(oid), entlen + baselen, path);
 		}
 
 		/*
@@ -426,12 +419,13 @@ static int update_one(struct cache_tree *it,
 			continue;
 
 		strbuf_grow(&buffer, entlen + 100);
-		strbuf_addf(&buffer, "%o %.*s%c", mode, entlen, path + baselen, '\0');
+		strbuf_addf(&buffer, "%o %.*s%c", mode, entlen, path + baselen,
+			    '\0');
 		strbuf_add(&buffer, oid->hash, the_hash_algo->rawsz);
 
 #if DEBUG_CACHE_TREE
-		fprintf(stderr, "cache-tree update-one %o %.*s\n",
-			mode, entlen, path + baselen);
+		fprintf(stderr, "cache-tree update-one %o %.*s\n", mode, entlen,
+			path + baselen);
 #endif
 	}
 
@@ -439,16 +433,18 @@ static int update_one(struct cache_tree *it,
 		struct object_id oid;
 		hash_object_file(the_hash_algo, buffer.buf, buffer.len,
 				 OBJ_TREE, &oid);
-		if (repo_has_object_file_with_flags(the_repository, &oid, OBJECT_INFO_SKIP_FETCH_OBJECT))
+		if (repo_has_object_file_with_flags(
+			    the_repository, &oid,
+			    OBJECT_INFO_SKIP_FETCH_OBJECT))
 			oidcpy(&it->oid, &oid);
 		else
 			to_invalidate = 1;
 	} else if (dryrun) {
 		hash_object_file(the_hash_algo, buffer.buf, buffer.len,
 				 OBJ_TREE, &it->oid);
-	} else if (write_object_file_flags(buffer.buf, buffer.len, OBJ_TREE,
-					   &it->oid, NULL, flags & WRITE_TREE_SILENT
-					   ? HASH_SILENT : 0)) {
+	} else if (write_object_file_flags(
+			   buffer.buf, buffer.len, OBJ_TREE, &it->oid, NULL,
+			   flags & WRITE_TREE_SILENT ? HASH_SILENT : 0)) {
 		strbuf_release(&buffer);
 		return -1;
 	}
@@ -457,8 +453,7 @@ static int update_one(struct cache_tree *it,
 	it->entry_count = to_invalidate ? -1 : i - *skip_count;
 #if DEBUG_CACHE_TREE
 	fprintf(stderr, "cache-tree update-one (%d ent, %d subtree) %s\n",
-		it->entry_count, it->subtree_nr,
-		oid_to_hex(&it->oid));
+		it->entry_count, it->subtree_nr, oid_to_hex(&it->oid));
 #endif
 	return i;
 }
@@ -475,14 +470,15 @@ int cache_tree_update(struct index_state *istate, int flags)
 	if (!istate->cache_tree)
 		istate->cache_tree = cache_tree();
 
-	if (!(flags & WRITE_TREE_MISSING_OK) && repo_has_promisor_remote(the_repository))
+	if (!(flags & WRITE_TREE_MISSING_OK) &&
+	    repo_has_promisor_remote(the_repository))
 		prefetch_cache_entries(istate, must_check_existence);
 
 	trace_performance_enter();
 	trace2_region_enter("cache_tree", "update", the_repository);
 	begin_odb_transaction();
-	i = update_one(istate->cache_tree, istate->cache, istate->cache_nr,
-		       "", 0, &skip, flags);
+	i = update_one(istate->cache_tree, istate->cache, istate->cache_nr, "",
+		       0, &skip, flags);
 	end_odb_transaction();
 	trace2_region_leave("cache_tree", "update", the_repository);
 	trace_performance_leave("cache_tree_update");
@@ -523,7 +519,7 @@ static void write_one(struct strbuf *buffer, struct cache_tree *it,
 	for (i = 0; i < it->subtree_nr; i++) {
 		struct cache_tree_sub *down = it->down[i];
 		if (i) {
-			struct cache_tree_sub *prev = it->down[i-1];
+			struct cache_tree_sub *prev = it->down[i - 1];
 			if (subtree_name_cmp(down->name, down->namelen,
 					     prev->name, prev->namelen) <= 0)
 				die("fatal - unsorted cache subtree");
@@ -557,7 +553,8 @@ static struct cache_tree *read_one(const char **buffer, unsigned long *size_p)
 	}
 	if (!size)
 		goto free_return;
-	buf++; size--;
+	buf++;
+	size--;
 	it = cache_tree();
 
 	cp = buf;
@@ -574,7 +571,8 @@ static struct cache_tree *read_one(const char **buffer, unsigned long *size_p)
 	}
 	if (!size)
 		goto free_return;
-	buf++; size--;
+	buf++;
+	size--;
 	if (0 <= it->entry_count) {
 		if (size < rawsz)
 			goto free_return;
@@ -618,7 +616,7 @@ static struct cache_tree *read_one(const char **buffer, unsigned long *size_p)
 	*size_p = size;
 	return it;
 
- free_return:
+free_return:
 	cache_tree_free(&it);
 	return NULL;
 }
@@ -637,7 +635,8 @@ struct cache_tree *cache_tree_read(const char *buffer, unsigned long size)
 	return result;
 }
 
-static struct cache_tree *cache_tree_find(struct cache_tree *it, const char *path)
+static struct cache_tree *cache_tree_find(struct cache_tree *it,
+					  const char *path)
 {
 	if (!it)
 		return NULL;
@@ -664,8 +663,7 @@ static struct cache_tree *cache_tree_find(struct cache_tree *it, const char *pat
 
 static int write_index_as_tree_internal(struct object_id *oid,
 					struct index_state *index_state,
-					int cache_tree_valid,
-					int flags,
+					int cache_tree_valid, int flags,
 					const char *prefix)
 {
 	if (flags & WRITE_TREE_IGNORE_CACHE_TREE) {
@@ -682,18 +680,18 @@ static int write_index_as_tree_internal(struct object_id *oid,
 		if (!subtree)
 			return WRITE_TREE_PREFIX_ERROR;
 		oidcpy(oid, &subtree->oid);
-	}
-	else
+	} else
 		oidcpy(oid, &index_state->cache_tree->oid);
 
 	return 0;
 }
 
-struct tree* write_in_core_index_as_tree(struct repository *repo) {
+struct tree *write_in_core_index_as_tree(struct repository *repo)
+{
 	struct object_id o;
 	int was_valid, ret;
 
-	struct index_state *index_state	= repo->index;
+	struct index_state *index_state = repo->index;
 	was_valid = index_state->cache_tree &&
 		    cache_tree_fully_valid(index_state->cache_tree);
 
@@ -713,8 +711,8 @@ struct tree* write_in_core_index_as_tree(struct repository *repo) {
 	return lookup_tree(repo, &index_state->cache_tree->oid);
 }
 
-
-int write_index_as_tree(struct object_id *oid, struct index_state *index_state, const char *index_path, int flags, const char *prefix)
+int write_index_as_tree(struct object_id *oid, struct index_state *index_state,
+			const char *index_path, int flags, const char *prefix)
 {
 	int entries, was_valid;
 	struct lock_file lock_file = LOCK_INIT;
@@ -752,15 +750,12 @@ out:
 static void prime_cache_tree_sparse_dir(struct cache_tree *it,
 					struct tree *tree)
 {
-
 	oidcpy(&it->oid, &tree->object.oid);
 	it->entry_count = 1;
 }
 
-static void prime_cache_tree_rec(struct repository *r,
-				 struct cache_tree *it,
-				 struct tree *tree,
-				 struct strbuf *tree_path)
+static void prime_cache_tree_rec(struct repository *r, struct cache_tree *it,
+				 struct tree *tree, struct strbuf *tree_path)
 {
 	struct tree_desc desc;
 	struct name_entry entry;
@@ -784,28 +779,34 @@ static void prime_cache_tree_rec(struct repository *r,
 			sub->cache_tree = cache_tree();
 
 			/*
-			 * Recursively-constructed subtree path is only needed when working
-			 * in a sparse index (where it's used to determine whether the
-			 * subtree is a sparse directory in the index).
+			 * Recursively-constructed subtree path is only needed
+			 * when working in a sparse index (where it's used to
+			 * determine whether the subtree is a sparse directory
+			 * in the index).
 			 */
 			if (r->index->sparse_index) {
 				strbuf_setlen(tree_path, base_path_len);
-				strbuf_add(tree_path, entry.path, entry.pathlen);
+				strbuf_add(tree_path, entry.path,
+					   entry.pathlen);
 				strbuf_addch(tree_path, '/');
 			}
 
 			/*
-			 * If a sparse index is in use, the directory being processed may be
-			 * sparse. To confirm that, we can check whether an entry with that
-			 * exact name exists in the index. If it does, the created subtree
-			 * should be sparse. Otherwise, cache tree expansion should continue
-			 * as normal.
+			 * If a sparse index is in use, the directory being
+			 * processed may be sparse. To confirm that, we can
+			 * check whether an entry with that exact name exists in
+			 * the index. If it does, the created subtree should be
+			 * sparse. Otherwise, cache tree expansion should
+			 * continue as normal.
 			 */
 			if (r->index->sparse_index &&
-			    index_entry_exists(r->index, tree_path->buf, tree_path->len))
-				prime_cache_tree_sparse_dir(sub->cache_tree, subtree);
+			    index_entry_exists(r->index, tree_path->buf,
+					       tree_path->len))
+				prime_cache_tree_sparse_dir(sub->cache_tree,
+							    subtree);
 			else
-				prime_cache_tree_rec(r, sub->cache_tree, subtree, tree_path);
+				prime_cache_tree_rec(r, sub->cache_tree,
+						     subtree, tree_path);
 			cnt += sub->cache_tree->entry_count;
 		}
 	}
@@ -813,8 +814,7 @@ static void prime_cache_tree_rec(struct repository *r,
 	it->entry_count = cnt;
 }
 
-void prime_cache_tree(struct repository *r,
-		      struct index_state *istate,
+void prime_cache_tree(struct repository *r, struct index_state *istate,
 		      struct tree *tree)
 {
 	struct strbuf tree_path = STRBUF_INIT;
@@ -837,8 +837,9 @@ void prime_cache_tree(struct repository *r,
  * (2) Otherwise, find the cache_tree that corresponds to one level
  *     above us, and find ourselves in there.
  */
-static struct cache_tree *find_cache_tree_from_traversal(struct cache_tree *root,
-							 struct traverse_info *info)
+static struct cache_tree *
+find_cache_tree_from_traversal(struct cache_tree *root,
+			       struct traverse_info *info)
 {
 	struct cache_tree *our_parent;
 
@@ -861,8 +862,7 @@ int cache_tree_matches_traversal(struct cache_tree *root,
 	return 0;
 }
 
-static void verify_one_sparse(struct index_state *istate,
-			      struct strbuf *path,
+static void verify_one_sparse(struct index_state *istate, struct strbuf *path,
 			      int pos)
 {
 	struct cache_entry *ce = istate->cache[pos];
@@ -879,10 +879,8 @@ static void verify_one_sparse(struct index_state *istate,
  *      tree that is being verified and verification needs to be restarted from
  *      the new toplevel cache tree.
  */
-static int verify_one(struct repository *r,
-		      struct index_state *istate,
-		      struct cache_tree *it,
-		      struct strbuf *path)
+static int verify_one(struct repository *r, struct index_state *istate,
+		      struct cache_tree *it, struct strbuf *path)
 {
 	int i, pos, len = path->len;
 	struct strbuf tree_buf = STRBUF_INIT;
@@ -931,7 +929,8 @@ static int verify_one(struct repository *r,
 		unsigned mode;
 		int entlen;
 
-		if (ce->ce_flags & (CE_STAGEMASK | CE_INTENT_TO_ADD | CE_REMOVE))
+		if (ce->ce_flags &
+		    (CE_STAGEMASK | CE_INTENT_TO_ADD | CE_REMOVE))
 			BUG("%s with flags 0x%x should not be in cache-tree",
 			    ce->name, ce->ce_flags);
 		name = ce->name + path->len;
@@ -957,8 +956,8 @@ static int verify_one(struct repository *r,
 			 &new_oid);
 	if (!oideq(&new_oid, &it->oid))
 		BUG("cache-tree for path %.*s does not match. "
-		    "Expected %s got %s", len, path->buf,
-		    oid_to_hex(&new_oid), oid_to_hex(&it->oid));
+		    "Expected %s got %s",
+		    len, path->buf, oid_to_hex(&new_oid), oid_to_hex(&it->oid));
 	strbuf_setlen(path, len);
 	strbuf_release(&tree_buf);
 	return 0;

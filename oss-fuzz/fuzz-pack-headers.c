@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "packfile.h"
+#include "components/git-compat-util.h"
+#include "components/packfile.h"
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 

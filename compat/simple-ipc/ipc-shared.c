@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "simple-ipc.h"
+#include "components/git-compat-util.h"
+#include "components/simple-ipc.h"
 
 #ifndef SUPPORTS_SIMPLE_IPC
 /*

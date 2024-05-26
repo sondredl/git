@@ -6,12 +6,12 @@
 *
 */
 
-#include "builtin.h"
-#include "gettext.h"
-#include "hex.h"
-#include "repository.h"
-#include "packfile.h"
-#include "object-store-ll.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/repository.h"
+#include "components/packfile.h"
+#include "components/object-store-ll.h"
 
 #define BLKSIZE 512
 

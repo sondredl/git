@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "version.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/version.h"
+#include "components/strbuf.h"
 
 const char git_version_string[] = GIT_VERSION;
 const char git_built_from_commit_string[] = GIT_BUILT_FROM_COMMIT;

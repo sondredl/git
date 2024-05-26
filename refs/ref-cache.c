@@ -1,10 +1,10 @@
-#include "../git-compat-util.h"
-#include "../hash.h"
-#include "../refs.h"
-#include "../repository.h"
+#include "components/git-compat-util.h"
+#include "components/hash.h"
+#include "components/refs.h"
+#include "components/repository.h"
 #include "refs-internal.h"
 #include "ref-cache.h"
-#include "../iterator.h"
+#include "components/iterator.h"
 
 void add_entry_to_dir(struct ref_dir *dir, struct ref_entry *entry)
 {

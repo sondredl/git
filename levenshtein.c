@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "levenshtein.h"
+#include "components/git-compat-util.h"
+#include "components/levenshtein.h"
 
 /*
  * This function implements the Damerau-Levenshtein algorithm to

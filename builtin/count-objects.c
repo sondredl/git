@@ -4,17 +4,17 @@
  * Copyright (c) 2006 Junio C Hamano
  */
 
-#include "builtin.h"
-#include "config.h"
-#include "dir.h"
-#include "environment.h"
-#include "gettext.h"
-#include "path.h"
-#include "repository.h"
-#include "parse-options.h"
-#include "quote.h"
-#include "packfile.h"
-#include "object-store-ll.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/dir.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/path.h"
+#include "components/repository.h"
+#include "components/parse-options.h"
+#include "components/quote.h"
+#include "components/packfile.h"
+#include "components/object-store-ll.h"
 
 static unsigned long garbage;
 static off_t size_garbage;

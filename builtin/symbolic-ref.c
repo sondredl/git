@@ -1,9 +1,9 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "refs.h"
-#include "parse-options.h"
-#include "strbuf.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/refs.h"
+#include "components/parse-options.h"
+#include "components/strbuf.h"
 
 static const char * const git_symbolic_ref_usage[] = {
 	N_("git symbolic-ref [-m <reason>] <name> <ref>"),

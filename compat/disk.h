@@ -1,8 +1,8 @@
 #ifndef COMPAT_DISK_H
 #define COMPAT_DISK_H
 
-#include "abspath.h"
-#include "gettext.h"
+#include "components/abspath.h"
+#include "components/gettext.h"
 
 static int get_disk_info(struct strbuf *out)
 {

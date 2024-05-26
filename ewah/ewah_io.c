@@ -16,9 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
+
 #include "ewok.h"
-#include "strbuf.h"
+
+#include "components/strbuf.h"
 
 int ewah_serialize_to(struct ewah_bitmap *self,
 		      int (*write_fun)(void *, const void *, size_t),

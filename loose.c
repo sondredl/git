@@ -1,13 +1,13 @@
-#include "git-compat-util.h"
-#include "hash.h"
-#include "path.h"
-#include "object-store.h"
-#include "hex.h"
-#include "wrapper.h"
-#include "gettext.h"
-#include "loose.h"
-#include "lockfile.h"
-#include "oidtree.h"
+#include "components/git-compat-util.h"
+#include "components/hash.h"
+#include "components/path.h"
+#include "components/object-store.h"
+#include "components/hex.h"
+#include "components/wrapper.h"
+#include "components/gettext.h"
+#include "components/loose.h"
+#include "components/lockfile.h"
+#include "components/oidtree.h"
 
 static const char *loose_object_header = "# loose-object-idx\n";
 

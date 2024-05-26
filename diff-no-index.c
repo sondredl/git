@@ -4,17 +4,17 @@
  * Copyright (c) 2008 by Junio C Hamano
  */
 
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "color.h"
-#include "commit.h"
-#include "diff.h"
-#include "diffcore.h"
-#include "gettext.h"
-#include "revision.h"
-#include "parse-options.h"
-#include "string-list.h"
-#include "dir.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/color.h"
+#include "components/commit.h"
+#include "components/diff.h"
+#include "components/diffcore.h"
+#include "components/gettext.h"
+#include "components/revision.h"
+#include "components/parse-options.h"
+#include "components/string-list.h"
+#include "components/dir.h"
 
 static int read_directory_contents(const char *path, struct string_list *list)
 {

@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "environment.h"
-#include "gettext.h"
-#include "string-list.h"
-#include "run-command.h"
-#include "commit.h"
-#include "trailer.h"
-#include "list.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/string-list.h"
+#include "components/run-command.h"
+#include "components/commit.h"
+#include "components/trailer.h"
+#include "components/list.h"
 /*
  * Copyright (c) 2013, 2014 Christian Couder <chriscool@tuxfamily.org>
  */

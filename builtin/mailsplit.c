@@ -4,10 +4,10 @@
  * It just splits a mbox into a list of files: "0001" "0002" ..
  * so you can process them further from there.
  */
-#include "builtin.h"
-#include "gettext.h"
-#include "string-list.h"
-#include "strbuf.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/string-list.h"
+#include "components/strbuf.h"
 
 static const char git_mailsplit_usage[] =
 "git mailsplit [-d<prec>] [-f<n>] [-b] [--keep-cr] -o<directory> [(<mbox>|<Maildir>)...]";

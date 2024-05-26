@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "dir.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/dir.h"
 #include "tr2_sysenv.h"
 
 /*

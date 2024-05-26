@@ -5,14 +5,14 @@
  *
  * Based on git-verify-tag
  */
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "object-name.h"
-#include "repository.h"
-#include "commit.h"
-#include "parse-options.h"
-#include "gpg-interface.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/object-name.h"
+#include "components/repository.h"
+#include "components/commit.h"
+#include "components/parse-options.h"
+#include "components/gpg-interface.h"
 
 static const char * const verify_commit_usage[] = {
 		N_("git verify-commit [-v | --verbose] [--raw] <commit>..."),

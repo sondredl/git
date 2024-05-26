@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "commit.h"
-#include "environment.h"
-#include "gettext.h"
-#include "refs.h"
-#include "notes-utils.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/commit.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/refs.h"
+#include "components/notes-utils.h"
+#include "components/strbuf.h"
 
 void create_notes_commit(struct repository *r,
 			 struct notes_tree *t,

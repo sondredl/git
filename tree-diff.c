@@ -1,13 +1,13 @@
 /*
  * Helper functions for tree diff generation
  */
-#include "git-compat-util.h"
-#include "diff.h"
-#include "diffcore.h"
-#include "hash.h"
-#include "tree.h"
-#include "tree-walk.h"
-#include "environment.h"
+#include "components/git-compat-util.h"
+#include "components/diff.h"
+#include "components/diffcore.h"
+#include "components/hash.h"
+#include "components/tree.h"
+#include "components/tree-walk.h"
+#include "components/environment.h"
 
 /*
  * Some mode bits are also used internally for computations.

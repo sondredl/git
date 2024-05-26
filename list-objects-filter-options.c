@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "gettext.h"
-#include "list-objects-filter-options.h"
-#include "promisor-remote.h"
-#include "trace.h"
-#include "url.h"
-#include "parse-options.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/list-objects-filter-options.h"
+#include "components/promisor-remote.h"
+#include "components/trace.h"
+#include "components/url.h"
+#include "components/parse-options.h"
 
 static int parse_combine_filter(
 	struct list_objects_filter_options *filter_options,

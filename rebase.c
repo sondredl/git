@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "rebase.h"
-#include "parse.h"
-#include "gettext.h"
+#include "components/git-compat-util.h"
+#include "components/rebase.h"
+#include "components/parse.h"
+#include "components/gettext.h"
 
 /*
  * Parses textual value for pull.rebase, branch.<name>.rebase, etc.

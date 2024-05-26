@@ -1,9 +1,9 @@
-#include "git-compat-util.h"
-#include "parse.h"
-#include "environment.h"
-#include "run-command.h"
-#include "strbuf.h"
-#include "prompt.h"
+#include "components/git-compat-util.h"
+#include "components/parse.h"
+#include "components/environment.h"
+#include "components/run-command.h"
+#include "components/strbuf.h"
+#include "components/prompt.h"
 #include "compat/terminal.h"
 
 static char *do_askpass(const char *cmd, const char *prompt)

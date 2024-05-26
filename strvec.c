@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "strvec.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/strvec.h"
+#include "components/strbuf.h"
 
 const char *empty_strvec[] = { NULL };
 

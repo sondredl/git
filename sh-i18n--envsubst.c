@@ -13,8 +13,8 @@
  * both files are reproduced immediately below.
  */
 
-#include "git-compat-util.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/trace2.h"
 
 /* Substitution of environment variables in shell format strings.
    Copyright (C) 2003-2007 Free Software Foundation, Inc.

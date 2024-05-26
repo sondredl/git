@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "environment.h"
-#include "statinfo.h"
+#include "components/git-compat-util.h"
+#include "components/environment.h"
+#include "components/statinfo.h"
 
 /*
  * Munge st_size into an unsigned int.

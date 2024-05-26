@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "hex.h"
-#include "match-trees.h"
-#include "strbuf.h"
-#include "tree.h"
-#include "tree-walk.h"
-#include "object-store-ll.h"
+#include "components/git-compat-util.h"
+#include "components/hex.h"
+#include "components/match-trees.h"
+#include "components/strbuf.h"
+#include "components/tree.h"
+#include "components/tree-walk.h"
+#include "components/object-store-ll.h"
 
 static int score_missing(unsigned mode)
 {
@@ -70,14 +70,15 @@ static void *fill_tree_desc_strict(struct tree_desc *desc,
 static int base_name_entries_compare(const struct name_entry *a,
 				     const struct name_entry *b)
 {
-	return base_name_compare(a->path, tree_entry_len(a), a->mode,
-				 b->path, tree_entry_len(b), b->mode);
+	return base_name_compare(a->path, tree_entry_len(a), a->mode, b->path,
+				 tree_entry_len(b), b->mode);
 }
 
 /*
  * Inspect two trees, and give a score that tells how similar they are.
  */
-static int score_trees(const struct object_id *hash1, const struct object_id *hash2)
+static int score_trees(const struct object_id *hash1,
+		       const struct object_id *hash2)
 {
 	struct tree_desc one;
 	struct tree_desc two;
@@ -131,11 +132,8 @@ static int score_trees(const struct object_id *hash1, const struct object_id *ha
  * Match one itself and its subtrees with two and pick the best match.
  */
 static void match_trees(const struct object_id *hash1,
-			const struct object_id *hash2,
-			int *best_score,
-			char **best_match,
-			const char *base,
-			int recurse_limit)
+			const struct object_id *hash2, int *best_score,
+			char **best_match, const char *base, int recurse_limit)
 {
 	struct tree_desc one;
 	void *one_buf = fill_tree_desc_strict(&one, hash1);
@@ -202,8 +200,7 @@ static int splice_tree(const struct object_id *oid1, const char *prefix,
 		unsigned short mode;
 
 		tree_entry_extract(&desc, &name, &mode);
-		if (strlen(name) == toplen &&
-		    !memcmp(name, prefix, toplen)) {
+		if (strlen(name) == toplen && !memcmp(name, prefix, toplen)) {
 			if (!S_ISDIR(mode))
 				die("entry %s in tree %s is not a tree", name,
 				    oid_to_hex(oid1));
@@ -217,9 +214,9 @@ static int splice_tree(const struct object_id *oid1, const char *prefix,
 			 *   - to discard the "const"; this is OK because we
 			 *     know it points into our non-const "buf"
 			 */
-			rewrite_here = (unsigned char *)(desc.entry.path +
-							 strlen(desc.entry.path) +
-							 1);
+			rewrite_here =
+				(unsigned char *)(desc.entry.path +
+						  strlen(desc.entry.path) + 1);
 			break;
 		}
 		update_tree_entry(&desc);
@@ -251,10 +248,8 @@ static int splice_tree(const struct object_id *oid1, const char *prefix,
  * other hand, it could cover tree one and we might need to pick a
  * subtree of it.
  */
-void shift_tree(struct repository *r,
-		const struct object_id *hash1,
-		const struct object_id *hash2,
-		struct object_id *shifted,
+void shift_tree(struct repository *r, const struct object_id *hash1,
+		const struct object_id *hash2, struct object_id *shifted,
 		int depth_limit)
 {
 	char *add_prefix;
@@ -295,8 +290,8 @@ void shift_tree(struct repository *r,
 			return;
 
 		if (get_tree_entry(r, hash2, del_prefix, shifted, &mode))
-			die("cannot find path %s in tree %s",
-			    del_prefix, oid_to_hex(hash2));
+			die("cannot find path %s in tree %s", del_prefix,
+			    oid_to_hex(hash2));
 		return;
 	}
 
@@ -311,10 +306,8 @@ void shift_tree(struct repository *r,
  * Unfortunately we cannot fundamentally tell which one to
  * be prefixed, as recursive merge can work in either direction.
  */
-void shift_tree_by(struct repository *r,
-		   const struct object_id *hash1,
-		   const struct object_id *hash2,
-		   struct object_id *shifted,
+void shift_tree_by(struct repository *r, const struct object_id *hash1,
+		   const struct object_id *hash2, struct object_id *shifted,
 		   const char *shift_prefix)
 {
 	struct object_id sub1, sub2;

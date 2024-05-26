@@ -1,15 +1,15 @@
 /*
  * Copyright (c) 2011, Google Inc.
  */
-#include "git-compat-util.h"
-#include "convert.h"
-#include "environment.h"
-#include "streaming.h"
-#include "repository.h"
-#include "object-file.h"
-#include "object-store-ll.h"
-#include "replace-object.h"
-#include "packfile.h"
+#include "components/git-compat-util.h"
+#include "components/convert.h"
+#include "components/environment.h"
+#include "components/streaming.h"
+#include "components/repository.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
+#include "components/replace-object.h"
+#include "components/packfile.h"
 
 typedef int (*open_istream_fn)(struct git_istream *,
 			       struct repository *,

@@ -5,14 +5,14 @@
  *
  * Based on git-verify-tag.sh
  */
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "tag.h"
-#include "object-name.h"
-#include "parse-options.h"
-#include "gpg-interface.h"
-#include "ref-filter.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/tag.h"
+#include "components/object-name.h"
+#include "components/parse-options.h"
+#include "components/gpg-interface.h"
+#include "components/ref-filter.h"
 
 static const char * const verify_tag_usage[] = {
 		N_("git verify-tag [-v | --verbose] [--format=<format>] [--raw] <tag>..."),

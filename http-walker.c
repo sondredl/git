@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "repository.h"
-#include "hex.h"
-#include "walker.h"
-#include "http.h"
-#include "list.h"
-#include "transport.h"
-#include "packfile.h"
-#include "object-store-ll.h"
+#include "components/git-compat-util.h"
+#include "components/repository.h"
+#include "components/hex.h"
+#include "components/walker.h"
+#include "components/http.h"
+#include "components/list.h"
+#include "components/transport.h"
+#include "components/packfile.h"
+#include "components/object-store-ll.h"
 
 struct alt_base {
 	char *base;

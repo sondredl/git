@@ -1,12 +1,12 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "lockfile.h"
-#include "credential.h"
-#include "path.h"
-#include "string-list.h"
-#include "parse-options.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/lockfile.h"
+#include "components/credential.h"
+#include "components/path.h"
+#include "components/string-list.h"
+#include "components/parse-options.h"
+#include "components/write-or-die.h"
 
 static struct lock_file credential_lock;
 

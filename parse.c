@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "parse.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/parse.h"
 
 static uintmax_t get_unit_factor(const char *end)
 {

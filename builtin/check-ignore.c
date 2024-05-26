@@ -1,14 +1,14 @@
 #define USE_THE_INDEX_VARIABLE
-#include "builtin.h"
-#include "config.h"
-#include "dir.h"
-#include "gettext.h"
-#include "quote.h"
-#include "pathspec.h"
-#include "parse-options.h"
-#include "repository.h"
-#include "submodule.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/dir.h"
+#include "components/gettext.h"
+#include "components/quote.h"
+#include "components/pathspec.h"
+#include "components/parse-options.h"
+#include "components/repository.h"
+#include "components/submodule.h"
+#include "components/write-or-die.h"
 
 static int quiet, verbose, stdin_paths, show_non_matching, no_index;
 static const char * const check_ignore_usage[] = {

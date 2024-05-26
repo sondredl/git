@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "skipping.h"
-#include "../commit.h"
-#include "../fetch-negotiator.h"
-#include "../hex.h"
-#include "../prio-queue.h"
-#include "../refs.h"
-#include "../repository.h"
-#include "../tag.h"
+#include "components/commit.h"
+#include "components/fetch-negotiator.h"
+#include "components/hex.h"
+#include "components/prio-queue.h"
+#include "components/refs.h"
+#include "components/repository.h"
+#include "components/tag.h"
 
 /* Remember to update object flag allocation in object.h */
 /*

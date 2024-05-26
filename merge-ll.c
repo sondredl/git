@@ -4,15 +4,15 @@
  * Copyright (c) 2007 Junio C Hamano
  */
 
-#include "git-compat-util.h"
-#include "config.h"
-#include "convert.h"
-#include "attr.h"
-#include "xdiff-interface.h"
-#include "run-command.h"
-#include "merge-ll.h"
-#include "quote.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/convert.h"
+#include "components/attr.h"
+#include "components/xdiff-interface.h"
+#include "components/run-command.h"
+#include "components/merge-ll.h"
+#include "components/quote.h"
+#include "components/strbuf.h"
 
 struct ll_merge_driver;
 

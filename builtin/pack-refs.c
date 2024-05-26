@@ -1,10 +1,10 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "refs.h"
-#include "repository.h"
-#include "revision.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/refs.h"
+#include "components/repository.h"
+#include "components/revision.h"
 
 static char const * const pack_refs_usage[] = {
 	N_("git pack-refs [--all] [--no-prune] [--auto] [--include <pattern>] [--exclude <pattern>]"),

@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "pack-mtimes.h"
-#include "object-file.h"
-#include "object-store-ll.h"
-#include "packfile.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/pack-mtimes.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
+#include "components/packfile.h"
+#include "components/strbuf.h"
 
 static char *pack_mtimes_filename(struct packed_git *p)
 {

@@ -1,10 +1,10 @@
 /*
  * Generic implementation of background process infrastructure.
  */
-#include "git-compat-util.h"
-#include "sub-process.h"
-#include "sigchain.h"
-#include "pkt-line.h"
+#include "components/git-compat-util.h"
+#include "components/sub-process.h"
+#include "components/sigchain.h"
+#include "components/pkt-line.h"
 
 int cmd2process_cmp(const void *cmp_data UNUSED,
 		    const struct hashmap_entry *eptr,

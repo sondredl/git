@@ -2,13 +2,13 @@
  * Another stupid program, this one parsing the headers of an
  * email to figure out authorship and subject
  */
-#include "builtin.h"
-#include "abspath.h"
-#include "environment.h"
-#include "gettext.h"
-#include "strbuf.h"
-#include "mailinfo.h"
-#include "parse-options.h"
+#include "components/builtin.h"
+#include "components/abspath.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/strbuf.h"
+#include "components/mailinfo.h"
+#include "components/parse-options.h"
 
 static const char * const mailinfo_usage[] = {
 	/* TRANSLATORS: keep <> in "<" mail ">" info. */

@@ -1,16 +1,16 @@
-#include "git-compat-util.h"
-#include "diagnose.h"
+#include "components/git-compat-util.h"
+#include "components/diagnose.h"
 #include "compat/disk.h"
-#include "archive.h"
-#include "dir.h"
-#include "help.h"
-#include "gettext.h"
-#include "hex.h"
-#include "strvec.h"
-#include "object-store-ll.h"
-#include "packfile.h"
-#include "parse-options.h"
-#include "write-or-die.h"
+#include "components/archive.h"
+#include "components/dir.h"
+#include "components/help.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/strvec.h"
+#include "components/object-store-ll.h"
+#include "components/packfile.h"
+#include "components/parse-options.h"
+#include "components/write-or-die.h"
 
 struct archive_dir {
 	const char *path;
@@ -111,8 +111,7 @@ static void loose_objs_stats(struct strbuf *buf, const char *path)
 
 	while ((e = readdir_skip_dot_and_dotdot(dir)) != NULL)
 		if (get_dtype(e, &count_path, 0) == DT_DIR &&
-		    strlen(e->d_name) == 2 &&
-		    !hex_to_bytes(&c, e->d_name, 1)) {
+		    strlen(e->d_name) == 2 && !hex_to_bytes(&c, e->d_name, 1)) {
 			strbuf_setlen(&count_path, base_path_len);
 			strbuf_addf(&count_path, "%s/", e->d_name);
 			total += (count = count_files(&count_path));
@@ -138,7 +137,8 @@ static int add_directory_to_archiver(struct strvec *archiver_args,
 	dir = opendir(at_root ? "." : path);
 	if (!dir) {
 		if (errno == ENOENT) {
-			warning(_("could not archive missing directory '%s'"), path);
+			warning(_("could not archive missing directory '%s'"),
+				path);
 			return 0;
 		}
 		return error_errno(_("could not open directory '%s'"), path);
@@ -164,10 +164,11 @@ static int add_directory_to_archiver(struct strvec *archiver_args,
 			strvec_pushf(archiver_args, "--add-file=%s", buf.buf);
 		else if (dtype != DT_DIR)
 			warning(_("skipping '%s', which is neither file nor "
-				  "directory"), buf.buf);
+				  "directory"),
+				buf.buf);
 		else if (recurse &&
-			 add_directory_to_archiver(archiver_args,
-						   buf.buf, recurse) < 0)
+			 add_directory_to_archiver(archiver_args, buf.buf,
+						   recurse) < 0)
 			res = -1;
 
 		strbuf_release(&abspath);
@@ -185,13 +186,11 @@ int create_diagnostics_archive(struct strbuf *zip_path, enum diagnose_mode mode)
 	int stdout_fd = -1, archiver_fd = -1;
 	struct strbuf buf = STRBUF_INIT;
 	int res, i;
-	struct archive_dir archive_dirs[] = {
-		{ ".git", 0 },
-		{ ".git/hooks", 0 },
-		{ ".git/info", 0 },
-		{ ".git/logs", 1 },
-		{ ".git/objects/info", 0 }
-	};
+	struct archive_dir archive_dirs[] = { { ".git", 0 },
+					      { ".git/hooks", 0 },
+					      { ".git/info", 0 },
+					      { ".git/logs", 1 },
+					      { ".git/objects/info", 0 } };
 
 	if (mode == DIAGNOSE_NONE) {
 		res = 0;
@@ -220,8 +219,7 @@ int create_diagnostics_archive(struct strbuf *zip_path, enum diagnose_mode mode)
 	strbuf_addf(&buf, "Repository root: %s\n", the_repository->worktree);
 	get_disk_info(&buf);
 	write_or_die(stdout_fd, buf.buf, buf.len);
-	strvec_pushf(&archiver_args,
-		     "--add-virtual-file=diagnostics.log:%.*s",
+	strvec_pushf(&archiver_args, "--add-virtual-file=diagnostics.log:%.*s",
 		     (int)buf.len, buf.buf);
 
 	strbuf_reset(&buf);
@@ -238,22 +236,24 @@ int create_diagnostics_archive(struct strbuf *zip_path, enum diagnose_mode mode)
 	/* Only include this if explicitly requested */
 	if (mode == DIAGNOSE_ALL) {
 		for (i = 0; i < ARRAY_SIZE(archive_dirs); i++) {
-			if (add_directory_to_archiver(&archiver_args,
-						      archive_dirs[i].path,
-						      archive_dirs[i].recursive)) {
-				res = error_errno(_("could not add directory '%s' to archiver"),
-						  archive_dirs[i].path);
+			if (add_directory_to_archiver(
+				    &archiver_args, archive_dirs[i].path,
+				    archive_dirs[i].recursive)) {
+				res = error_errno(
+					_("could not add directory '%s' to archiver"),
+					archive_dirs[i].path);
 				goto diagnose_cleanup;
 			}
 		}
 	}
 
-	strvec_pushl(&archiver_args, "--prefix=",
-		     oid_to_hex(the_hash_algo->empty_tree), "--", NULL);
+	strvec_pushl(&archiver_args,
+		     "--prefix=", oid_to_hex(the_hash_algo->empty_tree), "--",
+		     NULL);
 
 	/* `write_archive()` modifies the `argv` passed to it. Let it. */
-	argv_copy = xmemdupz(archiver_args.v,
-			     sizeof(char *) * archiver_args.nr);
+	argv_copy =
+		xmemdupz(archiver_args.v, sizeof(char *) * archiver_args.nr);
 	res = write_archive(archiver_args.nr, (const char **)argv_copy, NULL,
 			    the_repository, NULL, 0);
 	if (res) {
@@ -261,7 +261,8 @@ int create_diagnostics_archive(struct strbuf *zip_path, enum diagnose_mode mode)
 		goto diagnose_cleanup;
 	}
 
-	fprintf(stderr, "\n"
+	fprintf(stderr,
+		"\n"
 		"Diagnostics complete.\n"
 		"All of the gathered info is captured in '%s'\n",
 		zip_path->buf);

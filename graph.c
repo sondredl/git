@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "config.h"
-#include "commit.h"
-#include "color.h"
-#include "graph.h"
-#include "revision.h"
-#include "strvec.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/config.h"
+#include "components/commit.h"
+#include "components/color.h"
+#include "components/graph.h"
+#include "components/revision.h"
+#include "components/strvec.h"
 
 /* Internal API */
 

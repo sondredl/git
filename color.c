@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "color.h"
-#include "editor.h"
-#include "gettext.h"
-#include "hex-ll.h"
-#include "pager.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/color.h"
+#include "components/editor.h"
+#include "components/gettext.h"
+#include "components/hex-ll.h"
+#include "components/pager.h"
+#include "components/strbuf.h"
 
 static int git_use_color_default = GIT_COLOR_AUTO;
 int color_stdout_is_tty = -1;
@@ -14,18 +14,10 @@ int color_stdout_is_tty = -1;
  * The list of available column colors.
  */
 const char *column_colors_ansi[] = {
-	GIT_COLOR_RED,
-	GIT_COLOR_GREEN,
-	GIT_COLOR_YELLOW,
-	GIT_COLOR_BLUE,
-	GIT_COLOR_MAGENTA,
-	GIT_COLOR_CYAN,
-	GIT_COLOR_BOLD_RED,
-	GIT_COLOR_BOLD_GREEN,
-	GIT_COLOR_BOLD_YELLOW,
-	GIT_COLOR_BOLD_BLUE,
-	GIT_COLOR_BOLD_MAGENTA,
-	GIT_COLOR_BOLD_CYAN,
+	GIT_COLOR_RED,	     GIT_COLOR_GREEN,	     GIT_COLOR_YELLOW,
+	GIT_COLOR_BLUE,	     GIT_COLOR_MAGENTA,	     GIT_COLOR_CYAN,
+	GIT_COLOR_BOLD_RED,  GIT_COLOR_BOLD_GREEN,   GIT_COLOR_BOLD_YELLOW,
+	GIT_COLOR_BOLD_BLUE, GIT_COLOR_BOLD_MAGENTA, GIT_COLOR_BOLD_CYAN,
 	GIT_COLOR_RESET,
 };
 
@@ -81,10 +73,9 @@ static int get_hex_color(const char *in, unsigned char *out)
 static int parse_ansi_color(struct color *out, const char *name, int len)
 {
 	/* Positions in array must match ANSI color codes */
-	static const char * const color_names[] = {
-		"black", "red", "green", "yellow",
-		"blue", "magenta", "cyan", "white"
-	};
+	static const char *const color_names[] = { "black",  "red",  "green",
+						   "yellow", "blue", "magenta",
+						   "cyan",   "white" };
 	int i;
 	int color_offset = COLOR_FOREGROUND_ANSI;
 
@@ -162,12 +153,12 @@ static int parse_color(struct color *out, const char *name, int len)
 		else if (val < 0) {
 			out->type = COLOR_NORMAL;
 			return 0;
-		/* Rewrite 0-7 as more-portable standard colors. */
+			/* Rewrite 0-7 as more-portable standard colors. */
 		} else if (val < 8) {
 			out->type = COLOR_ANSI;
 			out->value = val + COLOR_FOREGROUND_ANSI;
 			return 0;
-		/* Rewrite 8-15 as more-portable aixterm colors. */
+			/* Rewrite 8-15 as more-portable aixterm colors. */
 		} else if (val < 16) {
 			out->type = COLOR_ANSI;
 			out->value = val - 8 + COLOR_FOREGROUND_BRIGHT_ANSI;
@@ -189,14 +180,14 @@ static int parse_attr(const char *name, size_t len)
 		size_t len;
 		int val, neg;
 	} attrs[] = {
-#define ATTR(x, val, neg) { (x), sizeof(x)-1, (val), (neg) }
-		ATTR("bold",      1, 22),
-		ATTR("dim",       2, 22),
-		ATTR("italic",    3, 23),
-		ATTR("ul",        4, 24),
-		ATTR("blink",     5, 25),
-		ATTR("reverse",   7, 27),
-		ATTR("strike",    9, 29)
+#define ATTR(x, val, neg)                        \
+	{                                        \
+		(x), sizeof(x) - 1, (val), (neg) \
+	}
+		ATTR("bold", 1, 22),   ATTR("dim", 2, 22),
+		ATTR("italic", 3, 23), ATTR("ul", 4, 24),
+		ATTR("blink", 5, 25),  ATTR("reverse", 7, 27),
+		ATTR("strike", 9, 29)
 #undef ATTR
 	};
 	int negate = 0;
@@ -224,7 +215,8 @@ int color_parse(const char *value, char *dst)
  * already have the ANSI escape code in it. "out" should have enough
  * space in it to fit any color.
  */
-static char *color_output(char *out, int len, const struct color *c, int background)
+static char *color_output(char *out, int len, const struct color *c,
+			  int background)
 {
 	int offset = 0;
 
@@ -238,13 +230,13 @@ static char *color_output(char *out, int len, const struct color *c, int backgro
 		out += xsnprintf(out, len, "%d", c->value + offset);
 		break;
 	case COLOR_256:
-		out += xsnprintf(out, len, "%d;5;%d", COLOR_FOREGROUND_256 + offset,
-				 c->value);
+		out += xsnprintf(out, len, "%d;5;%d",
+				 COLOR_FOREGROUND_256 + offset, c->value);
 		break;
 	case COLOR_RGB:
 		out += xsnprintf(out, len, "%d;2;%d;%d;%d",
-				 COLOR_FOREGROUND_RGB + offset,
-				 c->red, c->green, c->blue);
+				 COLOR_FOREGROUND_RGB + offset, c->red,
+				 c->green, c->blue);
 		break;
 	}
 	return out;
@@ -316,11 +308,12 @@ int color_parse_mem(const char *value, int value_len, char *dst)
 	}
 
 #undef OUT
-#define OUT(x) do { \
-	if (dst == end) \
-		BUG("color parsing ran out of space"); \
-	*dst++ = (x); \
-} while(0)
+#define OUT(x)                                                 \
+	do {                                                   \
+		if (dst == end)                                \
+			BUG("color parsing ran out of space"); \
+		*dst++ = (x);                                  \
+	} while (0)
 
 	if (has_reset || attr || !color_empty(&fg) || !color_empty(&bg)) {
 		int sep = 0;
@@ -440,7 +433,7 @@ void color_print_strbuf(FILE *fp, const char *color, const struct strbuf *sb)
 }
 
 static int color_vfprintf(FILE *fp, const char *color, const char *fmt,
-		va_list args, const char *trail)
+			  va_list args, const char *trail)
 {
 	int r = 0;
 

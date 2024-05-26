@@ -3,10 +3,10 @@
  *
  * Copyright (c) 2007 Junio C Hamano
  */
-#include "git-compat-util.h"
-#include "attr.h"
-#include "strbuf.h"
-#include "ws.h"
+#include "components/git-compat-util.h"
+#include "components/attr.h"
+#include "components/strbuf.h"
+#include "components/ws.h"
 
 unsigned whitespace_rule_cfg = WS_DEFAULT_RULE;
 

@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "editor.h"
-#include "pager.h"
-#include "run-command.h"
-#include "sigchain.h"
-#include "alias.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/editor.h"
+#include "components/pager.h"
+#include "components/run-command.h"
+#include "components/sigchain.h"
+#include "components/alias.h"
 
 int pager_use_color = 1;
 

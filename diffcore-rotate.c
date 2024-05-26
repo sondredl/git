@@ -2,10 +2,10 @@
  * Copyright (C) 2021, Google LLC.
  * Based on diffcore-order.c, which is Copyright (C) 2005, Junio C Hamano
  */
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "diff.h"
-#include "diffcore.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/diff.h"
+#include "components/diffcore.h"
 
 void diffcore_rotate(struct diff_options *opt)
 {

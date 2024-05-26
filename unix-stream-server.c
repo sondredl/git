@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "lockfile.h"
-#include "unix-socket.h"
-#include "unix-stream-server.h"
+#include "components/git-compat-util.h"
+#include "components/lockfile.h"
+#include "components/unix-socket.h"
+#include "components/unix-stream-server.h"
 
 #define DEFAULT_LOCK_TIMEOUT (100)
 

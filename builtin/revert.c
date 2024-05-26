@@ -1,13 +1,13 @@
-#include "git-compat-util.h"
-#include "builtin.h"
-#include "parse-options.h"
-#include "diff.h"
-#include "gettext.h"
-#include "repository.h"
-#include "revision.h"
-#include "rerere.h"
-#include "sequencer.h"
-#include "branch.h"
+#include "components/git-compat-util.h"
+#include "components/builtin.h"
+#include "components/parse-options.h"
+#include "components/diff.h"
+#include "components/gettext.h"
+#include "components/repository.h"
+#include "components/revision.h"
+#include "components/rerere.h"
+#include "components/sequencer.h"
+#include "components/branch.h"
 
 /*
  * This implements the builtins revert and cherry-pick.

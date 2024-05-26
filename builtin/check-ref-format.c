@@ -2,10 +2,10 @@
  * GIT - The information manager from hell
  */
 
-#include "builtin.h"
-#include "refs.h"
-#include "setup.h"
-#include "strbuf.h"
+#include "components/builtin.h"
+#include "components/refs.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
 
 static const char builtin_check_ref_format_usage[] =
 "git check-ref-format [--normalize] [<options>] <refname>\n"

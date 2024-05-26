@@ -1,8 +1,8 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "hex-ll.h"
-#include "strbuf.h"
-#include "urlmatch.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/hex-ll.h"
+#include "components/strbuf.h"
+#include "components/urlmatch.h"
 
 #define URL_ALPHA "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 #define URL_DIGIT "0123456789"

@@ -1,12 +1,12 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "hash.h"
-#include "refs.h"
-#include "object-name.h"
-#include "parse-options.h"
-#include "quote.h"
-#include "repository.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/hash.h"
+#include "components/refs.h"
+#include "components/object-name.h"
+#include "components/parse-options.h"
+#include "components/quote.h"
+#include "components/repository.h"
 
 static const char * const git_update_ref_usage[] = {
 	N_("git update-ref [<options>] -d <refname> [<old-oid>]"),

@@ -3,17 +3,17 @@
  *
  * Copyright (C) Linus Torvalds, 2005
  */
-#include "builtin.h"
-#include "abspath.h"
-#include "environment.h"
-#include "gettext.h"
-#include "object-file.h"
-#include "parse-options.h"
-#include "path.h"
-#include "refs.h"
-#include "repository.h"
-#include "setup.h"
-#include "strbuf.h"
+#include "components/builtin.h"
+#include "components/abspath.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/object-file.h"
+#include "components/parse-options.h"
+#include "components/path.h"
+#include "components/refs.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
 
 static int guess_repository_type(const char *git_dir)
 {

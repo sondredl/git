@@ -7,7 +7,7 @@
 #include "components/config.h"
 #include "components/gettext.h"
 #include "components/setup.h"
-#include "components/xdiff/xdiff.h"
+#include "xdiff/xdiff.h"
 #include "components/xdiff-interface.h"
 #include "components/parse-options.h"
 

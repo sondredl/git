@@ -5,7 +5,7 @@
 #include "components/repository.h"
 #include "components/string-list.h"
 #include "components/rerere.h"
-#include "components/xdiff/xdiff.h"
+#include "xdiff/xdiff.h"
 #include "components/xdiff-interface.h"
 #include "components/pathspec.h"
 

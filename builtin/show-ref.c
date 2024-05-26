@@ -2,7 +2,7 @@
 #include "components/config.h"
 #include "components/gettext.h"
 #include "components/hex.h"
-#include "components/refs/refs-internal.h"
+#include "refs/refs-internal.h"
 #include "components/object-name.h"
 #include "components/object-store-ll.h"
 #include "components/object.h"

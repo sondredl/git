@@ -33,7 +33,7 @@
 typedef void *SSL;
 #endif
 #ifdef USE_CURL_FOR_IMAP_SEND
-#include "http.h"
+#include "components/http.h"
 #endif
 
 #if defined(USE_CURL_FOR_IMAP_SEND)

@@ -5,6 +5,7 @@
 #include "components/setup.h"
 #include "components/tree.h"
 #include "components/cache-tree.h"
+#include "components/lockfile.h"
 
 int cmd__scrap_cache_tree(int ac UNUSED, const char **av UNUSED)
 {

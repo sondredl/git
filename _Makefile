@@ -4,21 +4,9 @@ BUILD_DIR = o
 
 # build:
 all:
-	cp cleanCode/pre-commit .git/hooks/pre-commit
-	chmod +x .git/hooks/pre-commit
-
 	cmake -B o/ -S .  -G Ninja
 	cd $(BUILD_DIR) && Ninja
 	# cmake -S . -B . -G Ninja
 	# Ninja
 	cp cleanCode/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
-
-# Copy the pre-commit hook
-# copy-hook:
-# 	cp cleanCode/pre-commit .git/hooks/pre-commit
-# 	chmod +x .git/hooks/pre-commit
-
-# Add a setup target to include copying the hook
-# setup: copy-hook
-# 	@echo "Project setup completed."

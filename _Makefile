@@ -1,6 +1,14 @@
 BUILD_DIR = o
+
 all:
 	cmake -B o/ -S .  -G Ninja
 	cd $(BUILD_DIR) && Ninja
 	# cmake -S . -B . -G Ninja
 	# Ninja
+
+# Copy the pre-commit hook
+copy-hook:
+    @echo "Copying pre-commit hook..."
+    # @mkdir -p .git/hooks
+    @cp cleanCode/pre-commit .git/hooks/pre-commit
+    @chmod +x .git/hooks/pre-commit

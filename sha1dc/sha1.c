@@ -6,6 +6,8 @@
 
 #include "components/git-compat-util.h"
 
+#include "components/git-compat-util.h"
+
 #ifndef SHA1DC_NO_STANDARD_INCLUDES
 #include <string.h>
 #include <memory.h>

@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "strbuf.h"
-#include "utf8.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
+#include "components/utf8.h"
 
 /* This code is originally from https://www.cl.cam.ac.uk/~mgk25/ucs/ */
 
@@ -86,7 +86,7 @@ static int git_wcwidth(ucs_char_t ch)
 	/*
 	 * Sorted list of non-overlapping intervals of non-spacing characters,
 	 */
-#include "unicode-width.h"
+#include "components/unicode-width.h"
 
 	/* test for 8-bit control characters */
 	if (ch == 0)

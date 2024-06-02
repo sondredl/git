@@ -1,13 +1,13 @@
 #define USE_THE_INDEX_VARIABLE
 #include "test-tool.h"
-#include "gettext.h"
-#include "hex.h"
-#include "tree.h"
-#include "cache-tree.h"
-#include "parse-options.h"
-#include "read-cache-ll.h"
-#include "repository.h"
-#include "setup.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/tree.h"
+#include "components/cache-tree.h"
+#include "components/parse-options.h"
+#include "components/read-cache-ll.h"
+#include "components/repository.h"
+#include "components/setup.h"
 
 static char const * const test_cache_tree_usage[] = {
 	N_("test-tool cache-tree <options> (control|prime|update)"),

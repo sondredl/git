@@ -4,15 +4,15 @@
  * Copyright (C) Linus Torvalds, 2005
  */
 #define USE_THE_INDEX_VARIABLE
-#include "builtin.h"
-#include "config.h"
-#include "environment.h"
-#include "gettext.h"
-#include "hex.h"
-#include "tree.h"
-#include "cache-tree.h"
-#include "parse-options.h"
-#include "repository.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/tree.h"
+#include "components/cache-tree.h"
+#include "components/parse-options.h"
+#include "components/repository.h"
 
 static const char * const write_tree_usage[] = {
 	N_("git write-tree [--missing-ok] [--prefix=<prefix>/]"),

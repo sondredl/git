@@ -1,5 +1,5 @@
-#include "git-compat-util.h"
-#include "json-writer.h"
+#include "components/git-compat-util.h"
+#include "components/json-writer.h"
 
 void jw_init(struct json_writer *jw)
 {

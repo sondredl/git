@@ -676,7 +676,7 @@ static inline int git_create_symlink(struct index_state *index, const char *targ
 
 #include "compat/bswap.h"
 
-#include "wrapper.h"
+#include "components/wrapper.h"
 
 /* General helper functions */
 NORETURN void usage(const char *err);
@@ -1286,7 +1286,7 @@ static inline size_t xsize_t(off_t len)
 #define HOST_NAME_MAX 256
 #endif
 
-#include "sane-ctype.h"
+#include "components/sane-ctype.h"
 
 /*
  * Like skip_prefix, but compare case-insensitively. Note that the comparison
@@ -1601,7 +1601,7 @@ int uncompress2(Bytef *dest, uLongf *destLen, const Bytef *source,
  * This include must come after system headers, since it introduces macros that
  * replace system names.
  */
-#include "banned.h"
+#include "components/banned.h"
 
 /*
  * container_of - Get the address of an object containing a field.

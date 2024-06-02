@@ -21,19 +21,19 @@
  *  along with this program; if not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "git-compat-util.h"
-#include "config.h"
-#include "credential.h"
-#include "gettext.h"
-#include "run-command.h"
-#include "parse-options.h"
-#include "setup.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/credential.h"
+#include "components/gettext.h"
+#include "components/run-command.h"
+#include "components/parse-options.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
 #if defined(NO_OPENSSL) && !defined(HAVE_OPENSSL_CSPRNG)
 typedef void *SSL;
 #endif
 #ifdef USE_CURL_FOR_IMAP_SEND
-#include "http.h"
+#include "components/http.h"
 #endif
 
 #if defined(USE_CURL_FOR_IMAP_SEND)

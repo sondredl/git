@@ -8,7 +8,7 @@ https://developers.google.com/open-source/licenses/bsd
 
 #include "stack.h"
 
-#include "../write-or-die.h"
+#include "components/write-or-die.h"
 #include "system.h"
 #include "merged.h"
 #include "reader.h"
@@ -17,7 +17,7 @@ https://developers.google.com/open-source/licenses/bsd
 #include "reftable-record.h"
 #include "reftable-merged.h"
 #include "writer.h"
-#include "tempfile.h"
+#include "components/tempfile.h"
 
 static int stack_try_add(struct reftable_stack *st,
 			 int (*write_table)(struct reftable_writer *wr,

@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "environment.h"
-#include "hex.h"
-#include "repository.h"
-#include "pack.h"
-#include "progress.h"
-#include "packfile.h"
-#include "object-file.h"
-#include "object-store-ll.h"
+#include "components/git-compat-util.h"
+#include "components/environment.h"
+#include "components/hex.h"
+#include "components/repository.h"
+#include "components/pack.h"
+#include "components/progress.h"
+#include "components/packfile.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
 
 struct idx_entry {
 	off_t                offset;

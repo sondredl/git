@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "parse.h"
-#include "run-command.h"
-#include "write-or-die.h"
+#include "components/git-compat-util.h"
+#include "components/parse.h"
+#include "components/run-command.h"
+#include "components/write-or-die.h"
 
 /*
  * Some cases use stdio, but want to flush after the write

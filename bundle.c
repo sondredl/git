@@ -1,22 +1,22 @@
-#include "git-compat-util.h"
-#include "lockfile.h"
-#include "bundle.h"
-#include "environment.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-store-ll.h"
-#include "repository.h"
-#include "object.h"
-#include "commit.h"
-#include "diff.h"
-#include "revision.h"
-#include "list-objects.h"
-#include "run-command.h"
-#include "refs.h"
-#include "strvec.h"
-#include "list-objects-filter-options.h"
-#include "connected.h"
-#include "write-or-die.h"
+#include "components/git-compat-util.h"
+#include "components/lockfile.h"
+#include "components/bundle.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-store-ll.h"
+#include "components/repository.h"
+#include "components/object.h"
+#include "components/commit.h"
+#include "components/diff.h"
+#include "components/revision.h"
+#include "components/list-objects.h"
+#include "components/run-command.h"
+#include "components/refs.h"
+#include "components/strvec.h"
+#include "components/list-objects-filter-options.h"
+#include "components/connected.h"
+#include "components/write-or-die.h"
 
 static const char v2_bundle_signature[] = "# v2 git bundle\n";
 static const char v3_bundle_signature[] = "# v3 git bundle\n";
@@ -41,13 +41,16 @@ void bundle_header_release(struct bundle_header *header)
 	list_objects_filter_release(&header->filter);
 }
 
-static int parse_capability(struct bundle_header *header, const char *capability)
+static int parse_capability(struct bundle_header *header,
+			    const char *capability)
 {
 	const char *arg;
 	if (skip_prefix(capability, "object-format=", &arg)) {
 		int algo = hash_algo_by_name(arg);
 		if (algo == GIT_HASH_UNKNOWN)
-			return error(_("unrecognized bundle hash algorithm: %s"), arg);
+			return error(
+				_("unrecognized bundle hash algorithm: %s"),
+				arg);
 		header->hash_algo = &hash_algos[algo];
 		return 0;
 	}
@@ -58,7 +61,8 @@ static int parse_capability(struct bundle_header *header, const char *capability
 	return error(_("unknown capability '%s'"), capability);
 }
 
-static int parse_bundle_signature(struct bundle_header *header, const char *line)
+static int parse_bundle_signature(struct bundle_header *header,
+				  const char *line)
 {
 	int i;
 
@@ -90,8 +94,8 @@ int read_bundle_header_fd(int fd, struct bundle_header *header,
 	header->hash_algo = the_hash_algo;
 
 	/* The bundle header ends with an empty line */
-	while (!strbuf_getwholeline_fd(&buf, fd, '\n') &&
-	       buf.len && buf.buf[0] != '\n') {
+	while (!strbuf_getwholeline_fd(&buf, fd, '\n') && buf.len &&
+	       buf.buf[0] != '\n') {
 		struct object_id oid;
 		int is_prereq = 0;
 		const char *p;
@@ -117,23 +121,25 @@ int read_bundle_header_fd(int fd, struct bundle_header *header,
 		 * followed by SP and subject line.
 		 */
 		if (parse_oid_hex_algop(buf.buf, &oid, &p, header->hash_algo) ||
-		    (*p && !isspace(*p)) ||
-		    (!is_prereq && !*p)) {
+		    (*p && !isspace(*p)) || (!is_prereq && !*p)) {
 			if (report_path)
 				error(_("unrecognized header: %s%s (%d)"),
-				      (is_prereq ? "-" : ""), buf.buf, (int)buf.len);
+				      (is_prereq ? "-" : ""), buf.buf,
+				      (int)buf.len);
 			status = -1;
 			break;
 		} else {
 			struct object_id *dup = oiddup(&oid);
 			if (is_prereq)
-				string_list_append(&header->prerequisites, "")->util = dup;
+				string_list_append(&header->prerequisites, "")
+					->util = dup;
 			else
-				string_list_append(&header->references, p + 1)->util = dup;
+				string_list_append(&header->references, p + 1)
+					->util = dup;
 		}
 	}
 
- abort:
+abort:
 	if (status) {
 		close(fd);
 		fd = -1;
@@ -190,7 +196,7 @@ static int list_refs(struct string_list *r, int argc, const char **argv)
 }
 
 /* Remember to update object flag allocation in object.h */
-#define PREREQ_MARK (1u<<16)
+#define PREREQ_MARK (1u << 16)
 
 struct string_list_iterator {
 	struct string_list *list;
@@ -207,8 +213,7 @@ static const struct object_id *iterate_ref_map(void *cb_data)
 	return iter->list->items[iter->cur++].util;
 }
 
-int verify_bundle(struct repository *r,
-		  struct bundle_header *header,
+int verify_bundle(struct repository *r, struct bundle_header *header,
 		  enum verify_bundle_flags flags)
 {
 	/*
@@ -255,7 +260,7 @@ int verify_bundle(struct repository *r,
 
 		r = &header->references;
 		printf_ln(Q_("The bundle contains this ref:",
-			     "The bundle contains these %"PRIuMAX" refs:",
+			     "The bundle contains these %" PRIuMAX " refs:",
 			     r->nr),
 			  (uintmax_t)r->nr);
 		list_refs(r, 0, NULL);
@@ -265,7 +270,8 @@ int verify_bundle(struct repository *r,
 			printf_ln(_("The bundle records a complete history."));
 		} else {
 			printf_ln(Q_("The bundle requires this ref:",
-				     "The bundle requires these %"PRIuMAX" refs:",
+				     "The bundle requires these %" PRIuMAX
+				     " refs:",
 				     r->nr),
 				  (uintmax_t)r->nr);
 			list_refs(r, 0, NULL);
@@ -309,23 +315,21 @@ static int is_tag_in_date_range(struct object *tag, struct rev_info *revs)
 		goto out;
 	date = parse_timestamp(line, NULL, 10);
 	result = (revs->max_age == -1 || revs->max_age < date) &&
-		(revs->min_age == -1 || revs->min_age > date);
+		 (revs->min_age == -1 || revs->min_age > date);
 out:
 	free(buf);
 	return result;
 }
 
-
 /* Write the pack data to bundle_fd */
-static int write_pack_data(int bundle_fd, struct rev_info *revs, struct strvec *pack_options)
+static int write_pack_data(int bundle_fd, struct rev_info *revs,
+			   struct strvec *pack_options)
 {
 	struct child_process pack_objects = CHILD_PROCESS_INIT;
 	int i;
 
-	strvec_pushl(&pack_objects.args,
-		     "pack-objects",
-		     "--stdout", "--thin", "--delta-base-offset",
-		     NULL);
+	strvec_pushl(&pack_objects.args, "pack-objects", "--stdout", "--thin",
+		     "--delta-base-offset", NULL);
 	strvec_pushv(&pack_objects.args, pack_options->v);
 	if (revs->filter.choice)
 		strvec_pushf(&pack_objects.args, "--filter=%s",
@@ -354,7 +358,8 @@ static int write_pack_data(int bundle_fd, struct rev_info *revs, struct strvec *
 		struct object *object = revs->pending.objects[i].item;
 		if (object->flags & UNINTERESTING)
 			write_or_die(pack_objects.in, "^", 1);
-		write_or_die(pack_objects.in, oid_to_hex(&object->oid), the_hash_algo->hexsz);
+		write_or_die(pack_objects.in, oid_to_hex(&object->oid),
+			     the_hash_algo->hexsz);
 		write_or_die(pack_objects.in, "\n", 1);
 	}
 	close(pack_objects.in);
@@ -394,7 +399,7 @@ static int write_bundle_refs(int bundle_fd, struct rev_info *revs)
 		display_ref = (flag & REF_ISSYMREF) ? e->name : ref;
 
 		if (e->item->type == OBJ_TAG &&
-				!is_tag_in_date_range(e->item, revs)) {
+		    !is_tag_in_date_range(e->item, revs)) {
 			e->item->flags |= UNINTERESTING;
 			goto skip_write_ref;
 		}
@@ -425,7 +430,8 @@ static int write_bundle_refs(int bundle_fd, struct rev_info *revs)
 			 * in terms of a tag (e.g. v2.0 from the range
 			 * "v1.0..v2.0")?
 			 */
-			struct commit *one = lookup_commit_reference(revs->repo, &oid);
+			struct commit *one =
+				lookup_commit_reference(revs->repo, &oid);
 			struct object *obj;
 
 			if (e->item == &(one->object)) {
@@ -445,11 +451,12 @@ static int write_bundle_refs(int bundle_fd, struct rev_info *revs)
 		}
 
 		ref_count++;
-		write_or_die(bundle_fd, oid_to_hex(&e->item->oid), the_hash_algo->hexsz);
+		write_or_die(bundle_fd, oid_to_hex(&e->item->oid),
+			     the_hash_algo->hexsz);
 		write_or_die(bundle_fd, " ", 1);
 		write_or_die(bundle_fd, display_ref, strlen(display_ref));
 		write_or_die(bundle_fd, "\n", 1);
- skip_write_ref:
+	skip_write_ref:
 		free(ref);
 	}
 
@@ -490,8 +497,8 @@ static void write_bundle_prerequisites(struct commit *commit, void *data)
 	strbuf_release(&buf);
 }
 
-int create_bundle(struct repository *r, const char *path,
-		  int argc, const char **argv, struct strvec *pack_options, int version)
+int create_bundle(struct repository *r, const char *path, int argc,
+		  const char **argv, struct strvec *pack_options, int version)
 {
 	struct lock_file lock = LOCK_INIT;
 	int bundle_fd = -1;
@@ -542,18 +549,23 @@ int create_bundle(struct repository *r, const char *path,
 	if (version < 2 || version > 3) {
 		die(_("unsupported bundle version %d"), version);
 	} else if (version < min_version) {
-		die(_("cannot write bundle version %d with algorithm %s"), version, the_hash_algo->name);
+		die(_("cannot write bundle version %d with algorithm %s"),
+		    version, the_hash_algo->name);
 	} else if (version == 2) {
-		write_or_die(bundle_fd, v2_bundle_signature, strlen(v2_bundle_signature));
+		write_or_die(bundle_fd, v2_bundle_signature,
+			     strlen(v2_bundle_signature));
 	} else {
 		const char *capability = "@object-format=";
-		write_or_die(bundle_fd, v3_bundle_signature, strlen(v3_bundle_signature));
+		write_or_die(bundle_fd, v3_bundle_signature,
+			     strlen(v3_bundle_signature));
 		write_or_die(bundle_fd, capability, strlen(capability));
-		write_or_die(bundle_fd, the_hash_algo->name, strlen(the_hash_algo->name));
+		write_or_die(bundle_fd, the_hash_algo->name,
+			     strlen(the_hash_algo->name));
 		write_or_die(bundle_fd, "\n", 1);
 
 		if (revs.filter.choice) {
-			const char *value = expand_list_objects_filter_spec(&revs.filter);
+			const char *value =
+				expand_list_objects_filter_spec(&revs.filter);
 			capability = "@filter=";
 			write_or_die(bundle_fd, capability, strlen(capability));
 			write_or_die(bundle_fd, value, strlen(value));
@@ -570,8 +582,8 @@ int create_bundle(struct repository *r, const char *path,
 		struct object_array_entry *e = revs.pending.objects + i;
 		if (e)
 			add_object_array_with_path(e->item, e->name,
-						   &revs_copy.pending,
-						   e->mode, e->path);
+						   &revs_copy.pending, e->mode,
+						   e->path);
 	}
 
 	/* write prerequisites */
@@ -610,8 +622,8 @@ err:
 	return -1;
 }
 
-int unbundle(struct repository *r, struct bundle_header *header,
-	     int bundle_fd, struct strvec *extra_index_pack_args,
+int unbundle(struct repository *r, struct bundle_header *header, int bundle_fd,
+	     struct strvec *extra_index_pack_args,
 	     enum verify_bundle_flags flags)
 {
 	struct child_process ip = CHILD_PROCESS_INIT;

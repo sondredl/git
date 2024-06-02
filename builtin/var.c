@@ -3,15 +3,15 @@
  *
  * Copyright (C) Eric Biederman, 2005
  */
-#include "builtin.h"
-#include "attr.h"
-#include "config.h"
-#include "editor.h"
-#include "ident.h"
-#include "pager.h"
-#include "refs.h"
-#include "path.h"
-#include "strbuf.h"
+#include "components/builtin.h"
+#include "components/attr.h"
+#include "components/config.h"
+#include "components/editor.h"
+#include "components/ident.h"
+#include "components/pager.h"
+#include "components/refs.h"
+#include "components/path.h"
+#include "components/strbuf.h"
 
 static const char var_usage[] = "git var (-l | <variable>)";
 

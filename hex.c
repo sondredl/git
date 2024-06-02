@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "hash.h"
-#include "hex.h"
+#include "components/git-compat-util.h"
+#include "components/hash.h"
+#include "components/hex.h"
 
 static int get_hash_hex_algop(const char *hex, unsigned char *hash,
 			      const struct git_hash_algo *algop)

@@ -1,5 +1,5 @@
-#include "../git-compat-util.h"
-#include "../wrapper.h"
+#include "components/git-compat-util.h"
+#include "components/wrapper.h"
 
 ssize_t git_pread(int fd, void *buf, size_t count, off_t offset)
 {

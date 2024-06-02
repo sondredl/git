@@ -1,8 +1,8 @@
-#include "git-compat-util.h"
-#include "path.h"
-#include "quote.h"
-#include "strbuf.h"
-#include "strvec.h"
+#include "components/git-compat-util.h"
+#include "components/path.h"
+#include "components/quote.h"
+#include "components/strbuf.h"
+#include "components/strvec.h"
 
 int quote_path_fully = 1;
 

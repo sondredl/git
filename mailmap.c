@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "environment.h"
-#include "string-list.h"
-#include "mailmap.h"
-#include "object-name.h"
-#include "object-store-ll.h"
-#include "setup.h"
+#include "components/git-compat-util.h"
+#include "components/environment.h"
+#include "components/string-list.h"
+#include "components/mailmap.h"
+#include "components/object-name.h"
+#include "components/object-store-ll.h"
+#include "components/setup.h"
 
 const char *git_mailmap_file;
 const char *git_mailmap_blob;

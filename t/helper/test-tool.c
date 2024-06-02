@@ -1,8 +1,8 @@
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 #include "test-tool.h"
 #include "test-tool-utils.h"
-#include "trace2.h"
-#include "parse-options.h"
+#include "components/trace2.h"
+#include "components/parse-options.h"
 
 static const char * const test_tool_usage[] = {
 	"test-tool [-C <directory>] <command [<arguments>...]]",

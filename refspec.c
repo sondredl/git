@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "hash.h"
-#include "hex.h"
-#include "strvec.h"
-#include "refs.h"
-#include "refspec.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/hash.h"
+#include "components/hex.h"
+#include "components/strvec.h"
+#include "components/refs.h"
+#include "components/refspec.h"
+#include "components/strbuf.h"
 
 static struct refspec_item s_tag_refspec = {
 	.force = 0,

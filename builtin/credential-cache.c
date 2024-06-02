@@ -1,9 +1,9 @@
-#include "builtin.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "path.h"
-#include "strbuf.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/path.h"
+#include "components/strbuf.h"
+#include "components/write-or-die.h"
 
 #ifndef NO_UNIX_SOCKETS
 

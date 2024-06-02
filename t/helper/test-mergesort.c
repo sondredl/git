@@ -1,7 +1,7 @@
 #include "test-tool.h"
-#include "mem-pool.h"
-#include "mergesort.h"
-#include "strbuf.h"
+#include "components/mem-pool.h"
+#include "components/mergesort.h"
+#include "components/strbuf.h"
 
 static uint32_t minstd_rand(uint32_t *state)
 {

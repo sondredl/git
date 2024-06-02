@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "chdir-notify.h"
-#include "list.h"
-#include "path.h"
-#include "strbuf.h"
-#include "trace.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/chdir-notify.h"
+#include "components/list.h"
+#include "components/path.h"
+#include "components/strbuf.h"
+#include "components/trace.h"
 
 struct chdir_notify_entry {
 	const char *name;
@@ -14,8 +14,7 @@ struct chdir_notify_entry {
 };
 static LIST_HEAD(chdir_notify_entries);
 
-void chdir_notify_register(const char *name,
-			   chdir_notify_callback cb,
+void chdir_notify_register(const char *name, chdir_notify_callback cb,
 			   void *data)
 {
 	struct chdir_notify_entry *e = xmalloc(sizeof(*e));
@@ -25,10 +24,8 @@ void chdir_notify_register(const char *name,
 	list_add_tail(&e->list, &chdir_notify_entries);
 }
 
-static void reparent_cb(const char *name,
-			const char *old_cwd,
-			const char *new_cwd,
-			void *data)
+static void reparent_cb(const char *name, const char *old_cwd,
+			const char *new_cwd, void *data)
 {
 	char **path = data;
 	char *tmp = *path;
@@ -40,8 +37,7 @@ static void reparent_cb(const char *name,
 	free(tmp);
 
 	if (name) {
-		trace_printf_key(&trace_setup_key,
-				 "setup: reparent %s to '%s'",
+		trace_printf_key(&trace_setup_key, "setup: reparent %s to '%s'",
 				 name, *path);
 	}
 }
@@ -65,11 +61,10 @@ int chdir_notify(const char *new_cwd)
 		return -1;
 	}
 
-	trace_printf_key(&trace_setup_key,
-			 "setup: chdir from '%s' to '%s'",
+	trace_printf_key(&trace_setup_key, "setup: chdir from '%s' to '%s'",
 			 old_cwd.buf, new_cwd);
 
-	list_for_each(pos, &chdir_notify_entries) {
+	list_for_each (pos, &chdir_notify_entries) {
 		struct chdir_notify_entry *e =
 			list_entry(pos, struct chdir_notify_entry, list);
 		e->cb(e->name, old_cwd.buf, new_cwd, e->data);
@@ -79,8 +74,7 @@ int chdir_notify(const char *new_cwd)
 	return 0;
 }
 
-char *reparent_relative_path(const char *old_cwd,
-			     const char *new_cwd,
+char *reparent_relative_path(const char *old_cwd, const char *new_cwd,
 			     const char *path)
 {
 	char *ret, *full;

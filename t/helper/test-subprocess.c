@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "run-command.h"
-#include "setup.h"
+#include "components/run-command.h"
+#include "components/setup.h"
 
 int cmd__subprocess(int argc, const char **argv)
 {

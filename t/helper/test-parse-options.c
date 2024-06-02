@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "parse-options.h"
-#include "strbuf.h"
-#include "string-list.h"
-#include "trace2.h"
+#include "components/parse-options.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
+#include "components/trace2.h"
 
 static int boolean = 0;
 static int integer = 0;

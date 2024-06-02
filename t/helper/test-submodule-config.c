@@ -1,11 +1,11 @@
 #include "test-tool.h"
-#include "config.h"
-#include "hash.h"
-#include "object-name.h"
-#include "repository.h"
-#include "setup.h"
-#include "submodule-config.h"
-#include "submodule.h"
+#include "components/config.h"
+#include "components/hash.h"
+#include "components/object-name.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/submodule-config.h"
+#include "components/submodule.h"
 
 static void die_usage(int argc UNUSED, const char **argv, const char *msg)
 {

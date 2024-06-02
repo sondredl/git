@@ -1,4 +1,4 @@
-#include "../../git-compat-util.h"
+#include "components/git-compat-util.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"

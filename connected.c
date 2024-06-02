@@ -1,13 +1,13 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-store-ll.h"
-#include "run-command.h"
-#include "sigchain.h"
-#include "connected.h"
-#include "transport.h"
-#include "packfile.h"
-#include "promisor-remote.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-store-ll.h"
+#include "components/run-command.h"
+#include "components/sigchain.h"
+#include "components/connected.h"
+#include "components/transport.h"
+#include "components/packfile.h"
+#include "components/promisor-remote.h"
 
 /*
  * If we feed all the commits we want to verify to this command

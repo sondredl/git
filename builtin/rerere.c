@@ -1,13 +1,13 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "repository.h"
-#include "string-list.h"
-#include "rerere.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/repository.h"
+#include "components/string-list.h"
+#include "components/rerere.h"
 #include "xdiff/xdiff.h"
-#include "xdiff-interface.h"
-#include "pathspec.h"
+#include "components/xdiff-interface.h"
+#include "components/pathspec.h"
 
 static const char * const rerere_usage[] = {
 	N_("git rerere [clear | forget <pathspec>... | diff | status | remaining | gc]"),

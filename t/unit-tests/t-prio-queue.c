@@ -1,5 +1,5 @@
 #include "test-lib.h"
-#include "prio-queue.h"
+#include "components/prio-queue.h"
 
 static int intcmp(const void *va, const void *vb, void *data UNUSED)
 {

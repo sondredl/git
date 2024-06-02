@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "strmap.h"
-#include "mem-pool.h"
+#include "components/git-compat-util.h"
+#include "components/strmap.h"
+#include "components/mem-pool.h"
 
 int cmp_strmap_entry(const void *hashmap_cmp_fn_data UNUSED,
 		     const struct hashmap_entry *entry1,

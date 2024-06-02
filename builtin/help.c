@@ -1,18 +1,18 @@
 /*
  * Builtin help command
  */
-#include "builtin.h"
-#include "config.h"
-#include "exec-cmd.h"
-#include "gettext.h"
-#include "pager.h"
-#include "parse-options.h"
-#include "path.h"
-#include "run-command.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/exec-cmd.h"
+#include "components/gettext.h"
+#include "components/pager.h"
+#include "components/parse-options.h"
+#include "components/path.h"
+#include "components/run-command.h"
 #include "config-list.h"
-#include "help.h"
-#include "alias.h"
-#include "setup.h"
+#include "components/help.h"
+#include "components/alias.h"
+#include "components/setup.h"
 
 #ifndef DEFAULT_HELP_FORMAT
 #define DEFAULT_HELP_FORMAT "man"

@@ -1,5 +1,5 @@
 #include "test-tool.h"
-#include "gettext.h"
+#include "components/gettext.h"
 
 struct reg_flag {
 	const char *name;

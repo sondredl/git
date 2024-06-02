@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "parse-options.h"
+#include "components/git-compat-util.h"
+#include "components/parse-options.h"
 
 static const char *getcwd_usage[] = {
 	"test-tool getcwd",

@@ -1,16 +1,16 @@
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "config.h"
-#include "credential.h"
-#include "gettext.h"
-#include "string-list.h"
-#include "run-command.h"
-#include "url.h"
-#include "prompt.h"
-#include "sigchain.h"
-#include "strbuf.h"
-#include "urlmatch.h"
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/config.h"
+#include "components/credential.h"
+#include "components/gettext.h"
+#include "components/string-list.h"
+#include "components/run-command.h"
+#include "components/url.h"
+#include "components/prompt.h"
+#include "components/sigchain.h"
+#include "components/strbuf.h"
+#include "components/urlmatch.h"
+#include "components/git-compat-util.h"
 
 void credential_init(struct credential *c)
 {
@@ -36,14 +36,10 @@ int credential_match(const struct credential *want,
 		     const struct credential *have, int match_password)
 {
 #define CHECK(x) (!want->x || (have->x && !strcmp(want->x, have->x)))
-	return CHECK(protocol) &&
-	       CHECK(host) &&
-	       CHECK(path) &&
-	       CHECK(username) &&
-	       (!match_password || CHECK(password));
+	return CHECK(protocol) && CHECK(host) && CHECK(path) &&
+	       CHECK(username) && (!match_password || CHECK(password));
 #undef CHECK
 }
-
 
 static int credential_from_potentially_partial_url(struct credential *c,
 						   const char *url);
@@ -71,8 +67,7 @@ static int credential_config_callback(const char *var, const char *value,
 			free(c->username);
 			c->username = xstrdup(value);
 		}
-	}
-	else if (!strcmp(key, "usehttppath"))
+	} else if (!strcmp(key, "usehttppath"))
 		c->use_http_path = git_config_bool(var, value);
 
 	return 0;
@@ -202,10 +197,9 @@ static void credential_getpass(struct credential *c)
 {
 	if (!c->username)
 		c->username = credential_ask_one("Username", c,
-						 PROMPT_ASKPASS|PROMPT_ECHO);
+						 PROMPT_ASKPASS | PROMPT_ECHO);
 	if (!c->password)
-		c->password = credential_ask_one("Password", c,
-						 PROMPT_ASKPASS);
+		c->password = credential_ask_one("Password", c, PROMPT_ASKPASS);
 }
 
 int credential_read(struct credential *c, FILE *fp)
@@ -246,7 +240,8 @@ int credential_read(struct credential *c, FILE *fp)
 			strvec_push(&c->wwwauth_headers, value);
 		} else if (!strcmp(key, "password_expiry_utc")) {
 			errno = 0;
-			c->password_expiry_utc = parse_timestamp(value, NULL, 10);
+			c->password_expiry_utc =
+				parse_timestamp(value, NULL, 10);
 			if (c->password_expiry_utc == 0 || errno == ERANGE)
 				c->password_expiry_utc = TIME_MAX;
 		} else if (!strcmp(key, "oauth_refresh_token")) {
@@ -287,18 +282,19 @@ void credential_write(const struct credential *c, FILE *fp)
 	credential_write_item(fp, "path", c->path, 0);
 	credential_write_item(fp, "username", c->username, 0);
 	credential_write_item(fp, "password", c->password, 0);
-	credential_write_item(fp, "oauth_refresh_token", c->oauth_refresh_token, 0);
+	credential_write_item(fp, "oauth_refresh_token", c->oauth_refresh_token,
+			      0);
 	if (c->password_expiry_utc != TIME_MAX) {
-		char *s = xstrfmt("%"PRItime, c->password_expiry_utc);
+		char *s = xstrfmt("%" PRItime, c->password_expiry_utc);
 		credential_write_item(fp, "password_expiry_utc", s, 0);
 		free(s);
 	}
 	for (size_t i = 0; i < c->wwwauth_headers.nr; i++)
-		credential_write_item(fp, "wwwauth[]", c->wwwauth_headers.v[i], 0);
+		credential_write_item(fp, "wwwauth[]", c->wwwauth_headers.v[i],
+				      0);
 }
 
-static int run_credential_helper(struct credential *c,
-				 const char *cmd,
+static int run_credential_helper(struct credential *c, const char *cmd,
 				 int want_output)
 {
 	struct child_process helper = CHILD_PROCESS_INIT;
@@ -418,8 +414,8 @@ void credential_reject(struct credential *c)
 	c->approved = 0;
 }
 
-static int check_url_component(const char *url, int quiet,
-			       const char *name, const char *value)
+static int check_url_component(const char *url, int quiet, const char *name,
+			       const char *value)
 {
 	if (!value)
 		return 0;
@@ -489,8 +485,7 @@ static int credential_from_url_1(struct credential *c, const char *url,
 	if (!at || slash <= at) {
 		/* Case (1) */
 		host = cp;
-	}
-	else if (!colon || at <= colon) {
+	} else if (!colon || at <= colon) {
 		/* Case (2) */
 		c->username = url_decode_mem(cp, at - cp);
 		if (c->username && *c->username)

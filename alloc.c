@@ -8,14 +8,14 @@
  * up with maximal alignment because it doesn't know what the object alignment
  * for the new allocation is.
  */
-#include "git-compat-util.h"
-#include "object.h"
-#include "blob.h"
-#include "tree.h"
-#include "commit.h"
-#include "repository.h"
-#include "tag.h"
-#include "alloc.h"
+#include "components/git-compat-util.h"
+#include "components/object.h"
+#include "components/blob.h"
+#include "components/tree.h"
+#include "components/commit.h"
+#include "components/repository.h"
+#include "components/tag.h"
+#include "components/alloc.h"
 
 #define BLOCKING 1024
 
@@ -28,8 +28,8 @@ union any_object {
 };
 
 struct alloc_state {
-	int nr;    /* number of nodes left in current allocation */
-	void *p;   /* first free node in current allocation */
+	int nr; /* number of nodes left in current allocation */
+	void *p; /* first free node in current allocation */
 
 	/* bookkeeping of allocations */
 	void **slabs;
@@ -72,28 +72,32 @@ static inline void *alloc_node(struct alloc_state *s, size_t node_size)
 
 void *alloc_blob_node(struct repository *r)
 {
-	struct blob *b = alloc_node(r->parsed_objects->blob_state, sizeof(struct blob));
+	struct blob *b =
+		alloc_node(r->parsed_objects->blob_state, sizeof(struct blob));
 	b->object.type = OBJ_BLOB;
 	return b;
 }
 
 void *alloc_tree_node(struct repository *r)
 {
-	struct tree *t = alloc_node(r->parsed_objects->tree_state, sizeof(struct tree));
+	struct tree *t =
+		alloc_node(r->parsed_objects->tree_state, sizeof(struct tree));
 	t->object.type = OBJ_TREE;
 	return t;
 }
 
 void *alloc_tag_node(struct repository *r)
 {
-	struct tag *t = alloc_node(r->parsed_objects->tag_state, sizeof(struct tag));
+	struct tag *t =
+		alloc_node(r->parsed_objects->tag_state, sizeof(struct tag));
 	t->object.type = OBJ_TAG;
 	return t;
 }
 
 void *alloc_object_node(struct repository *r)
 {
-	struct object *obj = alloc_node(r->parsed_objects->object_state, sizeof(union any_object));
+	struct object *obj = alloc_node(r->parsed_objects->object_state,
+					sizeof(union any_object));
 	obj->type = OBJ_NONE;
 	return obj;
 }
@@ -117,7 +121,8 @@ void init_commit_node(struct commit *c)
 
 void *alloc_commit_node(struct repository *r)
 {
-	struct commit *c = alloc_node(r->parsed_objects->commit_state, sizeof(struct commit));
+	struct commit *c = alloc_node(r->parsed_objects->commit_state,
+				      sizeof(struct commit));
 	init_commit_node(c);
 	return c;
 }

@@ -1,9 +1,9 @@
-#include "builtin.h"
-#include "abspath.h"
-#include "gettext.h"
-#include "object-file.h"
-#include "parse-options.h"
-#include "diagnose.h"
+#include "components/builtin.h"
+#include "components/abspath.h"
+#include "components/gettext.h"
+#include "components/object-file.h"
+#include "components/parse-options.h"
+#include "components/diagnose.h"
 
 static const char * const diagnose_usage[] = {
 	N_("git diagnose [(-o | --output-directory) <path>] [(-s | --suffix) <format>]\n"

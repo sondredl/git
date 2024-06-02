@@ -1,8 +1,8 @@
-#include "git-compat-util.h"
-#include "merge-ll.h"
-#include "blob.h"
-#include "merge-blobs.h"
-#include "object-store-ll.h"
+#include "components/git-compat-util.h"
+#include "components/merge-ll.h"
+#include "components/blob.h"
+#include "components/merge-blobs.h"
+#include "components/object-store-ll.h"
 
 static int fill_mmfile_blob(mmfile_t *f, struct blob *obj)
 {

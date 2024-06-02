@@ -1,8 +1,8 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "object.h"
-#include "decorate.h"
-#include "repository.h"
+#include "components/git-compat-util.h"
+#include "components/object.h"
+#include "components/decorate.h"
+#include "components/repository.h"
 
 int cmd__example_decorate(int argc UNUSED, const char **argv UNUSED)
 {

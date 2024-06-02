@@ -7,10 +7,10 @@
  * files. Useful when you write a file that you want to be
  * able to verify hasn't been messed with afterwards.
  */
-#include "git-compat-util.h"
-#include "progress.h"
-#include "csum-file.h"
-#include "hash.h"
+#include "components/git-compat-util.h"
+#include "components/progress.h"
+#include "components/csum-file.h"
+#include "components/hash.h"
 
 static void verify_buffer_or_die(struct hashfile *f,
 				 const void *buf,

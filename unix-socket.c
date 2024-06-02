@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "strbuf.h"
-#include "unix-socket.h"
+#include "components/git-compat-util.h"
+#include "components/strbuf.h"
+#include "components/unix-socket.h"
 
 #define DEFAULT_UNIX_STREAM_LISTEN_BACKLOG (5)
 

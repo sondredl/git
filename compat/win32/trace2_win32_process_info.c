@@ -1,7 +1,7 @@
-#include "../../git-compat-util.h"
-#include "../../json-writer.h"
-#include "../../repository.h"
-#include "../../trace2.h"
+#include "components/git-compat-util.h"
+#include "components/json-writer.h"
+#include "components/repository.h"
+#include "components/trace2.h"
 #include "lazyload.h"
 #include <psapi.h>
 #include <tlhelp32.h>

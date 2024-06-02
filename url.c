@@ -1,7 +1,7 @@
-#include "git-compat-util.h"
-#include "hex-ll.h"
-#include "strbuf.h"
-#include "url.h"
+#include "components/git-compat-util.h"
+#include "components/hex-ll.h"
+#include "components/strbuf.h"
+#include "components/url.h"
 
 int is_urlschemechar(int first_flag, int ch)
 {

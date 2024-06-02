@@ -1,6 +1,6 @@
-#include "git-compat-util.h"
-#include "run-command.h"
-#include "strbuf.h"
+#include "components/git-compat-util.h"
+#include "components/run-command.h"
+#include "components/strbuf.h"
 
 int cmd_main(int argc, const char **argv)
 {

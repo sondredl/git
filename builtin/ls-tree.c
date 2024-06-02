@@ -3,17 +3,17 @@
  *
  * Copyright (C) Linus Torvalds, 2005
  */
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-name.h"
-#include "object-store-ll.h"
-#include "tree.h"
-#include "path.h"
-#include "quote.h"
-#include "parse-options.h"
-#include "pathspec.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-name.h"
+#include "components/object-store-ll.h"
+#include "components/tree.h"
+#include "components/path.h"
+#include "components/quote.h"
+#include "components/parse-options.h"
+#include "components/pathspec.h"
 
 static const char * const ls_tree_usage[] = {
 	N_("git ls-tree [<options>] <tree-ish> [<path>...]"),

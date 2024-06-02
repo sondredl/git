@@ -2,9 +2,9 @@
  * decorate.c - decorate a git object with some arbitrary
  * data.
  */
-#include "git-compat-util.h"
-#include "object.h"
-#include "decorate.h"
+#include "components/git-compat-util.h"
+#include "components/object.h"
+#include "components/decorate.h"
 
 static unsigned int hash_obj(const struct object *obj, unsigned int n)
 {

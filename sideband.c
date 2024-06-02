@@ -1,12 +1,12 @@
-#include "git-compat-util.h"
-#include "color.h"
-#include "config.h"
-#include "editor.h"
-#include "gettext.h"
-#include "sideband.h"
-#include "help.h"
-#include "pkt-line.h"
-#include "write-or-die.h"
+#include "components/git-compat-util.h"
+#include "components/color.h"
+#include "components/config.h"
+#include "components/editor.h"
+#include "components/gettext.h"
+#include "components/sideband.h"
+#include "components/help.h"
+#include "components/pkt-line.h"
+#include "components/write-or-die.h"
 
 struct keyword_entry {
 	/*

@@ -1,9 +1,9 @@
 #define USE_THE_INDEX_VARIABLE
 #include "test-tool.h"
-#include "config.h"
-#include "read-cache-ll.h"
-#include "repository.h"
-#include "setup.h"
+#include "components/config.h"
+#include "components/read-cache-ll.h"
+#include "components/repository.h"
+#include "components/setup.h"
 
 int cmd__read_cache(int argc, const char **argv)
 {

@@ -1,9 +1,9 @@
-#include "git-compat-util.h"
-#include "alias.h"
-#include "config.h"
-#include "gettext.h"
-#include "strbuf.h"
-#include "string-list.h"
+#include "components/git-compat-util.h"
+#include "components/alias.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
 
 struct config_alias_data {
 	const char *alias;
@@ -22,8 +22,8 @@ static int config_alias_cb(const char *key, const char *value,
 
 	if (data->alias) {
 		if (!strcasecmp(p, data->alias))
-			return git_config_string((const char **)&data->v,
-						 key, value);
+			return git_config_string((const char **)&data->v, key,
+						 value);
 	} else if (data->list) {
 		string_list_append(data->list, p);
 	}
@@ -56,7 +56,7 @@ void quote_cmdline(struct strbuf *buf, const char **argv)
 		for (const char *p = *argp; *p; p++) {
 			const char c = *p;
 
-			if (c == '"' || c =='\\')
+			if (c == '"' || c == '\\')
 				strbuf_addch(buf, '\\');
 			strbuf_addch(buf, c);
 		}
@@ -86,8 +86,7 @@ int split_cmdline(char *cmdline, const char ***argv)
 		char c = cmdline[src];
 		if (!quoted && isspace(c)) {
 			cmdline[dst++] = 0;
-			while (cmdline[++src]
-					&& isspace(cmdline[src]))
+			while (cmdline[++src] && isspace(cmdline[src]))
 				; /* skip */
 			ALLOC_GROW(*argv, count + 1, size);
 			(*argv)[count++] = cmdline + dst;

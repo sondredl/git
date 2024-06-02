@@ -1,11 +1,11 @@
-#include "builtin.h"
-#include "config.h"
-#include "environment.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "setup.h"
-#include "strbuf.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/setup.h"
+#include "components/strbuf.h"
+#include "components/write-or-die.h"
 
 static void comment_lines(struct strbuf *buf)
 {

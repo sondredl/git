@@ -3,22 +3,22 @@
  * declaration matches the definition in this file.
  */
 #define USE_THE_INDEX_VARIABLE
-#include "git-compat-util.h"
-#include "abspath.h"
-#include "repository.h"
-#include "object-store-ll.h"
-#include "config.h"
-#include "object.h"
-#include "lockfile.h"
-#include "path.h"
-#include "read-cache-ll.h"
-#include "remote.h"
-#include "setup.h"
-#include "loose.h"
-#include "submodule-config.h"
-#include "sparse-index.h"
-#include "trace2.h"
-#include "promisor-remote.h"
+#include "components/git-compat-util.h"
+#include "components/abspath.h"
+#include "components/repository.h"
+#include "components/object-store-ll.h"
+#include "components/config.h"
+#include "components/object.h"
+#include "components/lockfile.h"
+#include "components/path.h"
+#include "components/read-cache-ll.h"
+#include "components/remote.h"
+#include "components/setup.h"
+#include "components/loose.h"
+#include "components/submodule-config.h"
+#include "components/sparse-index.h"
+#include "components/trace2.h"
+#include "components/promisor-remote.h"
 
 /* The main repository */
 static struct repository the_repo;

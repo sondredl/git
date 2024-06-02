@@ -1,15 +1,14 @@
-#include "git-compat-util.h"
-#include "advice.h"
-#include "config.h"
-#include "color.h"
-#include "gettext.h"
-#include "help.h"
-#include "string-list.h"
+#include "components/git-compat-util.h"
+#include "components/advice.h"
+#include "components/config.h"
+#include "components/color.h"
+#include "components/gettext.h"
+#include "components/help.h"
+#include "components/string-list.h"
 
 static int advice_use_color = -1;
 static char advice_colors[][COLOR_MAXLEN] = {
-	GIT_COLOR_RESET,
-	GIT_COLOR_YELLOW,	/* HINT */
+	GIT_COLOR_RESET, GIT_COLOR_YELLOW, /* HINT */
 };
 
 enum color_advice {
@@ -43,56 +42,58 @@ static struct {
 	const char *key;
 	enum advice_level level;
 } advice_setting[] = {
-	[ADVICE_ADD_EMBEDDED_REPO]			= { "addEmbeddedRepo" },
-	[ADVICE_ADD_EMPTY_PATHSPEC]			= { "addEmptyPathspec" },
-	[ADVICE_ADD_IGNORED_FILE]			= { "addIgnoredFile" },
-	[ADVICE_AMBIGUOUS_FETCH_REFSPEC]		= { "ambiguousFetchRefspec" },
-	[ADVICE_AM_WORK_DIR] 				= { "amWorkDir" },
-	[ADVICE_CHECKOUT_AMBIGUOUS_REMOTE_BRANCH_NAME] 	= { "checkoutAmbiguousRemoteBranchName" },
-	[ADVICE_COMMIT_BEFORE_MERGE]			= { "commitBeforeMerge" },
-	[ADVICE_DETACHED_HEAD]				= { "detachedHead" },
-	[ADVICE_DIVERGING]				= { "diverging" },
-	[ADVICE_FETCH_SHOW_FORCED_UPDATES]		= { "fetchShowForcedUpdates" },
-	[ADVICE_FORCE_DELETE_BRANCH]			= { "forceDeleteBranch" },
-	[ADVICE_GRAFT_FILE_DEPRECATED]			= { "graftFileDeprecated" },
-	[ADVICE_IGNORED_HOOK]				= { "ignoredHook" },
-	[ADVICE_IMPLICIT_IDENTITY]			= { "implicitIdentity" },
-	[ADVICE_MERGE_CONFLICT]				= { "mergeConflict" },
-	[ADVICE_NAME_TOO_LONG]				= { "nameTooLong" },
-	[ADVICE_NESTED_TAG]				= { "nestedTag" },
-	[ADVICE_OBJECT_NAME_WARNING]			= { "objectNameWarning" },
-	[ADVICE_PUSH_ALREADY_EXISTS]			= { "pushAlreadyExists" },
-	[ADVICE_PUSH_FETCH_FIRST]			= { "pushFetchFirst" },
-	[ADVICE_PUSH_NEEDS_FORCE]			= { "pushNeedsForce" },
-	[ADVICE_PUSH_NON_FF_CURRENT]			= { "pushNonFFCurrent" },
-	[ADVICE_PUSH_NON_FF_MATCHING]			= { "pushNonFFMatching" },
-	[ADVICE_PUSH_REF_NEEDS_UPDATE]			= { "pushRefNeedsUpdate" },
-	[ADVICE_PUSH_UNQUALIFIED_REF_NAME]		= { "pushUnqualifiedRefName" },
-	[ADVICE_PUSH_UPDATE_REJECTED]			= { "pushUpdateRejected" },
-	[ADVICE_PUSH_UPDATE_REJECTED_ALIAS]		= { "pushNonFastForward" }, /* backwards compatibility */
-	[ADVICE_REF_SYNTAX]				= { "refSyntax" },
-	[ADVICE_RESET_NO_REFRESH_WARNING]		= { "resetNoRefresh" },
-	[ADVICE_RESOLVE_CONFLICT]			= { "resolveConflict" },
-	[ADVICE_RM_HINTS]				= { "rmHints" },
-	[ADVICE_SEQUENCER_IN_USE]			= { "sequencerInUse" },
-	[ADVICE_SET_UPSTREAM_FAILURE]			= { "setUpstreamFailure" },
-	[ADVICE_SKIPPED_CHERRY_PICKS]			= { "skippedCherryPicks" },
-	[ADVICE_STATUS_AHEAD_BEHIND_WARNING]		= { "statusAheadBehindWarning" },
-	[ADVICE_STATUS_HINTS]				= { "statusHints" },
-	[ADVICE_STATUS_U_OPTION]			= { "statusUoption" },
-	[ADVICE_SUBMODULES_NOT_UPDATED] 		= { "submodulesNotUpdated" },
+	[ADVICE_ADD_EMBEDDED_REPO] = { "addEmbeddedRepo" },
+	[ADVICE_ADD_EMPTY_PATHSPEC] = { "addEmptyPathspec" },
+	[ADVICE_ADD_IGNORED_FILE] = { "addIgnoredFile" },
+	[ADVICE_AMBIGUOUS_FETCH_REFSPEC] = { "ambiguousFetchRefspec" },
+	[ADVICE_AM_WORK_DIR] = { "amWorkDir" },
+	[ADVICE_CHECKOUT_AMBIGUOUS_REMOTE_BRANCH_NAME] = { "checkoutAmbiguousRemoteBranchName" },
+	[ADVICE_COMMIT_BEFORE_MERGE] = { "commitBeforeMerge" },
+	[ADVICE_DETACHED_HEAD] = { "detachedHead" },
+	[ADVICE_DIVERGING] = { "diverging" },
+	[ADVICE_FETCH_SHOW_FORCED_UPDATES] = { "fetchShowForcedUpdates" },
+	[ADVICE_FORCE_DELETE_BRANCH] = { "forceDeleteBranch" },
+	[ADVICE_GRAFT_FILE_DEPRECATED] = { "graftFileDeprecated" },
+	[ADVICE_IGNORED_HOOK] = { "ignoredHook" },
+	[ADVICE_IMPLICIT_IDENTITY] = { "implicitIdentity" },
+	[ADVICE_MERGE_CONFLICT] = { "mergeConflict" },
+	[ADVICE_NAME_TOO_LONG] = { "nameTooLong" },
+	[ADVICE_NESTED_TAG] = { "nestedTag" },
+	[ADVICE_OBJECT_NAME_WARNING] = { "objectNameWarning" },
+	[ADVICE_PUSH_ALREADY_EXISTS] = { "pushAlreadyExists" },
+	[ADVICE_PUSH_FETCH_FIRST] = { "pushFetchFirst" },
+	[ADVICE_PUSH_NEEDS_FORCE] = { "pushNeedsForce" },
+	[ADVICE_PUSH_NON_FF_CURRENT] = { "pushNonFFCurrent" },
+	[ADVICE_PUSH_NON_FF_MATCHING] = { "pushNonFFMatching" },
+	[ADVICE_PUSH_REF_NEEDS_UPDATE] = { "pushRefNeedsUpdate" },
+	[ADVICE_PUSH_UNQUALIFIED_REF_NAME] = { "pushUnqualifiedRefName" },
+	[ADVICE_PUSH_UPDATE_REJECTED] = { "pushUpdateRejected" },
+	[ADVICE_PUSH_UPDATE_REJECTED_ALIAS] = { "pushNonFastForward" }, /* backwards
+									   compatibility
+									 */
+	[ADVICE_REF_SYNTAX] = { "refSyntax" },
+	[ADVICE_RESET_NO_REFRESH_WARNING] = { "resetNoRefresh" },
+	[ADVICE_RESOLVE_CONFLICT] = { "resolveConflict" },
+	[ADVICE_RM_HINTS] = { "rmHints" },
+	[ADVICE_SEQUENCER_IN_USE] = { "sequencerInUse" },
+	[ADVICE_SET_UPSTREAM_FAILURE] = { "setUpstreamFailure" },
+	[ADVICE_SKIPPED_CHERRY_PICKS] = { "skippedCherryPicks" },
+	[ADVICE_STATUS_AHEAD_BEHIND_WARNING] = { "statusAheadBehindWarning" },
+	[ADVICE_STATUS_HINTS] = { "statusHints" },
+	[ADVICE_STATUS_U_OPTION] = { "statusUoption" },
+	[ADVICE_SUBMODULES_NOT_UPDATED] = { "submodulesNotUpdated" },
 	[ADVICE_SUBMODULE_ALTERNATE_ERROR_STRATEGY_DIE] = { "submoduleAlternateErrorStrategyDie" },
-	[ADVICE_SUBMODULE_MERGE_CONFLICT]               = { "submoduleMergeConflict" },
-	[ADVICE_SUGGEST_DETACHING_HEAD]			= { "suggestDetachingHead" },
-	[ADVICE_UPDATE_SPARSE_PATH]			= { "updateSparsePath" },
-	[ADVICE_USE_CORE_FSMONITOR_CONFIG]		= { "useCoreFSMonitorConfig" },
-	[ADVICE_WAITING_FOR_EDITOR]			= { "waitingForEditor" },
-	[ADVICE_WORKTREE_ADD_ORPHAN]			= { "worktreeAddOrphan" },
+	[ADVICE_SUBMODULE_MERGE_CONFLICT] = { "submoduleMergeConflict" },
+	[ADVICE_SUGGEST_DETACHING_HEAD] = { "suggestDetachingHead" },
+	[ADVICE_UPDATE_SPARSE_PATH] = { "updateSparsePath" },
+	[ADVICE_USE_CORE_FSMONITOR_CONFIG] = { "useCoreFSMonitorConfig" },
+	[ADVICE_WAITING_FOR_EDITOR] = { "waitingForEditor" },
+	[ADVICE_WORKTREE_ADD_ORPHAN] = { "worktreeAddOrphan" },
 };
 
 static const char turn_off_instructions[] =
-N_("\n"
-   "Disable this message with \"git config advice.%s false\"");
+	N_("\n"
+	   "Disable this message with \"git config advice.%s false\"");
 
 static void vadvise(const char *advice, int display_instructions,
 		    const char *key, va_list params)
@@ -107,10 +108,9 @@ static void vadvise(const char *advice, int display_instructions,
 
 	for (cp = buf.buf; *cp; cp = np) {
 		np = strchrnul(cp, '\n');
-		fprintf(stderr,	_("%shint:%s%.*s%s\n"),
+		fprintf(stderr, _("%shint:%s%.*s%s\n"),
 			advise_get_color(ADVICE_COLOR_HINT),
-			(np == cp) ? "" : " ",
-			(int)(np - cp), cp,
+			(np == cp) ? "" : " ", (int)(np - cp), cp,
 			advise_get_color(ADVICE_COLOR_RESET));
 		if (*np)
 			np++;
@@ -175,9 +175,9 @@ int git_default_advice_config(const char *var, const char *value)
 	for (i = 0; i < ARRAY_SIZE(advice_setting); i++) {
 		if (strcasecmp(k, advice_setting[i].key))
 			continue;
-		advice_setting[i].level = git_config_bool(var, value)
-					  ? ADVICE_LEVEL_ENABLED
-					  : ADVICE_LEVEL_DISABLED;
+		advice_setting[i].level = git_config_bool(var, value) ?
+						  ADVICE_LEVEL_ENABLED :
+						  ADVICE_LEVEL_DISABLED;
 		return 0;
 	}
 
@@ -214,8 +214,9 @@ int error_resolve_conflict(const char *me)
 		 * Message used both when 'git commit' fails and when
 		 * other commands doing a merge do.
 		 */
-		advise(_("Fix them up in the work tree, and then use 'git add/rm <file>'\n"
-			 "as appropriate to mark resolution and make a commit."));
+		advise(_(
+			"Fix them up in the work tree, and then use 'git add/rm <file>'\n"
+			"as appropriate to mark resolution and make a commit."));
 	return -1;
 }
 
@@ -235,14 +236,15 @@ void NORETURN die_conclude_merge(void)
 
 void NORETURN die_ff_impossible(void)
 {
-	advise_if_enabled(ADVICE_DIVERGING,
+	advise_if_enabled(
+		ADVICE_DIVERGING,
 		_("Diverging branches can't be fast-forwarded, you need to either:\n"
-		"\n"
-		"\tgit merge --no-ff\n"
-		"\n"
-		"or:\n"
-		"\n"
-		"\tgit rebase\n"));
+		  "\n"
+		  "\tgit merge --no-ff\n"
+		  "\n"
+		  "or:\n"
+		  "\n"
+		  "\tgit rebase\n"));
 	die(_("Not possible to fast-forward, aborting."));
 }
 
@@ -253,37 +255,39 @@ void advise_on_updating_sparse_paths(struct string_list *pathspec_list)
 	if (!pathspec_list->nr)
 		return;
 
-	fprintf(stderr, _("The following paths and/or pathspecs matched paths that exist\n"
-			  "outside of your sparse-checkout definition, so will not be\n"
-			  "updated in the index:\n"));
-	for_each_string_list_item(item, pathspec_list)
+	fprintf(stderr,
+		_("The following paths and/or pathspecs matched paths that exist\n"
+		  "outside of your sparse-checkout definition, so will not be\n"
+		  "updated in the index:\n"));
+	for_each_string_list_item (item, pathspec_list)
 		fprintf(stderr, "%s\n", item->string);
 
-	advise_if_enabled(ADVICE_UPDATE_SPARSE_PATH,
-			  _("If you intend to update such entries, try one of the following:\n"
-			    "* Use the --sparse option.\n"
-			    "* Disable or modify the sparsity rules."));
+	advise_if_enabled(
+		ADVICE_UPDATE_SPARSE_PATH,
+		_("If you intend to update such entries, try one of the following:\n"
+		  "* Use the --sparse option.\n"
+		  "* Disable or modify the sparsity rules."));
 }
 
 void detach_advice(const char *new_name)
 {
-	const char *fmt =
-	_("Note: switching to '%s'.\n"
-	"\n"
-	"You are in 'detached HEAD' state. You can look around, make experimental\n"
-	"changes and commit them, and you can discard any commits you make in this\n"
-	"state without impacting any branches by switching back to a branch.\n"
-	"\n"
-	"If you want to create a new branch to retain commits you create, you may\n"
-	"do so (now or later) by using -c with the switch command. Example:\n"
-	"\n"
-	"  git switch -c <new-branch-name>\n"
-	"\n"
-	"Or undo this operation with:\n"
-	"\n"
-	"  git switch -\n"
-	"\n"
-	"Turn off this advice by setting config variable advice.detachedHead to false\n\n");
+	const char *fmt = _(
+		"Note: switching to '%s'.\n"
+		"\n"
+		"You are in 'detached HEAD' state. You can look around, make experimental\n"
+		"changes and commit them, and you can discard any commits you make in this\n"
+		"state without impacting any branches by switching back to a branch.\n"
+		"\n"
+		"If you want to create a new branch to retain commits you create, you may\n"
+		"do so (now or later) by using -c with the switch command. Example:\n"
+		"\n"
+		"  git switch -c <new-branch-name>\n"
+		"\n"
+		"Or undo this operation with:\n"
+		"\n"
+		"  git switch -\n"
+		"\n"
+		"Turn off this advice by setting config variable advice.detachedHead to false\n\n");
 
 	fprintf(stderr, fmt, new_name);
 }
@@ -295,14 +299,16 @@ void advise_on_moving_dirty_path(struct string_list *pathspec_list)
 	if (!pathspec_list->nr)
 		return;
 
-	fprintf(stderr, _("The following paths have been moved outside the\n"
-			  "sparse-checkout definition but are not sparse due to local\n"
-			  "modifications.\n"));
-	for_each_string_list_item(item, pathspec_list)
+	fprintf(stderr,
+		_("The following paths have been moved outside the\n"
+		  "sparse-checkout definition but are not sparse due to local\n"
+		  "modifications.\n"));
+	for_each_string_list_item (item, pathspec_list)
 		fprintf(stderr, "%s\n", item->string);
 
-	advise_if_enabled(ADVICE_UPDATE_SPARSE_PATH,
-			  _("To correct the sparsity of these paths, do the following:\n"
-			    "* Use \"git add --sparse <paths>\" to update the index\n"
-			    "* Use \"git sparse-checkout reapply\" to apply the sparsity rules"));
+	advise_if_enabled(
+		ADVICE_UPDATE_SPARSE_PATH,
+		_("To correct the sparsity of these paths, do the following:\n"
+		  "* Use \"git add --sparse <paths>\" to update the index\n"
+		  "* Use \"git sparse-checkout reapply\" to apply the sparsity rules"));
 }

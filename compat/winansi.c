@@ -4,7 +4,7 @@
 
 #undef NOGDI
 
-#include "../git-compat-util.h"
+#include "components/git-compat-util.h"
 #include <wingdi.h>
 #include <winreg.h>
 #include "win32.h"

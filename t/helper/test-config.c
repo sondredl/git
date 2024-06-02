@@ -1,7 +1,7 @@
 #include "test-tool.h"
-#include "config.h"
-#include "setup.h"
-#include "string-list.h"
+#include "components/config.h"
+#include "components/setup.h"
+#include "components/string-list.h"
 
 /*
  * This program exposes the C API of the configuration mechanism

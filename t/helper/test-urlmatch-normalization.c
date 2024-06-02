@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "git-compat-util.h"
-#include "urlmatch.h"
+#include "components/git-compat-util.h"
+#include "components/urlmatch.h"
 
 int cmd__urlmatch_normalization(int argc, const char **argv)
 {

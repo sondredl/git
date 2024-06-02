@@ -1,5 +1,5 @@
-#include "../git-compat-util.h"
-#include "../git-curl-compat.h"
+#include "components/git-compat-util.h"
+#include "components/git-curl-compat.h"
 #ifndef WIN32
 #include <dlfcn.h>
 #endif

@@ -5,19 +5,19 @@
  *
  */
 #define USE_THE_INDEX_VARIABLE
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "lockfile.h"
-#include "quote.h"
-#include "repository.h"
-#include "cache-tree.h"
-#include "parse-options.h"
-#include "entry.h"
-#include "parallel-checkout.h"
-#include "read-cache-ll.h"
-#include "setup.h"
-#include "sparse-index.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/lockfile.h"
+#include "components/quote.h"
+#include "components/repository.h"
+#include "components/cache-tree.h"
+#include "components/parse-options.h"
+#include "components/entry.h"
+#include "components/parallel-checkout.h"
+#include "components/read-cache-ll.h"
+#include "components/setup.h"
+#include "components/sparse-index.h"
 
 #define CHECKOUT_ALL 4
 static int nul_term_line;

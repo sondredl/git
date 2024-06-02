@@ -1,9 +1,9 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "hook.h"
-#include "parse-options.h"
-#include "strvec.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/hook.h"
+#include "components/parse-options.h"
+#include "components/strvec.h"
 
 #define BUILTIN_HOOK_RUN_USAGE \
 	N_("git hook run [--ignore-missing] [--to-stdin=<path>] <hook-name> [-- <hook-args>]")

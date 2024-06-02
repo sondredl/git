@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "config.h"
-#include "fsmonitor-ll.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/fsmonitor-ll.h"
 #include "fsm-health.h"
-#include "fsmonitor--daemon.h"
-#include "gettext.h"
-#include "simple-ipc.h"
+#include "components/fsmonitor--daemon.h"
+#include "components/gettext.h"
+#include "components/simple-ipc.h"
 
 /*
  * Every minute wake up and test our health.

@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "parse.h"
-#include "parse-options.h"
+#include "components/parse.h"
+#include "components/parse-options.h"
 
 static char const * const env__helper_usage[] = {
 	"test-tool env-helper --type=[bool|ulong] <options> <env-var>",

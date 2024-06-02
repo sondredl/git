@@ -32,9 +32,9 @@
    String Matching:  An Aid to Bibliographic Search," CACM June 1975,
    Vol. 18, No. 6, which describes the failure function used below. */
 
-#include "git-compat-util.h"
+#include "components/git-compat-util.h"
 
-#include "kwset.h"
+#include "components/kwset.h"
 #include "compat/obstack.h"
 
 #define NCHAR (UCHAR_MAX + 1)

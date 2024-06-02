@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2008 Linus Torvalds
  */
-#include "git-compat-util.h"
-#include "pathspec.h"
-#include "dir.h"
-#include "environment.h"
-#include "fsmonitor.h"
-#include "gettext.h"
-#include "parse.h"
-#include "preload-index.h"
-#include "progress.h"
-#include "read-cache.h"
-#include "thread-utils.h"
-#include "repository.h"
-#include "symlinks.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/pathspec.h"
+#include "components/dir.h"
+#include "components/environment.h"
+#include "components/fsmonitor.h"
+#include "components/gettext.h"
+#include "components/parse.h"
+#include "components/preload-index.h"
+#include "components/progress.h"
+#include "components/read-cache.h"
+#include "components/thread-utils.h"
+#include "components/repository.h"
+#include "components/symlinks.h"
+#include "components/trace2.h"
 
 static struct fscache *fscache;
 

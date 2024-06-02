@@ -1,20 +1,20 @@
 /*
  * Copyright (c) 2006 Rene Scharfe
  */
-#include "git-compat-util.h"
-#include "config.h"
-#include "archive.h"
-#include "gettext.h"
-#include "git-zlib.h"
-#include "hex.h"
-#include "streaming.h"
-#include "utf8.h"
-#include "object-store-ll.h"
-#include "strbuf.h"
-#include "userdiff.h"
-#include "write-or-die.h"
-#include "xdiff-interface.h"
-#include "date.h"
+#include "components/git-compat-util.h"
+#include "components/config.h"
+#include "components/archive.h"
+#include "components/gettext.h"
+#include "components/git-zlib.h"
+#include "components/hex.h"
+#include "components/streaming.h"
+#include "components/utf8.h"
+#include "components/object-store-ll.h"
+#include "components/strbuf.h"
+#include "components/userdiff.h"
+#include "components/write-or-die.h"
+#include "components/xdiff-interface.h"
+#include "components/date.h"
 
 static int zip_date;
 static int zip_time;
@@ -27,13 +27,10 @@ static uint64_t zip_dir_entries;
 
 static unsigned int max_creator_version;
 
-#define ZIP_STREAM	(1 <<  3)
-#define ZIP_UTF8	(1 << 11)
+#define ZIP_STREAM (1 << 3)
+#define ZIP_UTF8 (1 << 11)
 
-enum zip_method {
-	ZIP_METHOD_STORE = 0,
-	ZIP_METHOD_DEFLATE = 8
-};
+enum zip_method { ZIP_METHOD_STORE = 0, ZIP_METHOD_DEFLATE = 8 };
 
 struct zip_local_header {
 	unsigned char magic[4];
@@ -121,20 +118,20 @@ struct zip64_dir_trailer_locator {
  * sizeof(struct ...) reports two bytes more than the payload size
  * we're interested in.
  */
-#define ZIP_LOCAL_HEADER_SIZE	offsetof(struct zip_local_header, _end)
-#define ZIP_DATA_DESC_SIZE	offsetof(struct zip_data_desc, _end)
-#define ZIP64_DATA_DESC_SIZE	offsetof(struct zip64_data_desc, _end)
-#define ZIP_DIR_HEADER_SIZE	offsetof(struct zip_dir_header, _end)
-#define ZIP_DIR_TRAILER_SIZE	offsetof(struct zip_dir_trailer, _end)
-#define ZIP_EXTRA_MTIME_SIZE	offsetof(struct zip_extra_mtime, _end)
+#define ZIP_LOCAL_HEADER_SIZE offsetof(struct zip_local_header, _end)
+#define ZIP_DATA_DESC_SIZE offsetof(struct zip_data_desc, _end)
+#define ZIP64_DATA_DESC_SIZE offsetof(struct zip64_data_desc, _end)
+#define ZIP_DIR_HEADER_SIZE offsetof(struct zip_dir_header, _end)
+#define ZIP_DIR_TRAILER_SIZE offsetof(struct zip_dir_trailer, _end)
+#define ZIP_EXTRA_MTIME_SIZE offsetof(struct zip_extra_mtime, _end)
 #define ZIP_EXTRA_MTIME_PAYLOAD_SIZE \
 	(ZIP_EXTRA_MTIME_SIZE - offsetof(struct zip_extra_mtime, flags))
-#define ZIP64_EXTRA_SIZE	offsetof(struct zip64_extra, _end)
+#define ZIP64_EXTRA_SIZE offsetof(struct zip64_extra, _end)
 #define ZIP64_EXTRA_PAYLOAD_SIZE \
 	(ZIP64_EXTRA_SIZE - offsetof(struct zip64_extra, size))
-#define ZIP64_DIR_TRAILER_SIZE	offsetof(struct zip64_dir_trailer, _end)
+#define ZIP64_DIR_TRAILER_SIZE offsetof(struct zip64_dir_trailer, _end)
 #define ZIP64_DIR_TRAILER_RECORD_SIZE \
-	(ZIP64_DIR_TRAILER_SIZE - \
+	(ZIP64_DIR_TRAILER_SIZE -     \
 	 offsetof(struct zip64_dir_trailer, creator_version))
 #define ZIP64_DIR_TRAILER_LOCATOR_SIZE \
 	offsetof(struct zip64_dir_trailer_locator, _end)
@@ -289,10 +286,9 @@ static int entry_is_binary(struct index_state *istate, const char *path,
 #define STREAM_BUFFER_SIZE (1024 * 16)
 
 static int write_zip_entry(struct archiver_args *args,
-			   const struct object_id *oid,
-			   const char *path, size_t pathlen,
-			   unsigned int mode,
-			   void *buffer, unsigned long size)
+			   const struct object_id *oid, const char *path,
+			   size_t pathlen, unsigned int mode, void *buffer,
+			   unsigned long size)
 {
 	struct zip_local_header header;
 	uintmax_t offset = zip_offset;
@@ -326,7 +322,7 @@ static int write_zip_entry(struct archiver_args *args,
 
 	if (pathlen > 0xffff) {
 		return error(_("path too long (%d chars, SHA1: %s): %s"),
-				(int)pathlen, oid_to_hex(oid), path);
+			     (int)pathlen, oid_to_hex(oid), path);
 	}
 
 	if (S_ISDIR(mode) || S_ISGITLINK(mode)) {
@@ -337,7 +333,8 @@ static int write_zip_entry(struct archiver_args *args,
 	} else if (S_ISREG(mode) || S_ISLNK(mode)) {
 		method = ZIP_METHOD_STORE;
 		attr2 = S_ISLNK(mode) ? ((mode | 0777) << 16) :
-			(mode & 0111) ? ((mode) << 16) : 0;
+			(mode & 0111) ? ((mode) << 16) :
+					0;
 		if (S_ISLNK(mode) || (mode & 0111))
 			creator_version = 0x0317;
 		if (S_ISREG(mode) && args->compression_level != 0 && size > 0)
@@ -355,14 +352,14 @@ static int write_zip_entry(struct archiver_args *args,
 		} else {
 			crc = crc32(crc, buffer, size);
 			is_binary = entry_is_binary(args->repo->index,
-						    path_without_prefix,
-						    buffer, size);
+						    path_without_prefix, buffer,
+						    size);
 			out = buffer;
 		}
 		compressed_size = (method == ZIP_METHOD_STORE) ? size : 0;
 	} else {
 		return error(_("unsupported file mode: 0%o (SHA1: %s)"), mode,
-				oid_to_hex(oid));
+			     oid_to_hex(oid));
 	}
 
 	if (creator_version > max_creator_version)
@@ -381,7 +378,7 @@ static int write_zip_entry(struct archiver_args *args,
 
 	copy_le16(extra.magic, 0x5455);
 	copy_le16(extra.extra_size, ZIP_EXTRA_MTIME_PAYLOAD_SIZE);
-	extra.flags[0] = 1;	/* just mtime */
+	extra.flags[0] = 1; /* just mtime */
 	copy_le32(extra.mtime, args->time);
 
 	if (size > 0xffffffff || compressed_size > 0xffffffff)
@@ -481,7 +478,6 @@ static int write_zip_entry(struct archiver_args *args,
 				zstream.next_out = compressed;
 				zstream.avail_out = sizeof(compressed);
 			}
-
 		}
 		close_istream(stream);
 		if (readlen)
@@ -518,7 +514,7 @@ static int write_zip_entry(struct archiver_args *args,
 		zip_dir_extra_size += 2 + 2 + zip64_dir_extra_payload_size;
 	}
 
-	strbuf_add_le(&zip_dir, 4, 0x02014b50);	/* magic */
+	strbuf_add_le(&zip_dir, 4, 0x02014b50); /* magic */
 	strbuf_add_le(&zip_dir, 2, creator_version);
 	strbuf_add_le(&zip_dir, 2, version_needed);
 	strbuf_add_le(&zip_dir, 2, flags);
@@ -530,15 +526,15 @@ static int write_zip_entry(struct archiver_args *args,
 	strbuf_add_le(&zip_dir, 4, clamp32(size));
 	strbuf_add_le(&zip_dir, 2, pathlen);
 	strbuf_add_le(&zip_dir, 2, zip_dir_extra_size);
-	strbuf_add_le(&zip_dir, 2, 0);		/* comment length */
-	strbuf_add_le(&zip_dir, 2, 0);		/* disk */
+	strbuf_add_le(&zip_dir, 2, 0); /* comment length */
+	strbuf_add_le(&zip_dir, 2, 0); /* disk */
 	strbuf_add_le(&zip_dir, 2, !is_binary);
 	strbuf_add_le(&zip_dir, 4, attr2);
 	strbuf_add_le(&zip_dir, 4, clamp32(offset));
 	strbuf_add(&zip_dir, path, pathlen);
 	strbuf_add(&zip_dir, &extra, ZIP_EXTRA_MTIME_SIZE);
 	if (zip64_dir_extra_payload_size) {
-		strbuf_add_le(&zip_dir, 2, 0x0001);	/* magic */
+		strbuf_add_le(&zip_dir, 2, 0x0001); /* magic */
 		strbuf_add_le(&zip_dir, 2, zip64_dir_extra_payload_size);
 		if (size >= 0xffffffff)
 			strbuf_add_le(&zip_dir, 8, size);
@@ -606,7 +602,7 @@ static void dos_time(timestamp_t *timestamp, int *dos_date, int *dos_time)
 	struct tm tm;
 
 	if (date_overflows(*timestamp))
-		die(_("timestamp too large for this system: %"PRItime),
+		die(_("timestamp too large for this system: %" PRItime),
 		    *timestamp);
 	time = (time_t)*timestamp;
 	localtime_r(&time, &tm);
@@ -647,7 +643,7 @@ static int write_zip_archive(const struct archiver *ar UNUSED,
 static struct archiver zip_archiver = {
 	.name = "zip",
 	.write_archive = write_zip_archive,
-	.flags = ARCHIVER_WANT_COMPRESSION_LEVELS|ARCHIVER_REMOTE,
+	.flags = ARCHIVER_WANT_COMPRESSION_LEVELS | ARCHIVER_REMOTE,
 };
 
 void init_zip_archiver(void)

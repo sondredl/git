@@ -1,5 +1,5 @@
 #include "test-tool.h"
-#include "hex.h"
+#include "components/hex.h"
 
 int cmd_hash_impl(int ac, const char **av, int algo)
 {

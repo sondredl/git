@@ -2,14 +2,14 @@
  * Copyright (C) 2005 Junio C Hamano
  * Copyright (C) 2010 Google Inc.
  */
-#include "git-compat-util.h"
-#include "diff.h"
-#include "diffcore.h"
-#include "xdiff-interface.h"
-#include "kwset.h"
-#include "oidset.h"
-#include "pretty.h"
-#include "quote.h"
+#include "components/git-compat-util.h"
+#include "components/diff.h"
+#include "components/diffcore.h"
+#include "components/xdiff-interface.h"
+#include "components/kwset.h"
+#include "components/oidset.h"
+#include "components/pretty.h"
+#include "components/quote.h"
 
 typedef int (*pickaxe_fn)(mmfile_t *one, mmfile_t *two,
 			  struct diff_options *o,

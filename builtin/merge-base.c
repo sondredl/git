@@ -1,12 +1,12 @@
-#include "builtin.h"
-#include "config.h"
-#include "commit.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-name.h"
-#include "parse-options.h"
-#include "repository.h"
-#include "commit-reach.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/commit.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-name.h"
+#include "components/parse-options.h"
+#include "components/repository.h"
+#include "components/commit-reach.h"
 
 static int show_merge_base(struct commit **rev, int rev_nr, int show_all)
 {

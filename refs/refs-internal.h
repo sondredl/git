@@ -1,8 +1,8 @@
 #ifndef REFS_REFS_INTERNAL_H
 #define REFS_REFS_INTERNAL_H
 
-#include "refs.h"
-#include "iterator.h"
+#include "components/refs.h"
+#include "components/iterator.h"
 
 struct ref_transaction;
 

@@ -1,11 +1,11 @@
 #define USE_THE_INDEX_VARIABLE
 #include "test-tool.h"
-#include "lockfile.h"
-#include "read-cache-ll.h"
-#include "repository.h"
-#include "setup.h"
-#include "tree.h"
-#include "cache-tree.h"
+#include "components/read-cache-ll.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/tree.h"
+#include "components/cache-tree.h"
+#include "components/lockfile.h"
 
 int cmd__scrap_cache_tree(int ac UNUSED, const char **av UNUSED)
 {

@@ -1,9 +1,9 @@
 #include "test-tool.h"
-#include "object-name.h"
-#include "object-store.h"
-#include "packfile.h"
-#include "parse-options.h"
-#include "setup.h"
+#include "components/object-name.h"
+#include "components/object-store.h"
+#include "components/packfile.h"
+#include "components/parse-options.h"
+#include "components/setup.h"
 
 /*
  * Display the path(s), one per line, of the packfile(s) containing

@@ -1,11 +1,11 @@
-#include "builtin.h"
-#include "config.h"
-#include "gettext.h"
-#include "parse-options.h"
-#include "path.h"
-#include "repository.h"
-#include "run-command.h"
-#include "string-list.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/gettext.h"
+#include "components/parse-options.h"
+#include "components/path.h"
+#include "components/repository.h"
+#include "components/run-command.h"
+#include "components/string-list.h"
 
 static const char * const for_each_repo_usage[] = {
 	N_("git for-each-repo --config=<config> [--] <arguments>"),

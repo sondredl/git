@@ -9,13 +9,13 @@
  */
 
 #include "test-tool.h"
-#include "run-command.h"
-#include "strvec.h"
-#include "strbuf.h"
-#include "parse-options.h"
-#include "string-list.h"
-#include "thread-utils.h"
-#include "wildmatch.h"
+#include "components/run-command.h"
+#include "components/strvec.h"
+#include "components/strbuf.h"
+#include "components/parse-options.h"
+#include "components/string-list.h"
+#include "components/thread-utils.h"
+#include "components/wildmatch.h"
 
 static int number_callbacks;
 static int parallel_next(struct child_process *cp,

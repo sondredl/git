@@ -19,10 +19,10 @@
  */
 #define GIT_TEST_PROGRESS_ONLY
 #include "test-tool.h"
-#include "parse-options.h"
-#include "progress.h"
-#include "strbuf.h"
-#include "string-list.h"
+#include "components/parse-options.h"
+#include "components/progress.h"
+#include "components/strbuf.h"
+#include "components/string-list.h"
 
 int cmd__progress(int argc, const char **argv)
 {

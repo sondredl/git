@@ -1,15 +1,15 @@
 #define USE_THE_INDEX_VARIABLE
-#include "builtin.h"
-#include "config.h"
-#include "attr.h"
-#include "environment.h"
-#include "gettext.h"
-#include "object-name.h"
-#include "quote.h"
-#include "repository.h"
-#include "setup.h"
-#include "parse-options.h"
-#include "write-or-die.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/attr.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/object-name.h"
+#include "components/quote.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/parse-options.h"
+#include "components/write-or-die.h"
 
 static int all_attrs;
 static int cached_attrs;

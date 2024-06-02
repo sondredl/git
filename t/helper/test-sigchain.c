@@ -1,5 +1,5 @@
 #include "test-tool.h"
-#include "sigchain.h"
+#include "components/sigchain.h"
 
 #define X(f) \
 static void f(int sig) { \

@@ -1,22 +1,22 @@
-#include "git-compat-util.h"
-#include "advice.h"
-#include "config.h"
-#include "branch.h"
-#include "environment.h"
-#include "gettext.h"
-#include "hex.h"
-#include "object-name.h"
-#include "path.h"
-#include "refs.h"
-#include "refspec.h"
-#include "remote.h"
-#include "repository.h"
-#include "sequencer.h"
-#include "commit.h"
-#include "worktree.h"
-#include "submodule-config.h"
-#include "run-command.h"
-#include "strmap.h"
+#include "components/git-compat-util.h"
+#include "components/advice.h"
+#include "components/config.h"
+#include "components/branch.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/object-name.h"
+#include "components/path.h"
+#include "components/refs.h"
+#include "components/refspec.h"
+#include "components/remote.h"
+#include "components/repository.h"
+#include "components/sequencer.h"
+#include "components/commit.h"
+#include "components/worktree.h"
+#include "components/submodule-config.h"
+#include "components/run-command.h"
+#include "components/strmap.h"
 
 struct tracking {
 	struct refspec_item spec;
@@ -38,18 +38,22 @@ static int find_tracked_branch(struct remote *remote, void *priv)
 	if (!remote_find_tracking(remote, &tracking->spec)) {
 		switch (++tracking->matches) {
 		case 1:
-			string_list_append_nodup(tracking->srcs, tracking->spec.src);
+			string_list_append_nodup(tracking->srcs,
+						 tracking->spec.src);
 			tracking->remote = remote->name;
 			break;
 		case 2:
-			/* there are at least two remotes; backfill the first one */
-			string_list_append(&ftb->ambiguous_remotes, tracking->remote);
+			/* there are at least two remotes; backfill the first
+			 * one */
+			string_list_append(&ftb->ambiguous_remotes,
+					   tracking->remote);
 			/* fall through */
 		default:
-			string_list_append(&ftb->ambiguous_remotes, remote->name);
+			string_list_append(&ftb->ambiguous_remotes,
+					   remote->name);
 			free(tracking->spec.src);
 			string_list_clear(tracking->srcs, 0);
-		break;
+			break;
 		}
 		/* remote_find_tracking() searches by src if present */
 		tracking->spec.src = NULL;
@@ -87,7 +91,8 @@ static int should_setup_rebase(const char *origin)
  * `remotes` is a list of refs that are upstream of local
  */
 static int install_branch_config_multiple_remotes(int flag, const char *local,
-		const char *origin, struct string_list *remotes)
+						  const char *origin,
+						  struct string_list *remotes)
 {
 	const char *shortname = NULL;
 	struct strbuf key = STRBUF_INIT;
@@ -105,9 +110,10 @@ static int install_branch_config_multiple_remotes(int flag, const char *local,
 	 * wrong. Warn the user and don't proceed any further.
 	 */
 	if (!origin)
-		for_each_string_list_item(item, remotes)
-			if (skip_prefix(item->string, "refs/heads/", &shortname)
-			    && !strcmp(local, shortname)) {
+		for_each_string_list_item (item, remotes)
+			if (skip_prefix(item->string, "refs/heads/",
+					&shortname) &&
+			    !strcmp(local, shortname)) {
 				warning(_("not setting branch '%s' as its own upstream"),
 					local);
 				return 0;
@@ -127,8 +133,9 @@ static int install_branch_config_multiple_remotes(int flag, const char *local,
 	 */
 	if (git_config_set_gently(key.buf, NULL) < 0)
 		goto out_err;
-	for_each_string_list_item(item, remotes)
-		if (git_config_set_multivar_gently(key.buf, item->string, CONFIG_REGEX_NONE, 0) < 0)
+	for_each_string_list_item (item, remotes)
+		if (git_config_set_multivar_gently(key.buf, item->string,
+						   CONFIG_REGEX_NONE, 0) < 0)
 			goto out_err;
 
 	if (rebasing) {
@@ -143,18 +150,18 @@ static int install_branch_config_multiple_remotes(int flag, const char *local,
 		struct strbuf tmp_ref_name = STRBUF_INIT;
 		struct string_list friendly_ref_names = STRING_LIST_INIT_DUP;
 
-		for_each_string_list_item(item, remotes) {
+		for_each_string_list_item (item, remotes) {
 			shortname = item->string;
 			skip_prefix(shortname, "refs/heads/", &shortname);
 			if (origin) {
-				strbuf_addf(&tmp_ref_name, "%s/%s",
-					    origin, shortname);
+				strbuf_addf(&tmp_ref_name, "%s/%s", origin,
+					    shortname);
 				string_list_append_nodup(
 					&friendly_ref_names,
 					strbuf_detach(&tmp_ref_name, NULL));
 			} else {
-				string_list_append(
-					&friendly_ref_names, shortname);
+				string_list_append(&friendly_ref_names,
+						   shortname);
 			}
 		}
 
@@ -163,13 +170,14 @@ static int install_branch_config_multiple_remotes(int flag, const char *local,
 			 * Rebasing is only allowed in the case of a single
 			 * upstream branch.
 			 */
-			printf_ln(rebasing ?
-				_("branch '%s' set up to track '%s' by rebasing.") :
-				_("branch '%s' set up to track '%s'."),
+			printf_ln(
+				rebasing ?
+					_("branch '%s' set up to track '%s' by rebasing.") :
+					_("branch '%s' set up to track '%s'."),
 				local, friendly_ref_names.items[0].string);
 		} else {
 			printf_ln(_("branch '%s' set up to track:"), local);
-			for_each_string_list_item(item, &friendly_ref_names)
+			for_each_string_list_item (item, &friendly_ref_names)
 				printf_ln("  %s", item->string);
 		}
 
@@ -183,31 +191,31 @@ out_err:
 	error(_("unable to write upstream branch configuration"));
 
 	advise(_("\nAfter fixing the error cause you may try to fix up\n"
-		"the remote tracking information by invoking:"));
+		 "the remote tracking information by invoking:"));
 	if (remotes->nr == 1)
 		advise("  git branch --set-upstream-to=%s%s%s",
-			origin ? origin : "",
-			origin ? "/" : "",
-			remotes->items[0].string);
+		       origin ? origin : "", origin ? "/" : "",
+		       remotes->items[0].string);
 	else {
-		advise("  git config --add branch.\"%s\".remote %s",
-			local, origin ? origin : ".");
-		for_each_string_list_item(item, remotes)
+		advise("  git config --add branch.\"%s\".remote %s", local,
+		       origin ? origin : ".");
+		for_each_string_list_item (item, remotes)
 			advise("  git config --add branch.\"%s\".merge %s",
-				local, item->string);
+			       local, item->string);
 	}
 
 	return -1;
 }
 
 int install_branch_config(int flag, const char *local, const char *origin,
-		const char *remote)
+			  const char *remote)
 {
 	int ret;
 	struct string_list remotes = STRING_LIST_INIT_DUP;
 
 	string_list_append(&remotes, remote);
-	ret = install_branch_config_multiple_remotes(flag, local, origin, &remotes);
+	ret = install_branch_config_multiple_remotes(flag, local, origin,
+						     &remotes);
 	string_list_clear(&remotes, 0);
 	return ret;
 }
@@ -228,7 +236,8 @@ static int inherit_tracking(struct tracking *tracking, const char *orig_ref)
 		return -1;
 	}
 
-	if (branch->merge_nr < 1 || !branch->merge_name || !branch->merge_name[0]) {
+	if (branch->merge_nr < 1 || !branch->merge_name ||
+	    !branch->merge_name[0]) {
 		warning(_("asked to inherit tracking from '%s', but no merge configuration is set"),
 			bare_ref);
 		return -1;
@@ -289,23 +298,28 @@ static void setup_tracking(const char *new_ref, const char *orig_ref,
 	 * leaves tracking.matches at 0.
 	 */
 	if (tracking.matches > 1) {
-		int status = die_message(_("not tracking: ambiguous information for ref '%s'"),
-					    orig_ref);
+		int status = die_message(
+			_("not tracking: ambiguous information for ref '%s'"),
+			orig_ref);
 		if (advice_enabled(ADVICE_AMBIGUOUS_FETCH_REFSPEC)) {
 			struct strbuf remotes_advice = STRBUF_INIT;
 			struct string_list_item *item;
 
-			for_each_string_list_item(item, &ftb_cb.ambiguous_remotes)
+			for_each_string_list_item (item,
+						   &ftb_cb.ambiguous_remotes)
 				/*
-				 * TRANSLATORS: This is a line listing a remote with duplicate
-				 * refspecs in the advice message below. For RTL languages you'll
-				 * probably want to swap the "%s" and leading "  " space around.
+				 * TRANSLATORS: This is a line listing a remote
+				 * with duplicate refspecs in the advice message
+				 * below. For RTL languages you'll probably want
+				 * to swap the "%s" and leading "  " space
+				 * around.
 				 */
-				strbuf_addf(&remotes_advice, _("  %s\n"), item->string);
+				strbuf_addf(&remotes_advice, _("  %s\n"),
+					    item->string);
 
 			/*
-			 * TRANSLATORS: The second argument is a \n-delimited list of
-			 * duplicate refspecs, composed above.
+			 * TRANSLATORS: The second argument is a \n-delimited
+			 * list of duplicate refspecs, composed above.
 			 */
 			advise(_("There are multiple remotes whose fetch refspecs map to the remote\n"
 				 "tracking ref '%s':\n"
@@ -315,8 +329,8 @@ static void setup_tracking(const char *new_ref, const char *orig_ref,
 				 "\n"
 				 "To support setting up tracking branches, ensure that\n"
 				 "different remotes' fetch refspecs map into different\n"
-				 "tracking namespaces."), orig_ref,
-			       remotes_advice.buf);
+				 "tracking namespaces."),
+			       orig_ref, remotes_advice.buf);
 			strbuf_release(&remotes_advice);
 		}
 		exit(status);
@@ -331,16 +345,16 @@ static void setup_tracking(const char *new_ref, const char *orig_ref,
 		 * produce more than one entry).
 		 */
 		const char *tracked_branch;
-		if (!skip_prefix(tracking.srcs->items[0].string,
-				 "refs/heads/", &tracked_branch) ||
+		if (!skip_prefix(tracking.srcs->items[0].string, "refs/heads/",
+				 &tracked_branch) ||
 		    strcmp(tracked_branch, new_ref))
 			goto cleanup;
 	}
 
 	if (tracking.srcs->nr < 1)
 		string_list_append(tracking.srcs, orig_ref);
-	if (install_branch_config_multiple_remotes(config_flags, new_ref,
-				tracking.remote, tracking.srcs) < 0)
+	if (install_branch_config_multiple_remotes(
+		    config_flags, new_ref, tracking.remote, tracking.srcs) < 0)
 		exit(1);
 
 cleanup:
@@ -371,7 +385,8 @@ int read_branch_desc(struct strbuf *buf, const char *branch_name)
 int validate_branchname(const char *name, struct strbuf *ref)
 {
 	if (strbuf_check_branch_ref(ref, name)) {
-		int code = die_message(_("'%s' is not a valid branch name"), name);
+		int code =
+			die_message(_("'%s' is not a valid branch name"), name);
 		advise_if_enabled(ADVICE_REF_SYNTAX,
 				  _("See `man git check-ref-format`"));
 		exit(code);
@@ -405,18 +420,17 @@ static void prepare_checked_out_branches(void)
 
 		if (wt->head_ref) {
 			old = strmap_put(&current_checked_out_branches,
-					 wt->head_ref,
-					 xstrdup(wt->path));
+					 wt->head_ref, xstrdup(wt->path));
 			free(old);
 		}
 
 		if (wt_status_check_rebase(wt, &state) &&
-		    (state.rebase_in_progress || state.rebase_interactive_in_progress) &&
+		    (state.rebase_in_progress ||
+		     state.rebase_interactive_in_progress) &&
 		    state.branch) {
 			struct strbuf ref = STRBUF_INIT;
 			strbuf_addf(&ref, "refs/heads/%s", state.branch);
-			old = strmap_put(&current_checked_out_branches,
-					 ref.buf,
+			old = strmap_put(&current_checked_out_branches, ref.buf,
 					 xstrdup(wt->path));
 			free(old);
 			strbuf_release(&ref);
@@ -426,9 +440,9 @@ static void prepare_checked_out_branches(void)
 		if (wt_status_check_bisect(wt, &state) &&
 		    state.bisecting_from) {
 			struct strbuf ref = STRBUF_INIT;
-			strbuf_addf(&ref, "refs/heads/%s", state.bisecting_from);
-			old = strmap_put(&current_checked_out_branches,
-					 ref.buf,
+			strbuf_addf(&ref, "refs/heads/%s",
+				    state.bisecting_from);
+			old = strmap_put(&current_checked_out_branches, ref.buf,
 					 xstrdup(wt->path));
 			free(old);
 			strbuf_release(&ref);
@@ -438,7 +452,7 @@ static void prepare_checked_out_branches(void)
 		if (!sequencer_get_update_refs_state(get_worktree_git_dir(wt),
 						     &update_refs)) {
 			struct string_list_item *item;
-			for_each_string_list_item(item, &update_refs) {
+			for_each_string_list_item (item, &update_refs) {
 				old = strmap_put(&current_checked_out_branches,
 						 item->string,
 						 xstrdup(wt->path));
@@ -498,19 +512,19 @@ static int validate_remote_tracking_branch(char *ref)
 	return !for_each_remote(check_tracking_branch, ref);
 }
 
-static const char upstream_not_branch[] =
-N_("cannot set up tracking information; starting point '%s' is not a branch");
+static const char upstream_not_branch[] = N_(
+	"cannot set up tracking information; starting point '%s' is not a branch");
 static const char upstream_missing[] =
-N_("the requested upstream branch '%s' does not exist");
+	N_("the requested upstream branch '%s' does not exist");
 static const char upstream_advice[] =
-N_("\n"
-"If you are planning on basing your work on an upstream\n"
-"branch that already exists at the remote, you may need to\n"
-"run \"git fetch\" to retrieve it.\n"
-"\n"
-"If you are planning to push out a new local branch that\n"
-"will track its remote counterpart, you may want to use\n"
-"\"git push -u\" to set the upstream config as you push.");
+	N_("\n"
+	   "If you are planning on basing your work on an upstream\n"
+	   "branch that already exists at the remote, you may need to\n"
+	   "run \"git fetch\" to retrieve it.\n"
+	   "\n"
+	   "If you are planning to push out a new local branch that\n"
+	   "will track its remote counterpart, you may want to use\n"
+	   "\"git push -u\" to set the upstream config as you push.");
 
 /**
  * DWIMs a user-provided ref to determine the starting point for a
@@ -532,8 +546,8 @@ N_("\n"
  *
  */
 static void dwim_branch_start(struct repository *r, const char *start_name,
-			   enum branch_track track, char **out_real_ref,
-			   struct object_id *out_oid)
+			      enum branch_track track, char **out_real_ref,
+			      struct object_id *out_oid)
 {
 	struct commit *commit;
 	struct object_id oid;
@@ -588,10 +602,9 @@ static void dwim_branch_start(struct repository *r, const char *start_name,
 	FREE_AND_NULL(real_ref);
 }
 
-void create_branch(struct repository *r,
-		   const char *name, const char *start_name,
-		   int force, int clobber_head_ok, int reflog,
-		   int quiet, enum branch_track track, int dry_run)
+void create_branch(struct repository *r, const char *name,
+		   const char *start_name, int force, int clobber_head_ok,
+		   int reflog, int quiet, enum branch_track track, int dry_run)
 {
 	struct object_id oid;
 	char *real_ref;
@@ -606,9 +619,8 @@ void create_branch(struct repository *r,
 	if (clobber_head_ok && !force)
 		BUG("'clobber_head_ok' can only be used with 'force'");
 
-	if (clobber_head_ok ?
-			  validate_branchname(name, &ref) :
-			  validate_new_branchname(name, &ref, force)) {
+	if (clobber_head_ok ? validate_branchname(name, &ref) :
+			      validate_new_branchname(name, &ref, force)) {
 		forcing = 1;
 	}
 
@@ -625,10 +637,9 @@ void create_branch(struct repository *r,
 		msg = xstrfmt("branch: Created from %s", start_name);
 	transaction = ref_transaction_begin(&err);
 	if (!transaction ||
-		ref_transaction_update(transaction, ref.buf,
-					&oid, forcing ? NULL : null_oid(),
-					0, msg, &err) ||
-		ref_transaction_commit(transaction, &err))
+	    ref_transaction_update(transaction, ref.buf, &oid,
+				   forcing ? NULL : null_oid(), 0, msg, &err) ||
+	    ref_transaction_commit(transaction, &err))
 		die("%s", err.buf);
 	ref_transaction_free(transaction);
 	strbuf_release(&err);
@@ -748,7 +759,8 @@ void create_branches_recursively(struct repository *r, const char *name,
 	struct object_id super_oid;
 	struct submodule_entry_list submodule_entry_list;
 
-	/* Perform dwim on start_committish to get super_oid and branch_point. */
+	/* Perform dwim on start_committish to get super_oid and branch_point.
+	 */
 	dwim_branch_start(r, start_committish, BRANCH_TRACK_NEVER,
 			  &branch_point, &super_oid);
 
@@ -821,8 +833,8 @@ void remove_merge_branch_state(struct repository *r)
 	unlink(git_path_merge_rr(r));
 	unlink(git_path_merge_msg(r));
 	unlink(git_path_merge_mode(r));
-	refs_delete_ref(get_main_ref_store(r), "", "AUTO_MERGE",
-			NULL, REF_NO_DEREF);
+	refs_delete_ref(get_main_ref_store(r), "", "AUTO_MERGE", NULL,
+			REF_NO_DEREF);
 	save_autostash_ref(r, "MERGE_AUTOSTASH");
 }
 
@@ -844,7 +856,7 @@ void die_if_checked_out(const char *branch, int ignore_current_worktree)
 		if (is_shared_symref(worktrees[i], "HEAD", branch)) {
 			skip_prefix(branch, "refs/heads/", &branch);
 			die(_("'%s' is already used by worktree at '%s'"),
-				branch, worktrees[i]->path);
+			    branch, worktrees[i]->path);
 		}
 	}
 

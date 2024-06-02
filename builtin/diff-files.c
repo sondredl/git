@@ -3,14 +3,14 @@
  *
  * Copyright (C) Linus Torvalds, 2005
  */
-#include "builtin.h"
-#include "config.h"
-#include "diff.h"
-#include "diff-merges.h"
-#include "commit.h"
-#include "preload-index.h"
-#include "repository.h"
-#include "revision.h"
+#include "components/builtin.h"
+#include "components/config.h"
+#include "components/diff.h"
+#include "components/diff-merges.h"
+#include "components/commit.h"
+#include "components/preload-index.h"
+#include "components/repository.h"
+#include "components/revision.h"
 
 static const char diff_files_usage[] =
 "git diff-files [-q] [-0 | -1 | -2 | -3 | -c | --cc] [<common-diff-options>] [<path>...]"

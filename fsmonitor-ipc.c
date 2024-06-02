@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "simple-ipc.h"
-#include "fsmonitor-ipc.h"
-#include "repository.h"
-#include "run-command.h"
-#include "strbuf.h"
-#include "trace2.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/simple-ipc.h"
+#include "components/fsmonitor-ipc.h"
+#include "components/repository.h"
+#include "components/run-command.h"
+#include "components/strbuf.h"
+#include "components/trace2.h"
 
 #ifndef HAVE_FSMONITOR_DAEMON_BACKEND
 

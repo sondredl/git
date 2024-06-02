@@ -1,13 +1,13 @@
-#include "builtin.h"
-#include "gettext.h"
-#include "hex.h"
-#include "parse-options.h"
-#include "strbuf.h"
-#include "replace-object.h"
-#include "object-file.h"
-#include "object-store-ll.h"
-#include "fsck.h"
-#include "config.h"
+#include "components/builtin.h"
+#include "components/gettext.h"
+#include "components/hex.h"
+#include "components/parse-options.h"
+#include "components/strbuf.h"
+#include "components/replace-object.h"
+#include "components/object-file.h"
+#include "components/object-store-ll.h"
+#include "components/fsck.h"
+#include "components/config.h"
 
 static char const * const builtin_mktag_usage[] = {
 	"git mktag",

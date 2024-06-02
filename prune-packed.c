@@ -1,10 +1,10 @@
-#include "git-compat-util.h"
-#include "environment.h"
-#include "gettext.h"
-#include "object-store-ll.h"
-#include "packfile.h"
-#include "progress.h"
-#include "prune-packed.h"
+#include "components/git-compat-util.h"
+#include "components/environment.h"
+#include "components/gettext.h"
+#include "components/object-store-ll.h"
+#include "components/packfile.h"
+#include "components/progress.h"
+#include "components/prune-packed.h"
 
 static struct progress *progress;
 

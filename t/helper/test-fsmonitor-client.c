@@ -4,13 +4,13 @@
  */
 
 #include "test-tool.h"
-#include "parse-options.h"
-#include "fsmonitor-ipc.h"
-#include "read-cache-ll.h"
-#include "repository.h"
-#include "setup.h"
-#include "thread-utils.h"
-#include "trace2.h"
+#include "components/parse-options.h"
+#include "components/fsmonitor-ipc.h"
+#include "components/read-cache-ll.h"
+#include "components/repository.h"
+#include "components/setup.h"
+#include "components/thread-utils.h"
+#include "components/trace2.h"
 
 #ifndef HAVE_FSMONITOR_DAEMON_BACKEND
 int cmd__fsmonitor_client(int argc UNUSED, const char **argv UNUSED)

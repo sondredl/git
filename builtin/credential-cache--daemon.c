@@ -1,8 +1,8 @@
-#include "builtin.h"
-#include "abspath.h"
-#include "gettext.h"
-#include "object-file.h"
-#include "parse-options.h"
+#include "components/builtin.h"
+#include "components/abspath.h"
+#include "components/gettext.h"
+#include "components/object-file.h"
+#include "components/parse-options.h"
 
 #ifndef NO_UNIX_SOCKETS
 

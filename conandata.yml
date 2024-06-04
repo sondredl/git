@@ -1,0 +1,5 @@
+sources:
+  "1.0":
+    url: "https://github.com/user/mypackage"
+    branch: "mybranch"  # Specify the branch
+    commit: "commit_hash"  # Or specify the commit hash

@@ -1,0 +1,10 @@
+[requires]
+
+[generators]
+cmake
+
+[options]
+
+[imports]
+bin, *.dll -> ./bin # Copies all dll files from packages bin folder to my local "bin" folder
+lib, *.dylib* -> ./bin # Copies a

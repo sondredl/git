@@ -79,8 +79,16 @@ project(git
 
 #TODO gitk git-gui gitweb
 #TODO Enable NLS on windows natively
+file(GLOB C_FILES ./*.cpp)
+# foreach(${C_FILES} )
+#   <commands>
+	# message(${libgit_SOURCES})
+# 	message(C_FILES[])
+# endforeach()
+# message(C_FILES[])
 
-#macros for parsing the Makefile for sources and scripts
+# parse source files from list
+# macros for parsing the Makefile for sources and scripts
 macro(parse_makefile_for_sources list_var regex)
 	# message(${parse_makefile_for_sources})
 	# message(${list_var})
@@ -659,10 +667,10 @@ include_directories(${CMAKE_BINARY_DIR})
 #build
 #libgit
 parse_makefile_for_sources(libgit_SOURCES "LIB_OBJS")
-foreach(${libgit_SOURCES} "LIB_OBJS")
-#   <commands>
-	message(${libgit_SOURCES})
-endforeach()
+# foreach(${libgit_SOURCES} "LIB_OBJS")
+# #   <commands>
+# 	message(${libgit_SOURCES})
+# endforeach()
 # parse_makefile_for_sources(libgit_SOURCES "COMPONENTS")
 
 list(TRANSFORM libgit_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")

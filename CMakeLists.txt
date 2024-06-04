@@ -87,6 +87,18 @@ file(GLOB C_FILES ./*.cpp)
 # endforeach()
 # message(C_FILES[])
 
+# add_custom_target(abspath         abspath.c        )
+# add_custom_target(add-interactive add-interactive.c)
+# add_custom_target(add-patch       add-patch.c      )
+# add_custom_target(advice          advice.c         )
+# add_custom_target(alias           alias.c          )
+# add_custom_target(alloc           alloc.c          )
+# add_custom_target(apply           apply.c          )
+# add_custom_target(archive-tar     archive-tar.c    )
+# add_custom_target(archive-zip     archive-zip.c    )
+# add_custom_target(archive         archive.c        )
+# add_custom_target(attr            attr.c           )
+
 # parse source files from list
 # macros for parsing the Makefile for sources and scripts
 macro(parse_makefile_for_sources list_var regex)

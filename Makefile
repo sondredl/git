@@ -3943,3 +3943,6 @@ $(UNIT_TEST_PROGS): $(UNIT_TEST_BIN)/%$X: $(UNIT_TEST_DIR)/%.o $(UNIT_TEST_DIR)/
 build-unit-tests: $(UNIT_TEST_PROGS)
 unit-tests: $(UNIT_TEST_PROGS)
 	$(MAKE) -C t/ unit-tests
+
+cp contrib/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit

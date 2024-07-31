@@ -6,7 +6,8 @@ BUILD_DIR = o
 all:
 	cmake -B o/ -S .  -G Ninja
 	cd $(BUILD_DIR) && ninja
-	# cmake -S . -B . -G Ninja
-	# Ninja
-	# cp cleanCode/pre-commit .git/hooks/pre-commit
-	# chmod +x .git/hooks/pre-commit
+
+setup:
+	cp sanitas/GitHooks/pre-commit .git/hooks/pre-commit
+	chmod +x .git/hooks/pre-commit
+	

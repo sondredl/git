@@ -33,8 +33,8 @@ struct reftable_table;
  * reftable_reader_destroy(). On error, the block source `src` is
  * closed as well.
  */
-int reftable_new_reader(struct reftable_reader **pp,
-			struct reftable_block_source *src, const char *name);
+int reftable_new_reader(struct reftable_reader      **pp,
+                        struct reftable_block_source *src, const char *name);
 
 /* reftable_reader_seek_ref returns an iterator where 'name' would be inserted
    in the table.  To seek to the start of the table, use name = "".
@@ -61,8 +61,8 @@ int reftable_new_reader(struct reftable_reader **pp,
    reftable_iterator_destroy(&it);
    reftable_ref_record_release(&ref);
 */
-int reftable_reader_seek_ref(struct reftable_reader *r,
-			     struct reftable_iterator *it, const char *name);
+int reftable_reader_seek_ref(struct reftable_reader   *r,
+                             struct reftable_iterator *it, const char *name);
 
 /* returns the hash ID used in this table. */
 uint32_t reftable_reader_hash_id(struct reftable_reader *r);
@@ -70,20 +70,20 @@ uint32_t reftable_reader_hash_id(struct reftable_reader *r);
 /* seek to logs for the given name, older than update_index. To seek to the
    start of the table, use name = "".
 */
-int reftable_reader_seek_log_at(struct reftable_reader *r,
-				struct reftable_iterator *it, const char *name,
-				uint64_t update_index);
+int reftable_reader_seek_log_at(struct reftable_reader   *r,
+                                struct reftable_iterator *it, const char *name,
+                                uint64_t update_index);
 
 /* seek to newest log entry for given name. */
-int reftable_reader_seek_log(struct reftable_reader *r,
-			     struct reftable_iterator *it, const char *name);
+int reftable_reader_seek_log(struct reftable_reader   *r,
+                             struct reftable_iterator *it, const char *name);
 
 /* closes and deallocates a reader. */
 void reftable_reader_free(struct reftable_reader *);
 
 /* return an iterator for the refs pointing to `oid`. */
-int reftable_reader_refs_for(struct reftable_reader *r,
-			     struct reftable_iterator *it, uint8_t *oid);
+int reftable_reader_refs_for(struct reftable_reader   *r,
+                             struct reftable_iterator *it, uint8_t *oid);
 
 /* return the max_update_index for a table */
 uint64_t reftable_reader_max_update_index(struct reftable_reader *r);
@@ -92,8 +92,8 @@ uint64_t reftable_reader_max_update_index(struct reftable_reader *r);
 uint64_t reftable_reader_min_update_index(struct reftable_reader *r);
 
 /* creates a generic table from a file reader. */
-void reftable_table_from_reader(struct reftable_table *tab,
-				struct reftable_reader *reader);
+void reftable_table_from_reader(struct reftable_table  *tab,
+                                struct reftable_reader *reader);
 
 /* print table onto stdout for debugging. */
 int reftable_reader_print_file(const char *tablename);

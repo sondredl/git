@@ -11,18 +11,19 @@
 #include "reftable-record.h"
 #include "reftable-generic.h"
 
-struct modification {
-	struct reftable_table tab;
+struct modification
+{
+  struct reftable_table tab;
 
-	char **add;
-	size_t add_len;
+  char **add;
+  size_t add_len;
 
-	char **del;
-	size_t del_len;
+  char **del;
+  size_t del_len;
 };
 
-int validate_ref_record_addition(struct reftable_table tab,
-				 struct reftable_ref_record *recs, size_t sz);
+int validate_ref_record_addition(struct reftable_table       tab,
+                                 struct reftable_ref_record *recs, size_t sz);
 
 int modification_validate(struct modification *mod);
 

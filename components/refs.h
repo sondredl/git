@@ -12,7 +12,7 @@ struct string_list_item;
 struct worktree;
 
 unsigned int ref_storage_format_by_name(const char *name);
-const char *ref_storage_format_to_name(unsigned int ref_storage_format);
+const char  *ref_storage_format_to_name(unsigned int ref_storage_format);
 
 /*
  * Resolve a reference, recursively following symbolic refererences.
@@ -62,31 +62,31 @@ const char *ref_storage_format_to_name(unsigned int ref_storage_format);
  * Caps and underscores refers to the pseudorefs, such as HEAD,
  * FETCH_HEAD and friends, that all live outside of the refs/ directory.
  */
-#define RESOLVE_REF_READING 0x01
-#define RESOLVE_REF_NO_RECURSE 0x02
+#define RESOLVE_REF_READING        0x01
+#define RESOLVE_REF_NO_RECURSE     0x02
 #define RESOLVE_REF_ALLOW_BAD_NAME 0x04
 
 const char *refs_resolve_ref_unsafe(struct ref_store *refs,
-				    const char *refname,
-				    int resolve_flags,
-				    struct object_id *oid,
-				    int *flags);
+                                    const char       *refname,
+                                    int               resolve_flags,
+                                    struct object_id *oid,
+                                    int              *flags);
 
 const char *resolve_ref_unsafe(const char *refname, int resolve_flags,
-			       struct object_id *oid, int *flags);
+                               struct object_id *oid, int *flags);
 
 char *refs_resolve_refdup(struct ref_store *refs,
-			  const char *refname, int resolve_flags,
-			  struct object_id *oid, int *flags);
+                          const char *refname, int resolve_flags,
+                          struct object_id *oid, int *flags);
 char *resolve_refdup(const char *refname, int resolve_flags,
-		     struct object_id *oid, int *flags);
+                     struct object_id *oid, int *flags);
 
 int read_ref_full(const char *refname, int resolve_flags,
-		  struct object_id *oid, int *flags);
+                  struct object_id *oid, int *flags);
 int read_ref(const char *refname, struct object_id *oid);
 
 int refs_read_symbolic_ref(struct ref_store *ref_store, const char *refname,
-			   struct strbuf *referent);
+                           struct strbuf *referent);
 
 /*
  * Return 0 if a reference named refname could be created without
@@ -106,11 +106,11 @@ int refs_read_symbolic_ref(struct ref_store *ref_store, const char *refname,
  * extras and skip must be sorted.
  */
 
-int refs_verify_refname_available(struct ref_store *refs,
-				  const char *refname,
-				  const struct string_list *extras,
-				  const struct string_list *skip,
-				  struct strbuf *err);
+int refs_verify_refname_available(struct ref_store         *refs,
+                                  const char               *refname,
+                                  const struct string_list *extras,
+                                  const struct string_list *skip,
+                                  struct strbuf            *err);
 
 int refs_ref_exists(struct ref_store *refs, const char *refname);
 
@@ -143,7 +143,7 @@ int peel_iterated_oid(const struct object_id *base, struct object_id *peeled);
  * otherwise, return a non-zero value.
  */
 int resolve_gitlink_ref(const char *submodule, const char *refname,
-			struct object_id *oid);
+                        struct object_id *oid);
 
 /*
  * Return true iff abbrev_name is a possible abbreviation for
@@ -161,7 +161,7 @@ void expand_ref_prefix(struct strvec *prefixes, const char *prefix);
 
 int expand_ref(struct repository *r, const char *str, int len, struct object_id *oid, char **ref);
 int repo_dwim_ref(struct repository *r, const char *str, int len,
-		  struct object_id *oid, char **ref, int nonfatal_dangling_mark);
+                  struct object_id *oid, char **ref, int nonfatal_dangling_mark);
 int repo_dwim_log(struct repository *r, const char *str, int len, struct object_id *oid, char **ref);
 int dwim_log(const char *str, int len, struct object_id *oid, char **ref);
 
@@ -172,7 +172,7 @@ int dwim_log(const char *str, int len, struct object_id *oid, char **ref);
  * return value of `git_default_branch_name()` is a singleton.
  */
 const char *git_default_branch_name(int quiet);
-char *repo_default_branch_name(struct repository *r, int quiet);
+char       *repo_default_branch_name(struct repository *r, int quiet);
 
 /*
  * A ref_transaction represents a collection of reference updates that
@@ -295,18 +295,18 @@ struct ref_transaction;
  * arguments is only guaranteed to be valid for the duration of a
  * single callback invocation.
  */
-typedef int each_ref_fn(const char *refname,
-			const struct object_id *oid, int flags, void *cb_data);
+typedef int each_ref_fn(const char             *refname,
+                        const struct object_id *oid, int flags, void *cb_data);
 
 /*
  * The same as each_ref_fn, but also with a repository argument that
  * contains the repository associated with the callback.
  */
-typedef int each_repo_ref_fn(struct repository *r,
-			     const char *refname,
-			     const struct object_id *oid,
-			     int flags,
-			     void *cb_data);
+typedef int each_repo_ref_fn(struct repository      *r,
+                             const char             *refname,
+                             const struct object_id *oid,
+                             int                     flags,
+                             void                   *cb_data);
 
 /*
  * The following functions invoke the specified callback function for
@@ -318,17 +318,17 @@ typedef int each_repo_ref_fn(struct repository *r,
  * stop the iteration. Returned references are sorted.
  */
 int refs_head_ref(struct ref_store *refs,
-		  each_ref_fn fn, void *cb_data);
+                  each_ref_fn fn, void *cb_data);
 int refs_for_each_ref(struct ref_store *refs,
-		      each_ref_fn fn, void *cb_data);
+                      each_ref_fn fn, void *cb_data);
 int refs_for_each_ref_in(struct ref_store *refs, const char *prefix,
-			 each_ref_fn fn, void *cb_data);
+                         each_ref_fn fn, void *cb_data);
 int refs_for_each_tag_ref(struct ref_store *refs,
-			  each_ref_fn fn, void *cb_data);
+                          each_ref_fn fn, void *cb_data);
 int refs_for_each_branch_ref(struct ref_store *refs,
-			     each_ref_fn fn, void *cb_data);
+                             each_ref_fn fn, void *cb_data);
 int refs_for_each_remote_ref(struct ref_store *refs,
-			     each_ref_fn fn, void *cb_data);
+                             each_ref_fn fn, void *cb_data);
 
 /* just iterates the head ref. */
 int head_ref(each_ref_fn fn, void *cb_data);
@@ -347,8 +347,8 @@ int for_each_ref_in(const char *prefix, each_ref_fn fn, void *cb_data);
  * result set on a best-effort basis.
  */
 int refs_for_each_fullref_in(struct ref_store *refs, const char *prefix,
-			     const char **exclude_patterns,
-			     each_ref_fn fn, void *cb_data);
+                             const char **exclude_patterns,
+                             each_ref_fn fn, void *cb_data);
 int for_each_fullref_in(const char *prefix, each_ref_fn fn, void *cb_data);
 
 /**
@@ -361,10 +361,10 @@ int for_each_fullref_in(const char *prefix, each_ref_fn fn, void *cb_data);
  * callers should be prepared to ignore references that they did not ask for.
  */
 int refs_for_each_fullref_in_prefixes(struct ref_store *refs,
-				      const char *namespace,
-				      const char **patterns,
-				      const char **exclude_patterns,
-				      each_ref_fn fn, void *cb_data);
+                                      const char *namespace,
+                                      const char **patterns,
+                                      const char **exclude_patterns,
+                                      each_ref_fn fn, void *cb_data);
 
 /**
  * iterate refs from the respective area.
@@ -378,7 +378,7 @@ int for_each_replace_ref(struct repository *r, each_repo_ref_fn fn, void *cb_dat
 int for_each_glob_ref(each_ref_fn fn, const char *pattern, void *cb_data);
 
 int for_each_glob_ref_in(each_ref_fn fn, const char *pattern,
-			 const char *prefix, void *cb_data);
+                         const char *prefix, void *cb_data);
 
 int head_ref_namespaced(each_ref_fn fn, void *cb_data);
 /*
@@ -386,7 +386,7 @@ int head_ref_namespaced(each_ref_fn fn, void *cb_data);
  * result set on a best-effort basis.
  */
 int for_each_namespaced_ref(const char **exclude_patterns,
-			    each_ref_fn fn, void *cb_data);
+                            each_ref_fn fn, void *cb_data);
 
 /* can be used to learn about broken ref and symref */
 int refs_for_each_rawref(struct ref_store *refs, each_ref_fn fn, void *cb_data);
@@ -396,7 +396,7 @@ int for_each_rawref(each_ref_fn fn, void *cb_data);
  * Iterates over all refs including root refs, i.e. pseudorefs and HEAD.
  */
 int refs_for_each_include_root_refs(struct ref_store *refs, each_ref_fn fn,
-				    void *cb_data);
+                                    void *cb_data);
 
 /*
  * Normalizes partial refs to their fully qualified form.
@@ -408,16 +408,16 @@ int refs_for_each_include_root_refs(struct ref_store *refs, each_ref_fn fn,
  * non-NULL if it doesn't.
  */
 void normalize_glob_ref(struct string_list_item *item, const char *prefix,
-			const char *pattern);
+                        const char *pattern);
 
 static inline const char *has_glob_specials(const char *pattern)
 {
-	return strpbrk(pattern, "?*[");
+  return strpbrk(pattern, "?*[");
 }
 
 void warn_dangling_symref(FILE *fp, const char *msg_fmt, const char *refname);
 void warn_dangling_symrefs(FILE *fp, const char *msg_fmt,
-			   const struct string_list *refnames);
+                           const struct string_list *refnames);
 
 /*
  * Flags for controlling behaviour of pack_refs()
@@ -429,10 +429,11 @@ void warn_dangling_symrefs(FILE *fp, const char *msg_fmt,
 #define PACK_REFS_PRUNE (1 << 0)
 #define PACK_REFS_AUTO  (1 << 1)
 
-struct pack_refs_opts {
-	unsigned int flags;
-	struct ref_exclusions *exclusions;
-	struct string_list *includes;
+struct pack_refs_opts
+{
+  unsigned int           flags;
+  struct ref_exclusions *exclusions;
+  struct string_list    *includes;
 };
 
 /*
@@ -445,7 +446,7 @@ int refs_pack_refs(struct ref_store *refs, struct pack_refs_opts *opts);
  * Setup reflog before using. Fill in err and return -1 on failure.
  */
 int refs_create_reflog(struct ref_store *refs, const char *refname,
-		       struct strbuf *err);
+                       struct strbuf *err);
 int safe_create_reflog(const char *refname, struct strbuf *err);
 
 /**
@@ -463,10 +464,10 @@ int safe_create_reflog(const char *refname, struct strbuf *err);
  * "oid" field untouched.
  **/
 int read_ref_at(struct ref_store *refs,
-		const char *refname, unsigned int flags,
-		timestamp_t at_time, int cnt,
-		struct object_id *oid, char **msg,
-		timestamp_t *cutoff_time, int *cutoff_tz, int *cutoff_cnt);
+                const char *refname, unsigned int flags,
+                timestamp_t at_time, int cnt,
+                struct object_id *oid, char **msg,
+                timestamp_t *cutoff_time, int *cutoff_tz, int *cutoff_cnt);
 
 /** Check if a particular reflog exists */
 int refs_reflog_exists(struct ref_store *refs, const char *refname);
@@ -481,11 +482,11 @@ int reflog_exists(const char *refname);
  * ref_transaction_delete().
  */
 int refs_delete_ref(struct ref_store *refs, const char *msg,
-		    const char *refname,
-		    const struct object_id *old_oid,
-		    unsigned int flags);
+                    const char             *refname,
+                    const struct object_id *old_oid,
+                    unsigned int            flags);
 int delete_ref(const char *msg, const char *refname,
-	       const struct object_id *old_oid, unsigned int flags);
+               const struct object_id *old_oid, unsigned int flags);
 
 /*
  * Delete the specified references. If there are any problems, emit
@@ -494,9 +495,9 @@ int delete_ref(const char *msg, const char *refname,
  * ref_transaction_delete().
  */
 int refs_delete_refs(struct ref_store *refs, const char *msg,
-		     struct string_list *refnames, unsigned int flags);
+                     struct string_list *refnames, unsigned int flags);
 int delete_refs(const char *msg, struct string_list *refnames,
-		unsigned int flags);
+                unsigned int flags);
 
 /** Delete a reflog */
 int refs_delete_reflog(struct ref_store *refs, const char *refname);
@@ -529,21 +530,21 @@ int delete_reflog(const char *refname);
  * functions.
  */
 typedef int each_reflog_ent_fn(
-		struct object_id *old_oid, struct object_id *new_oid,
-		const char *committer, timestamp_t timestamp,
-		int tz, const char *msg, void *cb_data);
+    struct object_id *old_oid, struct object_id *new_oid,
+    const char *committer, timestamp_t timestamp,
+    int tz, const char *msg, void *cb_data);
 
 /* Iterate over reflog entries in the log for `refname`. */
 
 /* oldest entry first */
 int refs_for_each_reflog_ent(struct ref_store *refs, const char *refname,
-			     each_reflog_ent_fn fn, void *cb_data);
+                             each_reflog_ent_fn fn, void *cb_data);
 
 /* youngest entry first */
-int refs_for_each_reflog_ent_reverse(struct ref_store *refs,
-				     const char *refname,
-				     each_reflog_ent_fn fn,
-				     void *cb_data);
+int refs_for_each_reflog_ent_reverse(struct ref_store  *refs,
+                                     const char        *refname,
+                                     each_reflog_ent_fn fn,
+                                     void              *cb_data);
 
 /*
  * Iterate over reflog entries in the log for `refname` in the main ref store.
@@ -569,7 +570,7 @@ typedef int each_reflog_fn(const char *refname, void *cb_data);
 int refs_for_each_reflog(struct ref_store *refs, each_reflog_fn fn, void *cb_data);
 int for_each_reflog(each_reflog_fn fn, void *cb_data);
 
-#define REFNAME_ALLOW_ONELEVEL 1
+#define REFNAME_ALLOW_ONELEVEL  1
 #define REFNAME_REFSPEC_PATTERN 2
 
 /*
@@ -591,29 +592,30 @@ void sanitize_refname_component(const char *refname, struct strbuf *out);
 const char *prettify_refname(const char *refname);
 
 char *refs_shorten_unambiguous_ref(struct ref_store *refs,
-				   const char *refname, int strict);
+                                   const char *refname, int strict);
 char *shorten_unambiguous_ref(const char *refname, int strict);
 
 /** rename ref, return 0 on success **/
 int refs_rename_ref(struct ref_store *refs, const char *oldref,
-		    const char *newref, const char *logmsg);
+                    const char *newref, const char *logmsg);
 int rename_ref(const char *oldref, const char *newref,
-			const char *logmsg);
+               const char *logmsg);
 
 /** copy ref, return 0 on success **/
 int refs_copy_existing_ref(struct ref_store *refs, const char *oldref,
-		    const char *newref, const char *logmsg);
+                           const char *newref, const char *logmsg);
 int copy_existing_ref(const char *oldref, const char *newref,
-			const char *logmsg);
+                      const char *logmsg);
 
 int refs_create_symref(struct ref_store *refs, const char *refname,
-		       const char *target, const char *logmsg);
+                       const char *target, const char *logmsg);
 int create_symref(const char *refname, const char *target, const char *logmsg);
 
-enum action_on_err {
-	UPDATE_REFS_MSG_ON_ERR,
-	UPDATE_REFS_DIE_ON_ERR,
-	UPDATE_REFS_QUIET_ON_ERR
+enum action_on_err
+{
+  UPDATE_REFS_MSG_ON_ERR,
+  UPDATE_REFS_DIE_ON_ERR,
+  UPDATE_REFS_QUIET_ON_ERR
 };
 
 /*
@@ -621,7 +623,7 @@ enum action_on_err {
  * be freed by calling ref_transaction_free().
  */
 struct ref_transaction *ref_store_transaction_begin(struct ref_store *refs,
-						    struct strbuf *err);
+                                                    struct strbuf    *err);
 struct ref_transaction *ref_transaction_begin(struct strbuf *err);
 
 /*
@@ -700,9 +702,8 @@ struct ref_transaction *ref_transaction_begin(struct strbuf *err);
  * Bitmask of all of the flags that are allowed to be passed in to
  * ref_transaction_update() and friends:
  */
-#define REF_TRANSACTION_UPDATE_ALLOWED_FLAGS                                  \
-	(REF_NO_DEREF | REF_FORCE_CREATE_REFLOG | REF_SKIP_OID_VERIFICATION | \
-	 REF_SKIP_REFNAME_VERIFICATION)
+#define REF_TRANSACTION_UPDATE_ALLOWED_FLAGS \
+  (REF_NO_DEREF | REF_FORCE_CREATE_REFLOG | REF_SKIP_OID_VERIFICATION | REF_SKIP_REFNAME_VERIFICATION)
 
 /*
  * Add a reference update to transaction. `new_oid` is the value that
@@ -719,11 +720,11 @@ struct ref_transaction *ref_transaction_begin(struct strbuf *err);
  * information.
  */
 int ref_transaction_update(struct ref_transaction *transaction,
-			   const char *refname,
-			   const struct object_id *new_oid,
-			   const struct object_id *old_oid,
-			   unsigned int flags, const char *msg,
-			   struct strbuf *err);
+                           const char             *refname,
+                           const struct object_id *new_oid,
+                           const struct object_id *old_oid,
+                           unsigned int flags, const char *msg,
+                           struct strbuf *err);
 
 /*
  * Add a reference creation to transaction. new_oid is the value that
@@ -735,10 +736,10 @@ int ref_transaction_update(struct ref_transaction *transaction,
  * information.
  */
 int ref_transaction_create(struct ref_transaction *transaction,
-			   const char *refname,
-			   const struct object_id *new_oid,
-			   unsigned int flags, const char *msg,
-			   struct strbuf *err);
+                           const char             *refname,
+                           const struct object_id *new_oid,
+                           unsigned int flags, const char *msg,
+                           struct strbuf *err);
 
 /*
  * Add a reference deletion to transaction. If old_oid is non-NULL,
@@ -749,10 +750,10 @@ int ref_transaction_create(struct ref_transaction *transaction,
  * information.
  */
 int ref_transaction_delete(struct ref_transaction *transaction,
-			   const char *refname,
-			   const struct object_id *old_oid,
-			   unsigned int flags, const char *msg,
-			   struct strbuf *err);
+                           const char             *refname,
+                           const struct object_id *old_oid,
+                           unsigned int flags, const char *msg,
+                           struct strbuf *err);
 
 /*
  * Verify, within a transaction, that refname has the value old_oid,
@@ -763,10 +764,10 @@ int ref_transaction_delete(struct ref_transaction *transaction,
  * information.
  */
 int ref_transaction_verify(struct ref_transaction *transaction,
-			   const char *refname,
-			   const struct object_id *old_oid,
-			   unsigned int flags,
-			   struct strbuf *err);
+                           const char             *refname,
+                           const struct object_id *old_oid,
+                           unsigned int            flags,
+                           struct strbuf          *err);
 
 /* Naming conflict (for example, the ref names A and A/B conflict). */
 #define TRANSACTION_NAME_CONFLICT -1
@@ -790,7 +791,7 @@ int ref_transaction_verify(struct ref_transaction *transaction,
  * reference transactions should just call `ref_transaction_commit()`.
  */
 int ref_transaction_prepare(struct ref_transaction *transaction,
-			    struct strbuf *err);
+                            struct strbuf          *err);
 
 /*
  * Commit all of the changes that have been queued in transaction, as
@@ -800,14 +801,14 @@ int ref_transaction_prepare(struct ref_transaction *transaction,
  * `TRANSACTION_*` constants
  */
 int ref_transaction_commit(struct ref_transaction *transaction,
-			   struct strbuf *err);
+                           struct strbuf          *err);
 
 /*
  * Abort `transaction`, which has been begun and possibly prepared,
  * but not yet committed.
  */
 int ref_transaction_abort(struct ref_transaction *transaction,
-			  struct strbuf *err);
+                          struct strbuf          *err);
 
 /*
  * Like ref_transaction_commit(), but optimized for creating
@@ -821,7 +822,7 @@ int ref_transaction_abort(struct ref_transaction *transaction,
  * old_oid values must either be absent or null_oid.
  */
 int initial_ref_transaction_commit(struct ref_transaction *transaction,
-				   struct strbuf *err);
+                                   struct strbuf          *err);
 
 /*
  * Execute the given callback function for each of the reference updates which
@@ -829,13 +830,13 @@ int initial_ref_transaction_commit(struct ref_transaction *transaction,
  * `NULL` pointers depending on whether the update has these object IDs set or
  * not.
  */
-typedef void ref_transaction_for_each_queued_update_fn(const char *refname,
-						       const struct object_id *old_oid,
-						       const struct object_id *new_oid,
-						       void *cb_data);
-void ref_transaction_for_each_queued_update(struct ref_transaction *transaction,
-					    ref_transaction_for_each_queued_update_fn cb,
-					    void *cb_data);
+typedef void ref_transaction_for_each_queued_update_fn(const char             *refname,
+                                                       const struct object_id *old_oid,
+                                                       const struct object_id *new_oid,
+                                                       void                   *cb_data);
+void         ref_transaction_for_each_queued_update(struct ref_transaction                   *transaction,
+                                                    ref_transaction_for_each_queued_update_fn cb,
+                                                    void                                     *cb_data);
 
 /*
  * Free `*transaction` and all associated data.
@@ -851,14 +852,14 @@ void ref_transaction_free(struct ref_transaction *transaction);
  * argument.
  */
 int refs_update_ref(struct ref_store *refs, const char *msg, const char *refname,
-		    const struct object_id *new_oid, const struct object_id *old_oid,
-		    unsigned int flags, enum action_on_err onerr);
+                    const struct object_id *new_oid, const struct object_id *old_oid,
+                    unsigned int flags, enum action_on_err onerr);
 int update_ref(const char *msg, const char *refname,
-	       const struct object_id *new_oid, const struct object_id *old_oid,
-	       unsigned int flags, enum action_on_err onerr);
+               const struct object_id *new_oid, const struct object_id *old_oid,
+               unsigned int flags, enum action_on_err onerr);
 
 int parse_hide_refs_config(const char *var, const char *value, const char *,
-			   struct strvec *);
+                           struct strvec *);
 
 /*
  * Check whether a ref is hidden. If no namespace is set, both the first and
@@ -880,14 +881,15 @@ const char **hidden_refs_to_excludes(const struct strvec *hide_refs);
 int is_per_worktree_ref(const char *refname);
 
 /* Describes how a refname relates to worktrees */
-enum ref_worktree_type {
-	REF_WORKTREE_CURRENT, /* implicitly per worktree, eg. HEAD or
-				 refs/bisect/SOMETHING */
-	REF_WORKTREE_MAIN, /* explicitly in main worktree, eg.
-			      main-worktree/HEAD */
-	REF_WORKTREE_OTHER, /* explicitly in named worktree, eg.
-			       worktrees/bla/HEAD */
-	REF_WORKTREE_SHARED, /* the default, eg. refs/heads/main */
+enum ref_worktree_type
+{
+  REF_WORKTREE_CURRENT, /* implicitly per worktree, eg. HEAD or
+                           refs/bisect/SOMETHING */
+  REF_WORKTREE_MAIN,    /* explicitly in main worktree, eg.
+                           main-worktree/HEAD */
+  REF_WORKTREE_OTHER,   /* explicitly in named worktree, eg.
+                           worktrees/bla/HEAD */
+  REF_WORKTREE_SHARED,  /* the default, eg. refs/heads/main */
 };
 
 /*
@@ -900,15 +902,16 @@ enum ref_worktree_type {
  * `worktree_name`, `worktree_name_length` and `bare_refname` arguments may be
  * NULL.
  */
-enum ref_worktree_type parse_worktree_ref(const char *maybe_worktree_ref,
-					  const char **worktree_name,
-					  int *worktree_name_length,
-					  const char **bare_refname);
+enum ref_worktree_type parse_worktree_ref(const char  *maybe_worktree_ref,
+                                          const char **worktree_name,
+                                          int         *worktree_name_length,
+                                          const char **bare_refname);
 
-enum expire_reflog_flags {
-	EXPIRE_REFLOGS_DRY_RUN = 1 << 0,
-	EXPIRE_REFLOGS_UPDATE_REF = 1 << 1,
-	EXPIRE_REFLOGS_REWRITE = 1 << 2,
+enum expire_reflog_flags
+{
+  EXPIRE_REFLOGS_DRY_RUN    = 1 << 0,
+  EXPIRE_REFLOGS_UPDATE_REF = 1 << 1,
+  EXPIRE_REFLOGS_REWRITE    = 1 << 2,
 };
 
 /*
@@ -927,14 +930,14 @@ enum expire_reflog_flags {
  * reflog_expiry_cleanup_fn -- Called once before the reference is
  *     unlocked again.
  */
-typedef void reflog_expiry_prepare_fn(const char *refname,
-				      const struct object_id *oid,
-				      void *cb_data);
-typedef int reflog_expiry_should_prune_fn(struct object_id *ooid,
-					  struct object_id *noid,
-					  const char *email,
-					  timestamp_t timestamp, int tz,
-					  const char *message, void *cb_data);
+typedef void reflog_expiry_prepare_fn(const char             *refname,
+                                      const struct object_id *oid,
+                                      void                   *cb_data);
+typedef int  reflog_expiry_should_prune_fn(struct object_id *ooid,
+                                           struct object_id *noid,
+                                           const char       *email,
+                                           timestamp_t timestamp, int tz,
+                                           const char *message, void *cb_data);
 typedef void reflog_expiry_cleanup_fn(void *cb_data);
 
 /*
@@ -943,19 +946,19 @@ typedef void reflog_expiry_cleanup_fn(void *cb_data);
  * enum expire_reflog_flags. The three function pointers are described
  * above. On success, return zero.
  */
-int refs_reflog_expire(struct ref_store *refs,
-		       const char *refname,
-		       unsigned int flags,
-		       reflog_expiry_prepare_fn prepare_fn,
-		       reflog_expiry_should_prune_fn should_prune_fn,
-		       reflog_expiry_cleanup_fn cleanup_fn,
-		       void *policy_cb_data);
-int reflog_expire(const char *refname,
-		  unsigned int flags,
-		  reflog_expiry_prepare_fn prepare_fn,
-		  reflog_expiry_should_prune_fn should_prune_fn,
-		  reflog_expiry_cleanup_fn cleanup_fn,
-		  void *policy_cb_data);
+int refs_reflog_expire(struct ref_store             *refs,
+                       const char                   *refname,
+                       unsigned int                  flags,
+                       reflog_expiry_prepare_fn      prepare_fn,
+                       reflog_expiry_should_prune_fn should_prune_fn,
+                       reflog_expiry_cleanup_fn      cleanup_fn,
+                       void                         *policy_cb_data);
+int reflog_expire(const char                   *refname,
+                  unsigned int                  flags,
+                  reflog_expiry_prepare_fn      prepare_fn,
+                  reflog_expiry_should_prune_fn should_prune_fn,
+                  reflog_expiry_cleanup_fn      cleanup_fn,
+                  void                         *policy_cb_data);
 
 struct ref_store *get_main_ref_store(struct repository *r);
 
@@ -1012,34 +1015,36 @@ struct ref_store *get_worktree_ref_store(const struct worktree *wt);
  * reference from multiple places in the codebase.
  */
 
-struct ref_namespace_info {
-	char *ref;
-	enum decoration_type decoration;
+struct ref_namespace_info
+{
+  char                *ref;
+  enum decoration_type decoration;
 
-	/*
-	 * If 'exact' is true, then we must match the 'ref' exactly.
-	 * Otherwise, use a prefix match.
-	 *
-	 * 'ref_updated' is for internal use. It represents whether the
-	 * 'ref' value was replaced from its original literal version.
-	 */
-	unsigned exact:1,
-		 ref_updated:1;
+  /*
+   * If 'exact' is true, then we must match the 'ref' exactly.
+   * Otherwise, use a prefix match.
+   *
+   * 'ref_updated' is for internal use. It represents whether the
+   * 'ref' value was replaced from its original literal version.
+   */
+  unsigned exact : 1,
+      ref_updated : 1;
 };
 
-enum ref_namespace {
-	NAMESPACE_HEAD,
-	NAMESPACE_BRANCHES,
-	NAMESPACE_TAGS,
-	NAMESPACE_REMOTE_REFS,
-	NAMESPACE_STASH,
-	NAMESPACE_REPLACE,
-	NAMESPACE_NOTES,
-	NAMESPACE_PREFETCH,
-	NAMESPACE_REWRITTEN,
+enum ref_namespace
+{
+  NAMESPACE_HEAD,
+  NAMESPACE_BRANCHES,
+  NAMESPACE_TAGS,
+  NAMESPACE_REMOTE_REFS,
+  NAMESPACE_STASH,
+  NAMESPACE_REPLACE,
+  NAMESPACE_NOTES,
+  NAMESPACE_PREFETCH,
+  NAMESPACE_REWRITTEN,
 
-	/* Must be last */
-	NAMESPACE__COUNT
+  /* Must be last */
+  NAMESPACE__COUNT
 };
 
 /* See refs.c for the contents of this array. */

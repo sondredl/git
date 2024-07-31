@@ -5,7 +5,7 @@ struct strbuf;
 
 const char *git_editor(void);
 const char *git_sequence_editor(void);
-int is_terminal_dumb(void);
+int         is_terminal_dumb(void);
 
 /**
  * Launch the user preferred editor to edit a file and fill the buffer
@@ -15,10 +15,10 @@ int is_terminal_dumb(void);
  * file's contents are not read into the buffer upon completion.
  */
 int launch_editor(const char *path, struct strbuf *buffer,
-		  const char *const *env);
+                  const char *const *env);
 
 int launch_sequence_editor(const char *path, struct strbuf *buffer,
-			   const char *const *env);
+                           const char *const *env);
 
 /*
  * In contrast to `launch_editor()`, this function writes out the contents
@@ -29,6 +29,6 @@ int launch_sequence_editor(const char *path, struct strbuf *buffer,
  * If `path` is relative, it refers to a file in the `.git` directory.
  */
 int strbuf_edit_interactively(struct strbuf *buffer, const char *path,
-			      const char *const *env);
+                              const char *const *env);
 
 #endif

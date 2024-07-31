@@ -1,6 +1,6 @@
 #ifdef __MINGW64_VERSION_MAJOR
-#include <stdint.h>
-#include <wchar.h>
+  #include <stdint.h>
+  #include <wchar.h>
 typedef _sigset_t sigset_t;
 #endif
 #include <winsock2.h>
@@ -8,15 +8,15 @@ typedef _sigset_t sigset_t;
 
 /* MinGW-w64 reports to have flockfile, but it does not actually have it. */
 #ifdef __MINGW64_VERSION_MAJOR
-#undef _POSIX_THREAD_SAFE_FUNCTIONS
+  #undef _POSIX_THREAD_SAFE_FUNCTIONS
 #endif
 
 extern int core_fscache;
-int are_long_paths_enabled(void);
+int        are_long_paths_enabled(void);
 
 struct config_context;
 int mingw_core_config(const char *var, const char *value,
-		      const struct config_context *ctx, void *cb);
+                      const struct config_context *ctx, void *cb);
 #define platform_core_config mingw_core_config
 
 /*
@@ -27,92 +27,96 @@ typedef int uid_t;
 typedef int socklen_t;
 #ifndef __MINGW64_VERSION_MAJOR
 typedef int pid_t;
-#define hstrerror strerror
+  #define hstrerror strerror
 #endif
 
-#define S_IFLNK    0120000 /* Symbolic link */
-#define S_ISLNK(x) (((x) & S_IFMT) == S_IFLNK)
+#define S_IFLNK     0120000 /* Symbolic link */
+#define S_ISLNK(x)  (((x)&S_IFMT) == S_IFLNK)
 #define S_ISSOCK(x) 0
 
 #ifndef S_IRWXG
-#define S_IRGRP 0
-#define S_IWGRP 0
-#define S_IXGRP 0
-#define S_IRWXG (S_IRGRP | S_IWGRP | S_IXGRP)
+  #define S_IRGRP 0
+  #define S_IWGRP 0
+  #define S_IXGRP 0
+  #define S_IRWXG (S_IRGRP | S_IWGRP | S_IXGRP)
 #endif
 #ifndef S_IRWXO
-#define S_IROTH 0
-#define S_IWOTH 0
-#define S_IXOTH 0
-#define S_IRWXO (S_IROTH | S_IWOTH | S_IXOTH)
+  #define S_IROTH 0
+  #define S_IWOTH 0
+  #define S_IXOTH 0
+  #define S_IRWXO (S_IROTH | S_IWOTH | S_IXOTH)
 #endif
 
 #define S_ISUID 0004000
 #define S_ISGID 0002000
 #define S_ISVTX 0001000
 
-#define WIFEXITED(x) 1
+#define WIFEXITED(x)   1
 #define WIFSIGNALED(x) 0
-#define WEXITSTATUS(x) ((x) & 0xff)
-#define WTERMSIG(x) SIGTERM
+#define WEXITSTATUS(x) ((x)&0xff)
+#define WTERMSIG(x)    SIGTERM
 
 #ifndef EWOULDBLOCK
-#define EWOULDBLOCK EAGAIN
+  #define EWOULDBLOCK EAGAIN
 #endif
 #ifndef ELOOP
-#define ELOOP EMLINK
+  #define ELOOP EMLINK
 #endif
 #define SHUT_WR SD_SEND
 
-#define SIGHUP 1
+#define SIGHUP  1
 #define SIGQUIT 3
 #define SIGKILL 9
 #define SIGPIPE 13
 #define SIGALRM 14
 #define SIGCHLD 17
 
-#define F_GETFD 1
-#define F_SETFD 2
+#define F_GETFD    1
+#define F_SETFD    2
 #define FD_CLOEXEC 0x1
 
 #if !defined O_CLOEXEC && defined O_NOINHERIT
-#define O_CLOEXEC	O_NOINHERIT
+  #define O_CLOEXEC O_NOINHERIT
 #endif
 
 #ifndef EAFNOSUPPORT
-#define EAFNOSUPPORT WSAEAFNOSUPPORT
+  #define EAFNOSUPPORT WSAEAFNOSUPPORT
 #endif
 #ifndef ECONNABORTED
-#define ECONNABORTED WSAECONNABORTED
+  #define ECONNABORTED WSAECONNABORTED
 #endif
 #ifndef ENOTSOCK
-#define ENOTSOCK WSAENOTSOCK
+  #define ENOTSOCK WSAENOTSOCK
 #endif
 
-struct passwd {
-	char *pw_name;
-	char *pw_gecos;
-	char *pw_dir;
+struct passwd
+{
+  char *pw_name;
+  char *pw_gecos;
+  char *pw_dir;
 };
 
-typedef void (__cdecl *sig_handler_t)(int);
-struct sigaction {
-	sig_handler_t sa_handler;
-	unsigned sa_flags;
+typedef void(__cdecl *sig_handler_t)(int);
+struct sigaction
+{
+  sig_handler_t sa_handler;
+  unsigned      sa_flags;
 };
 #define SA_RESTART 0
 
-struct itimerval {
-	struct timeval it_value, it_interval;
+struct itimerval
+{
+  struct timeval it_value, it_interval;
 };
 #define ITIMER_REAL 0
 
-struct utsname {
-	char sysname[16];
-	char nodename[1];
-	char release[16];
-	char version[16];
-	char machine[1];
+struct utsname
+{
+  char sysname[16];
+  char nodename[1];
+  char release[16];
+  char version[16];
+  char machine[1];
 };
 
 /*
@@ -126,42 +130,67 @@ struct utsname {
  */
 
 static inline int fchmod(int fildes, mode_t mode)
-{ errno = ENOSYS; return -1; }
+{
+  errno = ENOSYS;
+  return -1;
+}
 #ifndef __MINGW64_VERSION_MAJOR
 static inline pid_t fork(void)
-{ errno = ENOSYS; return -1; }
+{
+  errno = ENOSYS;
+  return -1;
+}
 #endif
 static inline unsigned int alarm(unsigned int seconds)
-{ return 0; }
+{
+  return 0;
+}
 static inline int fsync(int fd)
-{ return _commit(fd); }
+{
+  return _commit(fd);
+}
 static inline void sync(void)
-{}
+{
+}
 static inline uid_t getuid(void)
-{ return 1; }
+{
+  return 1;
+}
 static inline struct passwd *getpwnam(const char *name)
-{ return NULL; }
+{
+  return NULL;
+}
 static inline int fcntl(int fd, int cmd, ...)
 {
-	if (cmd == F_GETFD || cmd == F_SETFD)
-		return 0;
-	errno = EINVAL;
-	return -1;
+  if (cmd == F_GETFD || cmd == F_SETFD)
+    return 0;
+  errno = EINVAL;
+  return -1;
 }
 
 #define sigemptyset(x) (void)0
 static inline int sigaddset(sigset_t *set, int signum)
-{ return 0; }
-#define SIG_BLOCK 0
+{
+  return 0;
+}
+#define SIG_BLOCK   0
 #define SIG_UNBLOCK 0
 static inline int sigprocmask(int how, const sigset_t *set, sigset_t *oldset)
-{ return 0; }
+{
+  return 0;
+}
 static inline pid_t getppid(void)
-{ return 1; }
+{
+  return 1;
+}
 static inline pid_t getpgid(pid_t pid)
-{ return pid == 0 ? getpid() : pid; }
+{
+  return pid == 0 ? getpid() : pid;
+}
 static inline pid_t tcgetpgrp(int fd)
-{ return getpid(); }
+{
+  return getpid();
+}
 
 /*
  * simple adaptors
@@ -180,45 +209,45 @@ int mingw_kill(pid_t pid, int sig);
 char *mingw_locate_in_PATH(const char *cmd);
 
 #ifndef NO_OPENSSL
-#include <openssl/ssl.h>
+  #include <openssl/ssl.h>
 static inline int mingw_SSL_set_fd(SSL *ssl, int fd)
 {
-	return SSL_set_fd(ssl, _get_osfhandle(fd));
+  return SSL_set_fd(ssl, _get_osfhandle(fd));
 }
-#define SSL_set_fd mingw_SSL_set_fd
+  #define SSL_set_fd mingw_SSL_set_fd
 
 static inline int mingw_SSL_set_rfd(SSL *ssl, int fd)
 {
-	return SSL_set_rfd(ssl, _get_osfhandle(fd));
+  return SSL_set_rfd(ssl, _get_osfhandle(fd));
 }
-#define SSL_set_rfd mingw_SSL_set_rfd
+  #define SSL_set_rfd mingw_SSL_set_rfd
 
 static inline int mingw_SSL_set_wfd(SSL *ssl, int fd)
 {
-	return SSL_set_wfd(ssl, _get_osfhandle(fd));
+  return SSL_set_wfd(ssl, _get_osfhandle(fd));
 }
-#define SSL_set_wfd mingw_SSL_set_wfd
+  #define SSL_set_wfd mingw_SSL_set_wfd
 #endif
 
 /*
  * implementations of missing functions
  */
 
-int pipe(int filedes[2]);
-unsigned int sleep (unsigned int seconds);
-int mkstemp(char *template);
-int gettimeofday(struct timeval *tv, void *tz);
+int          pipe(int filedes[2]);
+unsigned int sleep(unsigned int seconds);
+int          mkstemp(char *template);
+int          gettimeofday(struct timeval *tv, void *tz);
 #ifndef __MINGW64_VERSION_MAJOR
 struct tm *gmtime_r(const time_t *timep, struct tm *result);
 struct tm *localtime_r(const time_t *timep, struct tm *result);
 #endif
-int getpagesize(void);	/* defined in MinGW's libgcc.a */
+int            getpagesize(void); /* defined in MinGW's libgcc.a */
 struct passwd *getpwuid(uid_t uid);
-int setitimer(int type, struct itimerval *in, struct itimerval *out);
-int sigaction(int sig, struct sigaction *in, struct sigaction *out);
-int link(const char *oldpath, const char *newpath);
-int uname(struct utsname *buf);
-int readlink(const char *path, char *buf, size_t bufsiz);
+int            setitimer(int type, struct itimerval *in, struct itimerval *out);
+int            sigaction(int sig, struct sigaction *in, struct sigaction *out);
+int            link(const char *oldpath, const char *newpath);
+int            uname(struct utsname *buf);
+int            readlink(const char *path, char *buf, size_t bufsiz);
 struct index_state;
 int mingw_create_symlink(struct index_state *index, const char *target, const char *link);
 #define create_symlink mingw_create_symlink
@@ -233,17 +262,17 @@ int mingw_unlink(const char *pathname);
 int mingw_rmdir(const char *path);
 #define rmdir mingw_rmdir
 
-int mingw_open (const char *filename, int oflags, ...);
+int mingw_open(const char *filename, int oflags, ...);
 #define open mingw_open
 #undef OPEN_RETURNS_EINTR
 
 int mingw_fgetc(FILE *stream);
 #define fgetc mingw_fgetc
 
-FILE *mingw_fopen (const char *filename, const char *otype);
+FILE *mingw_fopen(const char *filename, const char *otype);
 #define fopen mingw_fopen
 
-FILE *mingw_freopen (const char *filename, const char *otype, FILE *stream);
+FILE *mingw_freopen(const char *filename, const char *otype, FILE *stream);
 #define freopen mingw_freopen
 
 int mingw_fflush(FILE *stream);
@@ -269,7 +298,7 @@ char *mingw_getcwd(char *pointer, int len);
 #define getcwd mingw_getcwd
 
 #ifdef NO_UNSETENV
-#error "NO_UNSETENV is incompatible with the Windows-specific startup code!"
+  #error "NO_UNSETENV is incompatible with the Windows-specific startup code!"
 #endif
 
 /*
@@ -292,9 +321,9 @@ char *mingw_getcwd(char *pointer, int len);
  *
  * We require NO_SETENV (and let gitsetenv() call our mingw_putenv).
  */
-#define getenv       mingw_getenv
-#define putenv       mingw_putenv
-#define unsetenv     mingw_putenv
+#define getenv   mingw_getenv
+#define putenv   mingw_putenv
+#define unsetenv mingw_putenv
 char *mingw_getenv(const char *name);
 int   mingw_putenv(const char *name);
 
@@ -305,7 +334,7 @@ struct hostent *mingw_gethostbyname(const char *host);
 #define gethostbyname mingw_gethostbyname
 
 int mingw_getaddrinfo(const char *node, const char *service,
-		      const struct addrinfo *hints, struct addrinfo **res);
+                      const struct addrinfo *hints, struct addrinfo **res);
 #define getaddrinfo mingw_getaddrinfo
 
 int mingw_socket(int domain, int type, int protocol);
@@ -329,34 +358,36 @@ int mingw_listen(int sockfd, int backlog);
 int mingw_accept(int sockfd, struct sockaddr *sa, socklen_t *sz);
 #define accept mingw_accept
 
-int mingw_rename(const char*, const char*);
+int mingw_rename(const char *, const char *);
 #define rename mingw_rename
 
 #if defined(USE_WIN32_MMAP) || defined(_MSC_VER)
 int mingw_getpagesize(void);
-#define getpagesize mingw_getpagesize
+  #define getpagesize mingw_getpagesize
 #endif
 
 int win32_fsync_no_flush(int fd);
 #define fsync_no_flush win32_fsync_no_flush
 
 #define FSYNC_COMPONENTS_PLATFORM_DEFAULT (FSYNC_COMPONENTS_DEFAULT | FSYNC_COMPONENT_LOOSE_OBJECT)
-#define FSYNC_METHOD_DEFAULT (FSYNC_METHOD_BATCH)
+#define FSYNC_METHOD_DEFAULT              (FSYNC_METHOD_BATCH)
 
-struct rlimit {
-	unsigned int rlim_cur;
+struct rlimit
+{
+  unsigned int rlim_cur;
 };
 #define RLIMIT_NOFILE 0
 
 static inline int getrlimit(int resource, struct rlimit *rlp)
 {
-	if (resource != RLIMIT_NOFILE) {
-		errno = EINVAL;
-		return -1;
-	}
+  if (resource != RLIMIT_NOFILE)
+  {
+    errno = EINVAL;
+    return -1;
+  }
 
-	rlp->rlim_cur = 2048;
-	return 0;
+  rlp->rlim_cur = 2048;
+  return 0;
 }
 
 /*
@@ -365,9 +396,9 @@ static inline int getrlimit(int resource, struct rlimit *rlp)
  */
 static inline long long filetime_to_hnsec(const FILETIME *ft)
 {
-	long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
-	/* Windows to Unix Epoch conversion */
-	return winTime - 116444736000000000LL;
+  long long winTime = ((long long)ft->dwHighDateTime << 32) + ft->dwLowDateTime;
+  /* Windows to Unix Epoch conversion */
+  return winTime - 116444736000000000LL;
 }
 
 /*
@@ -376,35 +407,37 @@ static inline long long filetime_to_hnsec(const FILETIME *ft)
  * file times.
  */
 #ifndef __MINGW64_VERSION_MAJOR
-#define off_t off64_t
-#define lseek _lseeki64
-#ifndef _MSC_VER
-struct timespec {
-	time_t tv_sec;
-	long tv_nsec;
+  #define off_t off64_t
+  #define lseek _lseeki64
+  #ifndef _MSC_VER
+struct timespec
+{
+  time_t tv_sec;
+  long   tv_nsec;
 };
-#endif
+  #endif
 #endif
 
 static inline void filetime_to_timespec(const FILETIME *ft, struct timespec *ts)
 {
-	long long hnsec = filetime_to_hnsec(ft);
-	ts->tv_sec = (time_t)(hnsec / 10000000);
-	ts->tv_nsec = (hnsec % 10000000) * 100;
+  long long hnsec = filetime_to_hnsec(ft);
+  ts->tv_sec      = (time_t)(hnsec / 10000000);
+  ts->tv_nsec     = (hnsec % 10000000) * 100;
 }
 
-struct mingw_stat {
-    _dev_t st_dev;
-    _ino_t st_ino;
-    _mode_t st_mode;
-    short st_nlink;
-    short st_uid;
-    short st_gid;
-    _dev_t st_rdev;
-    off64_t st_size;
-    struct timespec st_atim;
-    struct timespec st_mtim;
-    struct timespec st_ctim;
+struct mingw_stat
+{
+  _dev_t          st_dev;
+  _ino_t          st_ino;
+  _mode_t         st_mode;
+  short           st_nlink;
+  short           st_uid;
+  short           st_gid;
+  _dev_t          st_rdev;
+  off64_t         st_size;
+  struct timespec st_atim;
+  struct timespec st_mtim;
+  struct timespec st_ctim;
 };
 
 #define st_atime st_atim.tv_sec
@@ -412,38 +445,39 @@ struct mingw_stat {
 #define st_ctime st_ctim.tv_sec
 
 #ifdef stat
-#undef stat
+  #undef stat
 #endif
 #define stat mingw_stat
 int mingw_lstat(const char *file_name, struct stat *buf);
 int mingw_stat(const char *file_name, struct stat *buf);
 int mingw_fstat(int fd, struct stat *buf);
 #ifdef fstat
-#undef fstat
+  #undef fstat
 #endif
 #define fstat mingw_fstat
 #ifdef lstat
-#undef lstat
+  #undef lstat
 #endif
 extern int (*lstat)(const char *file_name, struct stat *buf);
-
 
 int mingw_utime(const char *file_name, const struct utimbuf *times);
 #define utime mingw_utime
 size_t mingw_strftime(char *s, size_t max,
-		   const char *format, const struct tm *tm);
+                      const char *format, const struct tm *tm);
 #define strftime mingw_strftime
 
 pid_t mingw_spawnvpe(const char *cmd, const char **argv, char **env,
-		     const char *dir,
-		     int fhin, int fhout, int fherr);
-int mingw_execvp(const char *cmd, char *const *argv);
+                     const char *dir,
+                     int fhin, int fhout, int fherr);
+int   mingw_execvp(const char *cmd, char *const *argv);
 #define execvp mingw_execvp
 int mingw_execv(const char *cmd, char *const *argv);
 #define execv mingw_execv
 
 static inline unsigned int git_ntohl(unsigned int x)
-{ return (unsigned int)ntohl(x); }
+{
+  return (unsigned int)ntohl(x);
+}
 #define ntohl git_ntohl
 
 sig_handler_t mingw_signal(int sig, sig_handler_t handler);
@@ -462,7 +496,7 @@ int winansi_isatty(int fd);
 int winansi_dup2(int oldfd, int newfd);
 #define dup2 winansi_dup2
 
-void winansi_init(void);
+void   winansi_init(void);
 HANDLE winansi_get_osfhandle(int fd);
 
 /*
@@ -471,26 +505,26 @@ HANDLE winansi_get_osfhandle(int fd);
 
 static inline void convert_slashes(char *path)
 {
-	for (; *path; path++)
-		if (*path == '\\')
-			*path = '/';
+  for (; *path; path++)
+    if (*path == '\\')
+      *path = '/';
 }
 struct strbuf;
 int mingw_is_mount_point(struct strbuf *path);
 extern int (*win32_is_mount_point)(struct strbuf *path);
-#define is_mount_point win32_is_mount_point
+#define is_mount_point          win32_is_mount_point
 #define CAN_UNLINK_MOUNT_POINTS 1
-#define PATH_SEP ';'
+#define PATH_SEP                ';'
 char *mingw_query_user_email(void);
 #define query_user_email mingw_query_user_email
 struct strbuf;
 char *mingw_strbuf_realpath(struct strbuf *resolved, const char *path);
 #define platform_strbuf_realpath mingw_strbuf_realpath
 #if !defined(__MINGW64_VERSION_MAJOR) && (!defined(_MSC_VER) || _MSC_VER < 1800)
-#define PRIuMAX "I64u"
-#define PRId64 "I64d"
+  #define PRIuMAX "I64u"
+  #define PRId64  "I64d"
 #else
-#include <inttypes.h>
+  #include <inttypes.h>
 #endif
 
 /**
@@ -611,7 +645,7 @@ int xutftowcsn(wchar_t *wcs, const char *utf, size_t wcslen, int utflen);
  */
 static inline int xutftowcs(wchar_t *wcs, const char *utf, size_t wcslen)
 {
-	return xutftowcsn(wcs, utf, wcslen, -1);
+  return xutftowcsn(wcs, utf, wcslen, -1);
 }
 
 /**
@@ -620,14 +654,14 @@ static inline int xutftowcs(wchar_t *wcs, const char *utf, size_t wcslen)
  * MAX_LONG_PATH wide chars (see handle_long_path).
  */
 static inline int xutftowcs_path_ex(wchar_t *wcs, const char *utf,
-		size_t wcslen, int utflen, int max_path, int expand)
+                                    size_t wcslen, int utflen, int max_path, int expand)
 {
-	int result = xutftowcsn(wcs, utf, wcslen, utflen);
-	if (result < 0 && errno == ERANGE)
-		errno = ENAMETOOLONG;
-	if (result >= 0)
-		result = handle_long_path(wcs, result, max_path, expand);
-	return result;
+  int result = xutftowcsn(wcs, utf, wcslen, utflen);
+  if (result < 0 && errno == ERANGE)
+    errno = ENAMETOOLONG;
+  if (result >= 0)
+    result = handle_long_path(wcs, result, max_path, expand);
+  return result;
 }
 
 /**
@@ -639,7 +673,7 @@ static inline int xutftowcs_path_ex(wchar_t *wcs, const char *utf,
  */
 static inline int xutftowcs_path(wchar_t *wcs, const char *utf)
 {
-	return xutftowcs_path_ex(wcs, utf, MAX_PATH, -1, MAX_PATH, 0);
+  return xutftowcs_path_ex(wcs, utf, MAX_PATH, -1, MAX_PATH, 0);
 }
 
 /**
@@ -651,8 +685,8 @@ static inline int xutftowcs_path(wchar_t *wcs, const char *utf)
  */
 static inline int xutftowcs_long_path(wchar_t *wcs, const char *utf)
 {
-	return xutftowcs_path_ex(wcs, utf, MAX_LONG_PATH, -1, MAX_PATH,
-				 are_long_paths_enabled());
+  return xutftowcs_path_ex(wcs, utf, MAX_LONG_PATH, -1, MAX_PATH,
+                           are_long_paths_enabled());
 }
 
 /**
@@ -727,8 +761,8 @@ int err_win_to_posix(DWORD winerr);
 
 #ifndef NO_UNIX_SOCKETS
 int mingw_have_unix_sockets(void);
-#undef have_unix_sockets
-#define have_unix_sockets mingw_have_unix_sockets
+  #undef have_unix_sockets
+  #define have_unix_sockets mingw_have_unix_sockets
 #endif
 
 /*

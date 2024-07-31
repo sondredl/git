@@ -93,7 +93,6 @@
  * -----------------------------------------------------------------------
  */
 
-
 /**
  * This struct represents a single username/password combination
  * along with any associated context. All string fields should be
@@ -104,52 +103,54 @@
  * This struct should always be initialized with `CREDENTIAL_INIT` or
  * `credential_init`.
  */
-struct credential {
+struct credential
+{
 
-	/**
-	 * A `string_list` of helpers. Each string specifies an external
-	 * helper which will be run, in order, to either acquire or store
-	 * credentials. This list is filled-in by the API functions
-	 * according to the corresponding configuration variables before
-	 * consulting helpers, so there usually is no need for a caller to
-	 * modify the helpers field at all.
-	 */
-	struct string_list helpers;
+  /**
+   * A `string_list` of helpers. Each string specifies an external
+   * helper which will be run, in order, to either acquire or store
+   * credentials. This list is filled-in by the API functions
+   * according to the corresponding configuration variables before
+   * consulting helpers, so there usually is no need for a caller to
+   * modify the helpers field at all.
+   */
+  struct string_list helpers;
 
-	/**
-	 * A `strvec` of WWW-Authenticate header values. Each string
-	 * is the value of a WWW-Authenticate header in an HTTP response,
-	 * in the order they were received in the response.
-	 */
-	struct strvec wwwauth_headers;
+  /**
+   * A `strvec` of WWW-Authenticate header values. Each string
+   * is the value of a WWW-Authenticate header in an HTTP response,
+   * in the order they were received in the response.
+   */
+  struct strvec wwwauth_headers;
 
-	/**
-	 * Internal use only. Keeps track of if we previously matched against a
-	 * WWW-Authenticate header line in order to re-fold future continuation
-	 * lines into one value.
-	 */
-	unsigned header_is_last_match:1;
+  /**
+   * Internal use only. Keeps track of if we previously matched against a
+   * WWW-Authenticate header line in order to re-fold future continuation
+   * lines into one value.
+   */
+  unsigned header_is_last_match : 1;
 
-	unsigned approved:1,
-		 configured:1,
-		 quit:1,
-		 use_http_path:1,
-		 username_from_proto:1;
+  unsigned approved : 1,
+      configured : 1,
+      quit : 1,
+      use_http_path : 1,
+      username_from_proto : 1;
 
-	char *username;
-	char *password;
-	char *protocol;
-	char *host;
-	char *path;
-	char *oauth_refresh_token;
-	timestamp_t password_expiry_utc;
+  char       *username;
+  char       *password;
+  char       *protocol;
+  char       *host;
+  char       *path;
+  char       *oauth_refresh_token;
+  timestamp_t password_expiry_utc;
 };
 
-#define CREDENTIAL_INIT { \
-	.helpers = STRING_LIST_INIT_DUP, \
-	.password_expiry_utc = TIME_MAX, \
-	.wwwauth_headers = STRVEC_INIT, \
-}
+#define CREDENTIAL_INIT                          \
+  {                                              \
+    .helpers             = STRING_LIST_INIT_DUP, \
+    .password_expiry_utc = TIME_MAX,             \
+    .wwwauth_headers     = STRVEC_INIT,          \
+  }
 
 /* Initialize a credential structure, setting all fields to empty. */
 void credential_init(struct credential *);
@@ -191,7 +192,7 @@ void credential_approve(struct credential *);
  */
 void credential_reject(struct credential *);
 
-int credential_read(struct credential *, FILE *);
+int  credential_read(struct credential *, FILE *);
 void credential_write(const struct credential *, FILE *);
 
 /*
@@ -208,9 +209,9 @@ void credential_write(const struct credential *, FILE *);
  * an empty credential.
  */
 void credential_from_url(struct credential *, const char *url);
-int credential_from_url_gently(struct credential *, const char *url, int quiet);
+int  credential_from_url_gently(struct credential *, const char *url, int quiet);
 
 int credential_match(const struct credential *want,
-		     const struct credential *have, int match_password);
+                     const struct credential *have, int match_password);
 
 #endif /* CREDENTIAL_H */

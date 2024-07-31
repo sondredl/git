@@ -1,6 +1,7 @@
 import os
 import subprocess
 
+
 def main():
     # Check if .gitmodules file exists
     if not os.path.isfile('.gitmodules'):
@@ -24,7 +25,7 @@ def main():
             current_path = line.split('=')[1].strip()
         elif 'url =' in line:
             current_url = line.split('=')[1].strip()
-        
+
         if current_path and current_url:
             submodule_info[current_path] = current_url
             current_path = None
@@ -39,6 +40,6 @@ def main():
         else:
             print(f"Submodule already cloned: {path}")
 
+
 if __name__ == "__main__":
     main()
-    

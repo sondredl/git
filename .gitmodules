@@ -2,3 +2,6 @@
 	path = sha1collisiondetection
 	url = https://github.com/cr-marcstevens/sha1collisiondetection.git
 	branch = master
+[submodule "sanitas"]
+	path = sanitas
+	url = https://github.com/sondredl/sanitas.git

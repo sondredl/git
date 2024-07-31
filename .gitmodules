@@ -5,3 +5,4 @@
 [submodule "sanitas"]
 	path = sanitas
 	url = https://github.com/sondredl/sanitas.git
+	branch = master

@@ -7,8 +7,8 @@
 
 #ifndef NO_UNIX_SOCKETS
 
-#include "unix-socket.h"
-#include "run-command.h"
+#include "components/unix-socket.h"
+#include "components/run-command.h"
 
 #define FLAG_SPAWN 0x1
 #define FLAG_RELAY 0x2

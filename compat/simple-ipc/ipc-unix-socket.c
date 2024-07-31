@@ -1,11 +1,11 @@
-#include "git-compat-util.h"
-#include "gettext.h"
-#include "simple-ipc.h"
-#include "strbuf.h"
-#include "thread-utils.h"
-#include "trace2.h"
-#include "unix-socket.h"
-#include "unix-stream-server.h"
+#include "components/git-compat-util.h"
+#include "components/gettext.h"
+#include "components/simple-ipc.h"
+#include "components/strbuf.h"
+#include "components/thread-utils.h"
+#include "components/trace2.h"
+#include "components/unix-socket.h"
+#include "components/unix-stream-server.h"
 
 #ifndef SUPPORTS_SIMPLE_IPC
 /*

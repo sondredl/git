@@ -6,10 +6,10 @@
 
 #ifndef NO_UNIX_SOCKETS
 
-#include "config.h"
-#include "tempfile.h"
-#include "credential.h"
-#include "unix-socket.h"
+#include "components/config.h"
+#include "components/tempfile.h"
+#include "components/credential.h"
+#include "components/unix-socket.h"
 
 struct credential_cache_entry {
 	struct credential item;

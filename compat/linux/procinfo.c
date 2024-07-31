@@ -1,8 +1,8 @@
 #include "git-compat-util.h"
 
-#include "strbuf.h"
-#include "strvec.h"
-#include "trace2.h"
+#include "components/strbuf.h"
+#include "components/strvec.h"
+#include "components/trace2.h"
 
 /*
  * We need more complex parsing in stat_parent_pid() and

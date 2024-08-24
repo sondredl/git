@@ -19,11 +19,11 @@
 #include "oid-array.h"
 #include "config.h"
 
-KHASH_INIT(str, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
+(str, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
 
-static kh_oid_map_t *island_marks;
-static unsigned      island_counter;
-static unsigned      island_counter_core;
+    static kh_oid_map_t *island_marks;
+static unsigned island_counter;
+static unsigned island_counter_core;
 
 struct remote_island
 {
@@ -49,7 +49,9 @@ static struct island_bitmap *island_bitmap_new(const struct island_bitmap *old)
     struct island_bitmap *b    = xcalloc(1, size);
 
     if (old)
+    {
         memcpy(b, old, size);
+    }
 
     b->refcount = 1;
     return b;
@@ -60,7 +62,9 @@ static void island_bitmap_or(struct island_bitmap *a, const struct island_bitmap
     uint32_t i;
 
     for (i = 0; i < island_bitmap_size; ++i)
+    {
         a->bits[i] |= b->bits[i];
+    }
 }
 
 static int island_bitmap_is_subset(struct island_bitmap *self,
@@ -69,19 +73,23 @@ static int island_bitmap_is_subset(struct island_bitmap *self,
     uint32_t i;
 
     if (self == super)
+    {
         return 1;
+    }
 
     for (i = 0; i < island_bitmap_size; ++i)
     {
         if ((self->bits[i] & super->bits[i]) != self->bits[i])
+        {
             return 0;
+        }
     }
 
     return 1;
 }
 
-#define ISLAND_BITMAP_BLOCK(x) (x / 32)
-#define ISLAND_BITMAP_MASK(x)  (1 << (x % 32))
+#define ISLAND_BITMAP_BLOCK(x) ((x) / 32)
+#define ISLAND_BITMAP_MASK(x)  (1 << ((x) % 32))
 
 static void island_bitmap_set(struct island_bitmap *self, uint32_t i)
 {
@@ -95,11 +103,14 @@ static int island_bitmap_get(struct island_bitmap *self, uint32_t i)
 
 int in_same_island(const struct object_id *trg_oid, const struct object_id *src_oid)
 {
-    khiter_t trg_pos, src_pos;
+    khiter_t trg_pos;
+    khiter_t src_pos;
 
     /* If we aren't using islands, assume everything goes together. */
     if (!island_marks)
+    {
         return 1;
+    }
 
     /*
      * If we don't have a bitmap for the target, we can delta it
@@ -107,7 +118,9 @@ int in_same_island(const struct object_id *trg_oid, const struct object_id *src_
      */
     trg_pos = kh_get_oid_map(island_marks, *trg_oid);
     if (trg_pos >= kh_end(island_marks))
+    {
         return 1;
+    }
 
     /*
      * if the source (our delta base) doesn't have a bitmap,
@@ -115,7 +128,9 @@ int in_same_island(const struct object_id *trg_oid, const struct object_id *src_
      */
     src_pos = kh_get_oid_map(island_marks, *src_oid);
     if (src_pos >= kh_end(island_marks))
+    {
         return 0;
+    }
 
     return island_bitmap_is_subset(kh_value(island_marks, trg_pos),
                                    kh_value(island_marks, src_pos));
@@ -123,29 +138,41 @@ int in_same_island(const struct object_id *trg_oid, const struct object_id *src_
 
 int island_delta_cmp(const struct object_id *a, const struct object_id *b)
 {
-    khiter_t              a_pos, b_pos;
-    struct island_bitmap *a_bitmap = NULL, *b_bitmap = NULL;
+    khiter_t              a_pos;
+    khiter_t              b_pos;
+    struct island_bitmap *a_bitmap = NULL;
+    struct island_bitmap *b_bitmap = NULL;
 
     if (!island_marks)
+    {
         return 0;
+    }
 
     a_pos = kh_get_oid_map(island_marks, *a);
     if (a_pos < kh_end(island_marks))
+    {
         a_bitmap = kh_value(island_marks, a_pos);
+    }
 
     b_pos = kh_get_oid_map(island_marks, *b);
     if (b_pos < kh_end(island_marks))
+    {
         b_bitmap = kh_value(island_marks, b_pos);
+    }
 
     if (a_bitmap)
     {
         if (!b_bitmap || !island_bitmap_is_subset(a_bitmap, b_bitmap))
+        {
             return -1;
+        }
     }
     if (b_bitmap)
     {
         if (!a_bitmap || !island_bitmap_is_subset(b_bitmap, a_bitmap))
+        {
             return 1;
+        }
     }
 
     return 0;
@@ -158,7 +185,9 @@ static struct island_bitmap *create_or_get_island_marks(struct object *obj)
 
     pos = kh_put_oid_map(island_marks, obj->oid, &hash_ret);
     if (hash_ret)
+    {
         kh_value(island_marks, pos) = island_bitmap_new(NULL);
+    }
 
     return kh_value(island_marks, pos);
 }
@@ -206,13 +235,17 @@ static void mark_remote_island_1(struct repository    *r,
         struct object        *obj = parse_object(r, &rl->oids.oid[i]);
 
         if (!obj)
+        {
             continue;
+        }
 
         marks = create_or_get_island_marks(obj);
         island_bitmap_set(marks, island_counter);
 
         if (is_core_island && obj->type == OBJ_COMMIT)
+        {
             obj->flags |= NEEDS_BITMAP;
+        }
 
         /* If it was a tag, also make sure we hit the underlying object. */
         while (obj && obj->type == OBJ_TAG)
@@ -228,7 +261,9 @@ static void mark_remote_island_1(struct repository    *r,
     }
 
     if (is_core_island)
+    {
         island_counter_core = island_counter;
+    }
 
     island_counter++;
 }
@@ -257,7 +292,9 @@ void resolve_tree_islands(struct repository   *r,
     int                       i;
 
     if (!island_marks)
+    {
         return;
+    }
 
     /*
      * We process only trees, as commits and tags have already been handled
@@ -279,7 +316,9 @@ void resolve_tree_islands(struct repository   *r,
     QSORT(todo, nr, tree_depth_compare);
 
     if (progress)
+    {
         progress_state = start_progress(_("Propagating island marks"), nr);
+    }
 
     for (i = 0; i < nr; i++)
     {
@@ -292,13 +331,17 @@ void resolve_tree_islands(struct repository   *r,
 
         pos = kh_get_oid_map(island_marks, ent->idx.oid);
         if (pos >= kh_end(island_marks))
+        {
             continue;
+        }
 
         root_marks = kh_value(island_marks, pos);
 
         tree = lookup_tree(r, &ent->idx.oid);
         if (!tree || parse_tree(tree) < 0)
+        {
             die(_("bad tree object %s"), oid_to_hex(&ent->idx.oid));
+        }
 
         init_tree_desc(&desc, &tree->object.oid, tree->buffer, tree->size);
         while (tree_entry(&desc, &entry))
@@ -306,11 +349,15 @@ void resolve_tree_islands(struct repository   *r,
             struct object *obj;
 
             if (S_ISGITLINK(entry.mode))
+            {
                 continue;
+            }
 
             obj = lookup_object(r, &entry.oid);
             if (!obj)
+            {
                 continue;
+            }
 
             set_island_marks(obj, root_marks);
         }
@@ -336,7 +383,9 @@ static char *core_island_name;
 static void free_config_regexes(struct island_load_data *ild)
 {
     for (size_t i = 0; i < ild->nr; i++)
+    {
         regfree(&ild->rx[i]);
+    }
     free(ild->rx);
 }
 
@@ -364,16 +413,22 @@ static int island_config_callback(const char *k, const char *v,
         struct strbuf re = STRBUF_INIT;
 
         if (!v)
+        {
             return config_error_nonbool(k);
+        }
 
         ALLOC_GROW(ild->rx, ild->nr + 1, ild->alloc);
 
         if (*v != '^')
+        {
             strbuf_addch(&re, '^');
+        }
         strbuf_addstr(&re, v);
 
         if (regcomp(&ild->rx[ild->nr], re.buf, REG_EXTENDED))
+        {
             die(_("failed to load island regex for '%s': %s"), k, re.buf);
+        }
 
         strbuf_release(&re);
         ild->nr++;
@@ -381,7 +436,9 @@ static int island_config_callback(const char *k, const char *v,
     }
 
     if (!strcmp(k, "pack.islandcore"))
+    {
         return git_config_string(&core_island_name, k, v);
+    }
 
     return 0;
 }
@@ -419,7 +476,8 @@ static int find_island_for_ref(const char *refname, const char *referent UNUSED,
      * than we support.
      */
     regmatch_t    matches[16];
-    int           i, m;
+    int           i;
+    int           m;
     struct strbuf island_name = STRBUF_INIT;
 
     /* walk backwards to get last-one-wins ordering */
@@ -427,26 +485,36 @@ static int find_island_for_ref(const char *refname, const char *referent UNUSED,
     {
         if (!regexec(&ild->rx[i], refname,
                      ARRAY_SIZE(matches), matches, 0))
+        {
             break;
+        }
     }
 
     if (i < 0)
+    {
         return 0;
+    }
 
     if (matches[ARRAY_SIZE(matches) - 1].rm_so != -1)
+    {
         warning(_("island regex from config has "
                   "too many capture groups (max=%d)"),
                 (int)ARRAY_SIZE(matches) - 2);
+    }
 
     for (m = 1; m < ARRAY_SIZE(matches); m++)
     {
         regmatch_t *match = &matches[m];
 
         if (match->rm_so == -1)
+        {
             continue;
+        }
 
         if (island_name.len)
+        {
             strbuf_addch(&island_name, '-');
+        }
 
         strbuf_add(&island_name, refname + match->rm_so, match->rm_eo - match->rm_so);
     }
@@ -462,7 +530,9 @@ static struct remote_island *get_core_island(kh_str_t *remote_islands)
     {
         khiter_t pos = kh_get_str(remote_islands, core_island_name);
         if (pos < kh_end(remote_islands))
+        {
             return kh_value(remote_islands, pos);
+        }
     }
 
     return NULL;
@@ -470,8 +540,14 @@ static struct remote_island *get_core_island(kh_str_t *remote_islands)
 
 static void deduplicate_islands(kh_str_t *remote_islands, struct repository *r)
 {
-    struct remote_island *island, *core = NULL, **list;
-    unsigned int          island_count, dst, src, ref, i = 0;
+    struct remote_island  *island;
+    struct remote_island  *core = NULL;
+    struct remote_island **list;
+    unsigned int           island_count;
+    unsigned int           dst;
+    unsigned int           src;
+    unsigned int           ref;
+    unsigned int           i = 0;
 
     island_count = kh_size(remote_islands);
     ALLOC_ARRAY(list, island_count);
@@ -485,10 +561,14 @@ static void deduplicate_islands(kh_str_t *remote_islands, struct repository *r)
         for (src = ref + 1, dst = src; src < island_count; src++)
         {
             if (list[ref]->hash == list[src]->hash)
+            {
                 continue;
+            }
 
             if (src != dst)
+            {
                 list[dst] = list[src];
+            }
 
             dst++;
         }
@@ -521,7 +601,9 @@ void load_delta_islands(struct repository *r, int progress)
     free_remote_islands(ild.remote_islands);
 
     if (progress)
+    {
         fprintf(stderr, _("Marked %d islands, done.\n"), island_counter);
+    }
 }
 
 void propagate_island_marks(struct commit *commit)
@@ -537,7 +619,9 @@ void propagate_island_marks(struct commit *commit)
         set_island_marks(&repo_get_commit_tree(the_repository, commit)->object,
                          root_marks);
         for (p = commit->parents; p; p = p->next)
+        {
             set_island_marks(&p->item->object, root_marks);
+        }
     }
 }
 
@@ -563,7 +647,9 @@ int compute_pack_layers(struct packing_data *to_pack)
     uint32_t i;
 
     if (!core_island_name || !island_marks)
+    {
         return 1;
+    }
 
     for (i = 0; i < to_pack->nr_objects; ++i)
     {
@@ -577,7 +663,9 @@ int compute_pack_layers(struct packing_data *to_pack)
             struct island_bitmap *bitmap = kh_value(island_marks, pos);
 
             if (island_bitmap_get(bitmap, island_counter_core))
+            {
                 oe_set_layer(to_pack, entry, 0);
+            }
         }
     }
 

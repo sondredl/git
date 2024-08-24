@@ -9,8 +9,9 @@
 
 static void vreportf(const char *prefix, const char *err, va_list params)
 {
-    char   msg[4096];
-    char  *p, *pend = msg + sizeof(msg);
+    char   msg[4097];
+    char  *p;
+    char  *pend       = msg + sizeof(msg);
     size_t prefix_len = strlen(prefix);
 
     if (sizeof(msg) <= prefix_len)
@@ -18,7 +19,7 @@ static void vreportf(const char *prefix, const char *err, va_list params)
         fprintf(stderr, "BUG!!! too long a prefix '%s'\n", prefix);
         abort();
     }
-    memcpy(msg, prefix, prefix_len);
+    strcpy(msg, prefix);
     p = msg + prefix_len;
     if (vsnprintf(p, pend - p, err, params) < 0)
     {
@@ -30,7 +31,9 @@ static void vreportf(const char *prefix, const char *err, va_list params)
     for (; p != pend - 1 && *p; p++)
     {
         if (iscntrl(*p) && *p != '\t' && *p != '\n')
+        {
             *p = '?';
+        }
     }
 
     *(p++) = '\n'; /* we no longer need a NUL */
@@ -111,7 +114,7 @@ static int die_is_recursing_builtin(void)
     {
         return 1;
     }
-    else if (dying == 2)
+    if (dying == 2)
     {
         warning("die() called many times. Recursion error or racy threaded death!");
         return 0;
@@ -197,14 +200,18 @@ void NORETURN die(const char *err, ...)
 
 static const char *fmt_with_err(char *buf, int n, const char *fmt)
 {
-    char str_error[256], *err;
-    int  i, j;
+    char  str_error[256];
+    char *err;
+    int   i;
+    int   j;
 
     err = strerror(errno);
     for (i = j = 0; err[i] && j < sizeof(str_error) - 1;)
     {
         if ((str_error[j++] = err[i++]) != '%')
+        {
             continue;
+        }
         if (j < sizeof(str_error) - 1)
         {
             str_error[j++] = '%';
@@ -328,13 +335,17 @@ static NORETURN void BUG_vfl(const char *file, int line, const char *fmt, va_lis
     BUG_vfl_common(file, line, fmt, params);
 
     if (in_bug)
+    {
         abort();
+    }
     in_bug = 1;
 
     trace2_cmd_error_va(fmt, params_copy);
 
     if (BUG_exit_code)
+    {
         exit(BUG_exit_code);
+    }
     abort();
 }
 

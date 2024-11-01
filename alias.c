@@ -1,3 +1,5 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "alias.h"
 #include "config.h"
@@ -44,7 +46,7 @@ char *alias_lookup(const char *alias)
 {
     struct config_alias_data data = {alias, NULL};
 
-    read_early_config(config_alias_cb, &data);
+    read_early_config(the_repository, config_alias_cb, &data);
 
     return data.v;
 }
@@ -53,7 +55,7 @@ void list_aliases(struct string_list *list)
 {
     struct config_alias_data data = {NULL, NULL, list};
 
-    read_early_config(config_alias_cb, &data);
+    read_early_config(the_repository, config_alias_cb, &data);
 }
 
 void quote_cmdline(struct strbuf *buf, const char **argv)

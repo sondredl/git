@@ -962,9 +962,9 @@ static int traverse_by_cache_tree(int pos, int nr_entries, int nr_names,
     int                          d;
 
     if (!o->merge)
-    {
         BUG("We need cache-tree to do this optimization");
-    }
+    if (nr_entries + pos > o->src_index->cache_nr)
+        return error(_("corrupted cache-tree has entries not present in index"));
 
     /*
      * Do what unpack_callback() and unpack_single_entry() normally
@@ -2483,16 +2483,15 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
         move_index_extensions(&o->internal.result, o->src_index);
         if (!ret)
         {
-            if (git_env_bool("GIT_TEST_CHECK_CACHE_TREE", 0))
+            if (git_env_bool("GIT_TEST_CHECK_CACHE_TREE", 0) && cache_tree_verify(the_repository, &o->internal.result) < 0)
             {
-                cache_tree_verify(the_repository,
-                                  &o->internal.result);
+                ret = -1;
+                goto done;
             }
+
             if (!o->skip_cache_tree_update && !cache_tree_fully_valid(o->internal.result.cache_tree))
-            {
                 cache_tree_update(&o->internal.result,
                                   WRITE_TREE_SILENT | WRITE_TREE_REPAIR);
-            }
         }
 
         o->internal.result.updated_workdir = 1;

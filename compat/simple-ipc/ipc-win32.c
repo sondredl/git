@@ -11,175 +11,180 @@
 #include "aclapi.h"
 
 #ifndef SUPPORTS_SIMPLE_IPC
-/*
- * This source file should only be compiled when Simple IPC is supported.
- * See the top-level Makefile.
- */
-#error SUPPORTS_SIMPLE_IPC not defined
+    /*
+     * This source file should only be compiled when Simple IPC is supported.
+     * See the top-level Makefile.
+     */
+    #error SUPPORTS_SIMPLE_IPC not defined
 #endif
 
 static int initialize_pipe_name(const char *path, wchar_t *wpath, size_t alloc)
 {
-	int off = 0;
-	struct strbuf realpath = STRBUF_INIT;
+    int           off      = 0;
+    struct strbuf realpath = STRBUF_INIT;
 
-	if (!strbuf_realpath(&realpath, path, 0))
-		return -1;
+    if (!strbuf_realpath(&realpath, path, 0))
+        return -1;
 
-	off = swprintf(wpath, alloc, L"\\\\.\\pipe\\");
-	if (xutftowcs(wpath + off, realpath.buf, alloc - off) < 0)
-		return -1;
+    off = swprintf(wpath, alloc, L"\\\\.\\pipe\\");
+    if (xutftowcs(wpath + off, realpath.buf, alloc - off) < 0)
+        return -1;
 
-	/* Handle drive prefix */
-	if (wpath[off] && wpath[off + 1] == L':') {
-		wpath[off + 1] = L'_';
-		off += 2;
-	}
+    /* Handle drive prefix */
+    if (wpath[off] && wpath[off + 1] == L':')
+    {
+        wpath[off + 1] = L'_';
+        off += 2;
+    }
 
-	for (; wpath[off]; off++)
-		if (wpath[off] == L'/')
-			wpath[off] = L'\\';
+    for (; wpath[off]; off++)
+        if (wpath[off] == L'/')
+            wpath[off] = L'\\';
 
-	strbuf_release(&realpath);
-	return 0;
+    strbuf_release(&realpath);
+    return 0;
 }
 
 static enum ipc_active_state get_active_state(wchar_t *pipe_path)
 {
-	if (WaitNamedPipeW(pipe_path, NMPWAIT_USE_DEFAULT_WAIT))
-		return IPC_STATE__LISTENING;
+    if (WaitNamedPipeW(pipe_path, NMPWAIT_USE_DEFAULT_WAIT))
+        return IPC_STATE__LISTENING;
 
-	if (GetLastError() == ERROR_SEM_TIMEOUT)
-		return IPC_STATE__NOT_LISTENING;
+    if (GetLastError() == ERROR_SEM_TIMEOUT)
+        return IPC_STATE__NOT_LISTENING;
 
-	if (GetLastError() == ERROR_FILE_NOT_FOUND)
-		return IPC_STATE__PATH_NOT_FOUND;
+    if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        return IPC_STATE__PATH_NOT_FOUND;
 
-	trace2_data_intmax("ipc-debug", NULL, "getstate/waitpipe/gle",
-			   (intmax_t)GetLastError());
+    trace2_data_intmax("ipc-debug", NULL, "getstate/waitpipe/gle",
+                       (intmax_t)GetLastError());
 
-	return IPC_STATE__OTHER_ERROR;
+    return IPC_STATE__OTHER_ERROR;
 }
 
 enum ipc_active_state ipc_get_active_state(const char *path)
 {
-	wchar_t pipe_path[MAX_PATH];
+    wchar_t pipe_path[MAX_PATH];
 
-	if (initialize_pipe_name(path, pipe_path, ARRAY_SIZE(pipe_path)) < 0)
-		return IPC_STATE__INVALID_PATH;
+    if (initialize_pipe_name(path, pipe_path, ARRAY_SIZE(pipe_path)) < 0)
+        return IPC_STATE__INVALID_PATH;
 
-	return get_active_state(pipe_path);
+    return get_active_state(pipe_path);
 }
 
 #define WAIT_STEP_MS (50)
 
 static enum ipc_active_state connect_to_server(
-	const wchar_t *wpath,
-	DWORD timeout_ms,
-	const struct ipc_client_connect_options *options,
-	int *pfd)
+    const wchar_t                           *wpath,
+    DWORD                                    timeout_ms,
+    const struct ipc_client_connect_options *options,
+    int                                     *pfd)
 {
-	DWORD t_start_ms, t_waited_ms;
-	DWORD step_ms;
-	HANDLE hPipe = INVALID_HANDLE_VALUE;
-	DWORD mode = PIPE_READMODE_BYTE;
-	DWORD gle;
+    DWORD  t_start_ms, t_waited_ms;
+    DWORD  step_ms;
+    HANDLE hPipe = INVALID_HANDLE_VALUE;
+    DWORD  mode  = PIPE_READMODE_BYTE;
+    DWORD  gle;
 
-	*pfd = -1;
+    *pfd = -1;
 
-	for (;;) {
-		hPipe = CreateFileW(wpath, GENERIC_READ | GENERIC_WRITE,
-				    0, NULL, OPEN_EXISTING, 0, NULL);
-		if (hPipe != INVALID_HANDLE_VALUE)
-			break;
+    for (;;)
+    {
+        hPipe = CreateFileW(wpath, GENERIC_READ | GENERIC_WRITE,
+                            0, NULL, OPEN_EXISTING, 0, NULL);
+        if (hPipe != INVALID_HANDLE_VALUE)
+            break;
 
-		gle = GetLastError();
+        gle = GetLastError();
 
-		switch (gle) {
-		case ERROR_FILE_NOT_FOUND:
-			if (!options->wait_if_not_found)
-				return IPC_STATE__PATH_NOT_FOUND;
-			if (!timeout_ms)
-				return IPC_STATE__PATH_NOT_FOUND;
+        switch (gle)
+        {
+            case ERROR_FILE_NOT_FOUND:
+                if (!options->wait_if_not_found)
+                    return IPC_STATE__PATH_NOT_FOUND;
+                if (!timeout_ms)
+                    return IPC_STATE__PATH_NOT_FOUND;
 
-			step_ms = (timeout_ms < WAIT_STEP_MS) ?
-				timeout_ms : WAIT_STEP_MS;
-			sleep_millisec(step_ms);
+                step_ms = (timeout_ms < WAIT_STEP_MS) ? timeout_ms : WAIT_STEP_MS;
+                sleep_millisec(step_ms);
 
-			timeout_ms -= step_ms;
-			break; /* try again */
+                timeout_ms -= step_ms;
+                break; /* try again */
 
-		case ERROR_PIPE_BUSY:
-			if (!options->wait_if_busy)
-				return IPC_STATE__NOT_LISTENING;
-			if (!timeout_ms)
-				return IPC_STATE__NOT_LISTENING;
+            case ERROR_PIPE_BUSY:
+                if (!options->wait_if_busy)
+                    return IPC_STATE__NOT_LISTENING;
+                if (!timeout_ms)
+                    return IPC_STATE__NOT_LISTENING;
 
-			t_start_ms = (DWORD)(getnanotime() / 1000000);
+                t_start_ms = (DWORD)(getnanotime() / 1000000);
 
-			if (!WaitNamedPipeW(wpath, timeout_ms)) {
-				DWORD gleWait = GetLastError();
+                if (!WaitNamedPipeW(wpath, timeout_ms))
+                {
+                    DWORD gleWait = GetLastError();
 
-				if (gleWait == ERROR_SEM_TIMEOUT)
-					return IPC_STATE__NOT_LISTENING;
+                    if (gleWait == ERROR_SEM_TIMEOUT)
+                        return IPC_STATE__NOT_LISTENING;
 
-				trace2_data_intmax("ipc-debug", NULL,
-						   "connect/waitpipe/gle",
-						   (intmax_t)gleWait);
+                    trace2_data_intmax("ipc-debug", NULL,
+                                       "connect/waitpipe/gle",
+                                       (intmax_t)gleWait);
 
-				return IPC_STATE__OTHER_ERROR;
-			}
+                    return IPC_STATE__OTHER_ERROR;
+                }
 
-			/*
-			 * A pipe server instance became available.
-			 * Race other client processes to connect to
-			 * it.
-			 *
-			 * But first decrement our overall timeout so
-			 * that we don't starve if we keep losing the
-			 * race.  But also guard against special
-			 * NPMWAIT_ values (0 and -1).
-			 */
-			t_waited_ms = (DWORD)(getnanotime() / 1000000) - t_start_ms;
-			if (t_waited_ms < timeout_ms)
-				timeout_ms -= t_waited_ms;
-			else
-				timeout_ms = 1;
-			break; /* try again */
+                /*
+                 * A pipe server instance became available.
+                 * Race other client processes to connect to
+                 * it.
+                 *
+                 * But first decrement our overall timeout so
+                 * that we don't starve if we keep losing the
+                 * race.  But also guard against special
+                 * NPMWAIT_ values (0 and -1).
+                 */
+                t_waited_ms = (DWORD)(getnanotime() / 1000000) - t_start_ms;
+                if (t_waited_ms < timeout_ms)
+                    timeout_ms -= t_waited_ms;
+                else
+                    timeout_ms = 1;
+                break; /* try again */
 
-		default:
-			trace2_data_intmax("ipc-debug", NULL,
-					   "connect/createfile/gle",
-					   (intmax_t)gle);
+            default:
+                trace2_data_intmax("ipc-debug", NULL,
+                                   "connect/createfile/gle",
+                                   (intmax_t)gle);
 
-			return IPC_STATE__OTHER_ERROR;
-		}
-	}
+                return IPC_STATE__OTHER_ERROR;
+        }
+    }
 
-	if (!SetNamedPipeHandleState(hPipe, &mode, NULL, NULL)) {
-		gle = GetLastError();
-		trace2_data_intmax("ipc-debug", NULL,
-				   "connect/setpipestate/gle",
-				   (intmax_t)gle);
+    if (!SetNamedPipeHandleState(hPipe, &mode, NULL, NULL))
+    {
+        gle = GetLastError();
+        trace2_data_intmax("ipc-debug", NULL,
+                           "connect/setpipestate/gle",
+                           (intmax_t)gle);
 
-		CloseHandle(hPipe);
-		return IPC_STATE__OTHER_ERROR;
-	}
+        CloseHandle(hPipe);
+        return IPC_STATE__OTHER_ERROR;
+    }
 
-	*pfd = _open_osfhandle((intptr_t)hPipe, O_RDWR|O_BINARY);
-	if (*pfd < 0) {
-		gle = GetLastError();
-		trace2_data_intmax("ipc-debug", NULL,
-				   "connect/openosfhandle/gle",
-				   (intmax_t)gle);
+    *pfd = _open_osfhandle((intptr_t)hPipe, O_RDWR | O_BINARY);
+    if (*pfd < 0)
+    {
+        gle = GetLastError();
+        trace2_data_intmax("ipc-debug", NULL,
+                           "connect/openosfhandle/gle",
+                           (intmax_t)gle);
 
-		CloseHandle(hPipe);
-		return IPC_STATE__OTHER_ERROR;
-	}
+        CloseHandle(hPipe);
+        return IPC_STATE__OTHER_ERROR;
+    }
 
-	/* fd now owns hPipe */
+    /* fd now owns hPipe */
 
-	return IPC_STATE__LISTENING;
+    return IPC_STATE__LISTENING;
 }
 
 /*
@@ -193,101 +198,106 @@ static enum ipc_active_state connect_to_server(
 #define WINDOWS_CONNECTION_TIMEOUT_MS (30000)
 
 enum ipc_active_state ipc_client_try_connect(
-	const char *path,
-	const struct ipc_client_connect_options *options,
-	struct ipc_client_connection **p_connection)
+    const char                              *path,
+    const struct ipc_client_connect_options *options,
+    struct ipc_client_connection           **p_connection)
 {
-	wchar_t wpath[MAX_PATH];
-	enum ipc_active_state state = IPC_STATE__OTHER_ERROR;
-	int fd = -1;
+    wchar_t               wpath[MAX_PATH];
+    enum ipc_active_state state = IPC_STATE__OTHER_ERROR;
+    int                   fd    = -1;
 
-	*p_connection = NULL;
+    *p_connection = NULL;
 
-	trace2_region_enter("ipc-client", "try-connect", NULL);
-	trace2_data_string("ipc-client", NULL, "try-connect/path", path);
+    trace2_region_enter("ipc-client", "try-connect", NULL);
+    trace2_data_string("ipc-client", NULL, "try-connect/path", path);
 
-	if (initialize_pipe_name(path, wpath, ARRAY_SIZE(wpath)) < 0)
-		state = IPC_STATE__INVALID_PATH;
-	else
-		state = connect_to_server(wpath, WINDOWS_CONNECTION_TIMEOUT_MS,
-					  options, &fd);
+    if (initialize_pipe_name(path, wpath, ARRAY_SIZE(wpath)) < 0)
+        state = IPC_STATE__INVALID_PATH;
+    else
+        state = connect_to_server(wpath, WINDOWS_CONNECTION_TIMEOUT_MS,
+                                  options, &fd);
 
-	trace2_data_intmax("ipc-client", NULL, "try-connect/state",
-			   (intmax_t)state);
-	trace2_region_leave("ipc-client", "try-connect", NULL);
+    trace2_data_intmax("ipc-client", NULL, "try-connect/state",
+                       (intmax_t)state);
+    trace2_region_leave("ipc-client", "try-connect", NULL);
 
-	if (state == IPC_STATE__LISTENING) {
-		(*p_connection) = xcalloc(1, sizeof(struct ipc_client_connection));
-		(*p_connection)->fd = fd;
-	}
+    if (state == IPC_STATE__LISTENING)
+    {
+        (*p_connection)     = xcalloc(1, sizeof(struct ipc_client_connection));
+        (*p_connection)->fd = fd;
+    }
 
-	return state;
+    return state;
 }
 
 void ipc_client_close_connection(struct ipc_client_connection *connection)
 {
-	if (!connection)
-		return;
+    if (!connection)
+        return;
 
-	if (connection->fd != -1)
-		close(connection->fd);
+    if (connection->fd != -1)
+        close(connection->fd);
 
-	free(connection);
+    free(connection);
 }
 
 int ipc_client_send_command_to_connection(
-	struct ipc_client_connection *connection,
-	const char *message, size_t message_len,
-	struct strbuf *answer)
+    struct ipc_client_connection *connection,
+    const char *message, size_t message_len,
+    struct strbuf *answer)
 {
-	int ret = 0;
+    int ret = 0;
 
-	strbuf_setlen(answer, 0);
+    strbuf_setlen(answer, 0);
 
-	trace2_region_enter("ipc-client", "send-command", NULL);
+    trace2_region_enter("ipc-client", "send-command", NULL);
 
-	if (write_packetized_from_buf_no_flush(message, message_len,
-					       connection->fd) < 0 ||
-	    packet_flush_gently(connection->fd) < 0) {
-		ret = error(_("could not send IPC command"));
-		goto done;
-	}
+    if (write_packetized_from_buf_no_flush(message, message_len,
+                                           connection->fd)
+            < 0
+        || packet_flush_gently(connection->fd) < 0)
+    {
+        ret = error(_("could not send IPC command"));
+        goto done;
+    }
 
-	FlushFileBuffers((HANDLE)_get_osfhandle(connection->fd));
+    FlushFileBuffers((HANDLE)_get_osfhandle(connection->fd));
 
-	if (read_packetized_to_strbuf(
-		    connection->fd, answer,
-		    PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR) < 0) {
-		ret = error(_("could not read IPC response"));
-		goto done;
-	}
+    if (read_packetized_to_strbuf(
+            connection->fd, answer,
+            PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR)
+        < 0)
+    {
+        ret = error(_("could not read IPC response"));
+        goto done;
+    }
 
 done:
-	trace2_region_leave("ipc-client", "send-command", NULL);
-	return ret;
+    trace2_region_leave("ipc-client", "send-command", NULL);
+    return ret;
 }
 
-int ipc_client_send_command(const char *path,
-			    const struct ipc_client_connect_options *options,
-			    const char *message, size_t message_len,
-			    struct strbuf *response)
+int ipc_client_send_command(const char                              *path,
+                            const struct ipc_client_connect_options *options,
+                            const char *message, size_t message_len,
+                            struct strbuf *response)
 {
-	int ret = -1;
-	enum ipc_active_state state;
-	struct ipc_client_connection *connection = NULL;
+    int                           ret = -1;
+    enum ipc_active_state         state;
+    struct ipc_client_connection *connection = NULL;
 
-	state = ipc_client_try_connect(path, options, &connection);
+    state = ipc_client_try_connect(path, options, &connection);
 
-	if (state != IPC_STATE__LISTENING)
-		return ret;
+    if (state != IPC_STATE__LISTENING)
+        return ret;
 
-	ret = ipc_client_send_command_to_connection(connection,
-						    message, message_len,
-						    response);
+    ret = ipc_client_send_command_to_connection(connection,
+                                                message, message_len,
+                                                response);
 
-	ipc_client_close_connection(connection);
+    ipc_client_close_connection(connection);
 
-	return ret;
+    return ret;
 }
 
 /*
@@ -296,29 +306,31 @@ int ipc_client_send_command(const char *path,
  */
 static int dup_fd_from_pipe(const HANDLE pipe)
 {
-	HANDLE process = GetCurrentProcess();
-	HANDLE handle;
-	int fd;
+    HANDLE process = GetCurrentProcess();
+    HANDLE handle;
+    int    fd;
 
-	if (!DuplicateHandle(process, pipe, process, &handle, 0, FALSE,
-			     DUPLICATE_SAME_ACCESS)) {
-		errno = err_win_to_posix(GetLastError());
-		return -1;
-	}
+    if (!DuplicateHandle(process, pipe, process, &handle, 0, FALSE,
+                         DUPLICATE_SAME_ACCESS))
+    {
+        errno = err_win_to_posix(GetLastError());
+        return -1;
+    }
 
-	fd = _open_osfhandle((intptr_t)handle, O_RDWR|O_BINARY);
-	if (fd < 0) {
-		errno = err_win_to_posix(GetLastError());
-		CloseHandle(handle);
-		return -1;
-	}
+    fd = _open_osfhandle((intptr_t)handle, O_RDWR | O_BINARY);
+    if (fd < 0)
+    {
+        errno = err_win_to_posix(GetLastError());
+        CloseHandle(handle);
+        return -1;
+    }
 
-	/*
-	 * `handle` is now owned by `fd` and will be automatically closed
-	 * when the descriptor is closed.
-	 */
+    /*
+     * `handle` is now owned by `fd` and will be automatically closed
+     * when the descriptor is closed.
+     */
 
-	return fd;
+    return fd;
 }
 
 /*
@@ -327,24 +339,27 @@ static int dup_fd_from_pipe(const HANDLE pipe)
  * wrong instance data across multiple levels of callbacks (which
  * is easy to do if there are `void*` arguments).
  */
-enum magic {
-	MAGIC_SERVER_REPLY_DATA,
-	MAGIC_SERVER_THREAD_DATA,
-	MAGIC_SERVER_DATA,
+enum magic
+{
+    MAGIC_SERVER_REPLY_DATA,
+    MAGIC_SERVER_THREAD_DATA,
+    MAGIC_SERVER_DATA,
 };
 
-struct ipc_server_reply_data {
-	enum magic magic;
-	int fd;
-	struct ipc_server_thread_data *server_thread_data;
+struct ipc_server_reply_data
+{
+    enum magic                     magic;
+    int                            fd;
+    struct ipc_server_thread_data *server_thread_data;
 };
 
-struct ipc_server_thread_data {
-	enum magic magic;
-	struct ipc_server_thread_data *next_thread;
-	struct ipc_server_data *server_data;
-	pthread_t pthread_id;
-	HANDLE hPipe;
+struct ipc_server_thread_data
+{
+    enum magic                     magic;
+    struct ipc_server_thread_data *next_thread;
+    struct ipc_server_data        *server_data;
+    pthread_t                      pthread_id;
+    HANDLE                         hPipe;
 };
 
 /*
@@ -361,50 +376,56 @@ struct ipc_server_thread_data {
  * A single "stop-event" is visible to all of the server threads to
  * tell them to shutdown (when idle).
  */
-struct ipc_server_data {
-	enum magic magic;
-	ipc_server_application_cb *application_cb;
-	void *application_data;
-	struct strbuf buf_path;
-	wchar_t wpath[MAX_PATH];
+struct ipc_server_data
+{
+    enum magic                 magic;
+    ipc_server_application_cb *application_cb;
+    void                      *application_data;
+    struct strbuf              buf_path;
+    wchar_t                    wpath[MAX_PATH];
 
-	HANDLE hEventStopRequested;
-	struct ipc_server_thread_data *thread_list;
-	int is_stopped;
+    HANDLE                         hEventStopRequested;
+    struct ipc_server_thread_data *thread_list;
+    int                            is_stopped;
+
+    pthread_mutex_t startup_barrier;
+    int             started;
 };
 
-enum connect_result {
-	CR_CONNECTED = 0,
-	CR_CONNECT_PENDING,
-	CR_CONNECT_ERROR,
-	CR_WAIT_ERROR,
-	CR_SHUTDOWN,
+enum connect_result
+{
+    CR_CONNECTED = 0,
+    CR_CONNECT_PENDING,
+    CR_CONNECT_ERROR,
+    CR_WAIT_ERROR,
+    CR_SHUTDOWN,
 };
 
 static enum connect_result queue_overlapped_connect(
-	struct ipc_server_thread_data *server_thread_data,
-	OVERLAPPED *lpo)
+    struct ipc_server_thread_data *server_thread_data,
+    OVERLAPPED                    *lpo)
 {
-	if (ConnectNamedPipe(server_thread_data->hPipe, lpo))
-		goto failed;
+    if (ConnectNamedPipe(server_thread_data->hPipe, lpo))
+        goto failed;
 
-	switch (GetLastError()) {
-	case ERROR_IO_PENDING:
-		return CR_CONNECT_PENDING;
+    switch (GetLastError())
+    {
+        case ERROR_IO_PENDING:
+            return CR_CONNECT_PENDING;
 
-	case ERROR_PIPE_CONNECTED:
-		SetEvent(lpo->hEvent);
-		return CR_CONNECTED;
+        case ERROR_PIPE_CONNECTED:
+            SetEvent(lpo->hEvent);
+            return CR_CONNECTED;
 
-	default:
-		break;
-	}
+        default:
+            break;
+    }
 
 failed:
-	error(_("ConnectNamedPipe failed for '%s' (%lu)"),
-	      server_thread_data->server_data->buf_path.buf,
-	      GetLastError());
-	return CR_CONNECT_ERROR;
+    error(_("ConnectNamedPipe failed for '%s' (%lu)"),
+          server_thread_data->server_data->buf_path.buf,
+          GetLastError());
+    return CR_CONNECT_ERROR;
 }
 
 /*
@@ -412,32 +433,33 @@ failed:
  * to be signalled.
  */
 static enum connect_result wait_for_connection(
-	struct ipc_server_thread_data *server_thread_data,
-	OVERLAPPED *lpo)
+    struct ipc_server_thread_data *server_thread_data,
+    OVERLAPPED                    *lpo)
 {
-	enum connect_result r;
-	HANDLE waitHandles[2];
-	DWORD dwWaitResult;
+    enum connect_result r;
+    HANDLE              waitHandles[2];
+    DWORD               dwWaitResult;
 
-	r = queue_overlapped_connect(server_thread_data, lpo);
-	if (r != CR_CONNECT_PENDING)
-		return r;
+    r = queue_overlapped_connect(server_thread_data, lpo);
+    if (r != CR_CONNECT_PENDING)
+        return r;
 
-	waitHandles[0] = server_thread_data->server_data->hEventStopRequested;
-	waitHandles[1] = lpo->hEvent;
+    waitHandles[0] = server_thread_data->server_data->hEventStopRequested;
+    waitHandles[1] = lpo->hEvent;
 
-	dwWaitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
-	switch (dwWaitResult) {
-	case WAIT_OBJECT_0 + 0:
-		return CR_SHUTDOWN;
+    dwWaitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+    switch (dwWaitResult)
+    {
+        case WAIT_OBJECT_0 + 0:
+            return CR_SHUTDOWN;
 
-	case WAIT_OBJECT_0 + 1:
-		ResetEvent(lpo->hEvent);
-		return CR_CONNECTED;
+        case WAIT_OBJECT_0 + 1:
+            ResetEvent(lpo->hEvent);
+            return CR_CONNECTED;
 
-	default:
-		return CR_WAIT_ERROR;
-	}
+        default:
+            return CR_WAIT_ERROR;
+    }
 }
 
 /*
@@ -454,13 +476,13 @@ static ipc_server_reply_cb do_io_reply_callback;
  * to chunk data to the client thru us.)
  */
 static int do_io_reply_callback(struct ipc_server_reply_data *reply_data,
-		       const char *response, size_t response_len)
+                                const char *response, size_t response_len)
 {
-	if (reply_data->magic != MAGIC_SERVER_REPLY_DATA)
-		BUG("reply_cb called with wrong instance data");
+    if (reply_data->magic != MAGIC_SERVER_REPLY_DATA)
+        BUG("reply_cb called with wrong instance data");
 
-	return write_packetized_from_buf_no_flush(response, response_len,
-						  reply_data->fd);
+    return write_packetized_from_buf_no_flush(response, response_len,
+                                              reply_data->fd);
 }
 
 /*
@@ -473,41 +495,43 @@ static int do_io_reply_callback(struct ipc_server_reply_data *reply_data,
  */
 static int do_io(struct ipc_server_thread_data *server_thread_data)
 {
-	struct strbuf buf = STRBUF_INIT;
-	struct ipc_server_reply_data reply_data;
-	int ret = 0;
+    struct strbuf                buf = STRBUF_INIT;
+    struct ipc_server_reply_data reply_data;
+    int                          ret = 0;
 
-	reply_data.magic = MAGIC_SERVER_REPLY_DATA;
-	reply_data.server_thread_data = server_thread_data;
+    reply_data.magic              = MAGIC_SERVER_REPLY_DATA;
+    reply_data.server_thread_data = server_thread_data;
 
-	reply_data.fd = dup_fd_from_pipe(server_thread_data->hPipe);
-	if (reply_data.fd < 0)
-		return error(_("could not create fd from pipe for '%s'"),
-			     server_thread_data->server_data->buf_path.buf);
+    reply_data.fd = dup_fd_from_pipe(server_thread_data->hPipe);
+    if (reply_data.fd < 0)
+        return error(_("could not create fd from pipe for '%s'"),
+                     server_thread_data->server_data->buf_path.buf);
 
-	ret = read_packetized_to_strbuf(
-		reply_data.fd, &buf,
-		PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR);
-	if (ret >= 0) {
-		ret = server_thread_data->server_data->application_cb(
-			server_thread_data->server_data->application_data,
-			buf.buf, buf.len, do_io_reply_callback, &reply_data);
+    ret = read_packetized_to_strbuf(
+        reply_data.fd, &buf,
+        PACKET_READ_GENTLE_ON_EOF | PACKET_READ_GENTLE_ON_READ_ERROR);
+    if (ret >= 0)
+    {
+        ret = server_thread_data->server_data->application_cb(
+            server_thread_data->server_data->application_data,
+            buf.buf, buf.len, do_io_reply_callback, &reply_data);
 
-		packet_flush_gently(reply_data.fd);
+        packet_flush_gently(reply_data.fd);
 
-		FlushFileBuffers((HANDLE)_get_osfhandle((reply_data.fd)));
-	}
-	else {
-		/*
-		 * The client probably disconnected/shutdown before it
-		 * could send a well-formed message.  Ignore it.
-		 */
-	}
+        FlushFileBuffers((HANDLE)_get_osfhandle((reply_data.fd)));
+    }
+    else
+    {
+        /*
+         * The client probably disconnected/shutdown before it
+         * could send a well-formed message.  Ignore it.
+         */
+    }
 
-	strbuf_release(&buf);
-	close(reply_data.fd);
+    strbuf_release(&buf);
+    close(reply_data.fd);
 
-	return ret;
+    return ret;
 }
 
 /*
@@ -516,14 +540,24 @@ static int do_io(struct ipc_server_thread_data *server_thread_data)
  */
 static int use_connection(struct ipc_server_thread_data *server_thread_data)
 {
-	int ret;
+    int ret;
 
-	ret = do_io(server_thread_data);
+    ret = do_io(server_thread_data);
 
-	FlushFileBuffers(server_thread_data->hPipe);
-	DisconnectNamedPipe(server_thread_data->hPipe);
+    FlushFileBuffers(server_thread_data->hPipe);
+    DisconnectNamedPipe(server_thread_data->hPipe);
 
-	return ret;
+    return ret;
+}
+
+static void wait_for_startup_barrier(struct ipc_server_data *server_data)
+{
+    /*
+     * Temporarily hold the startup_barrier mutex before starting,
+     * which lets us know that it's OK to start serving requests.
+     */
+    pthread_mutex_lock(&server_data->startup_barrier);
+    pthread_mutex_unlock(&server_data->startup_barrier);
 }
 
 /*
@@ -533,69 +567,75 @@ static int use_connection(struct ipc_server_thread_data *server_thread_data)
  */
 static void *server_thread_proc(void *_server_thread_data)
 {
-	struct ipc_server_thread_data *server_thread_data = _server_thread_data;
-	HANDLE hEventConnected = INVALID_HANDLE_VALUE;
-	OVERLAPPED oConnect;
-	enum connect_result cr;
-	int ret;
+    struct ipc_server_thread_data *server_thread_data = _server_thread_data;
+    HANDLE                         hEventConnected    = INVALID_HANDLE_VALUE;
+    OVERLAPPED                     oConnect;
+    enum connect_result            cr;
+    int                            ret;
 
-	assert(server_thread_data->hPipe != INVALID_HANDLE_VALUE);
+    assert(server_thread_data->hPipe != INVALID_HANDLE_VALUE);
 
-	trace2_thread_start("ipc-server");
-	trace2_data_string("ipc-server", NULL, "pipe",
-			   server_thread_data->server_data->buf_path.buf);
+    trace2_thread_start("ipc-server");
+    trace2_data_string("ipc-server", NULL, "pipe",
+                       server_thread_data->server_data->buf_path.buf);
 
-	hEventConnected = CreateEventW(NULL, TRUE, FALSE, NULL);
+    hEventConnected = CreateEventW(NULL, TRUE, FALSE, NULL);
 
-	memset(&oConnect, 0, sizeof(oConnect));
-	oConnect.hEvent = hEventConnected;
+    memset(&oConnect, 0, sizeof(oConnect));
+    oConnect.hEvent = hEventConnected;
 
-	for (;;) {
-		cr = wait_for_connection(server_thread_data, &oConnect);
+    wait_for_startup_barrier(server_thread_data->server_data);
 
-		switch (cr) {
-		case CR_SHUTDOWN:
-			goto finished;
+    for (;;)
+    {
+        cr = wait_for_connection(server_thread_data, &oConnect);
 
-		case CR_CONNECTED:
-			ret = use_connection(server_thread_data);
-			if (ret == SIMPLE_IPC_QUIT) {
-				ipc_server_stop_async(
-					server_thread_data->server_data);
-				goto finished;
-			}
-			if (ret > 0) {
-				/*
-				 * Ignore (transient) IO errors with this
-				 * client and reset for the next client.
-				 */
-			}
-			break;
+        switch (cr)
+        {
+            case CR_SHUTDOWN:
+                goto finished;
 
-		case CR_CONNECT_PENDING:
-			/* By construction, this should not happen. */
-			BUG("ipc-server[%s]: unexpeced CR_CONNECT_PENDING",
-			    server_thread_data->server_data->buf_path.buf);
+            case CR_CONNECTED:
+                ret = use_connection(server_thread_data);
+                if (ret == SIMPLE_IPC_QUIT)
+                {
+                    ipc_server_stop_async(
+                        server_thread_data->server_data);
+                    goto finished;
+                }
+                if (ret > 0)
+                {
+                    /*
+                     * Ignore (transient) IO errors with this
+                     * client and reset for the next client.
+                     */
+                }
+                break;
 
-		case CR_CONNECT_ERROR:
-		case CR_WAIT_ERROR:
-			/*
-			 * Ignore these theoretical errors.
-			 */
-			DisconnectNamedPipe(server_thread_data->hPipe);
-			break;
+            case CR_CONNECT_PENDING:
+                /* By construction, this should not happen. */
+                BUG("ipc-server[%s]: unexpeced CR_CONNECT_PENDING",
+                    server_thread_data->server_data->buf_path.buf);
 
-		default:
-			BUG("unandled case after wait_for_connection");
-		}
-	}
+            case CR_CONNECT_ERROR:
+            case CR_WAIT_ERROR:
+                /*
+                 * Ignore these theoretical errors.
+                 */
+                DisconnectNamedPipe(server_thread_data->hPipe);
+                break;
+
+            default:
+                BUG("unandled case after wait_for_connection");
+        }
+    }
 
 finished:
-	CloseHandle(server_thread_data->hPipe);
-	CloseHandle(hEventConnected);
+    CloseHandle(server_thread_data->hPipe);
+    CloseHandle(hEventConnected);
 
-	trace2_thread_exit();
-	return NULL;
+    trace2_thread_exit();
+    return NULL;
 }
 
 /*
@@ -611,29 +651,29 @@ finished:
  */
 struct my_sa_data
 {
-	PSID pEveryoneSID;
-	PACL pACL;
-	PSECURITY_DESCRIPTOR pSD;
-	LPSECURITY_ATTRIBUTES lpSA;
+    PSID                  pEveryoneSID;
+    PACL                  pACL;
+    PSECURITY_DESCRIPTOR  pSD;
+    LPSECURITY_ATTRIBUTES lpSA;
 };
 
 static void init_sa(struct my_sa_data *d)
 {
-	memset(d, 0, sizeof(*d));
+    memset(d, 0, sizeof(*d));
 }
 
 static void release_sa(struct my_sa_data *d)
 {
-	if (d->pEveryoneSID)
-		FreeSid(d->pEveryoneSID);
-	if (d->pACL)
-		LocalFree(d->pACL);
-	if (d->pSD)
-		LocalFree(d->pSD);
-	if (d->lpSA)
-		LocalFree(d->lpSA);
+    if (d->pEveryoneSID)
+        FreeSid(d->pEveryoneSID);
+    if (d->pACL)
+        LocalFree(d->pACL);
+    if (d->pSD)
+        LocalFree(d->pSD);
+    if (d->lpSA)
+        LocalFree(d->lpSA);
 
-	memset(d, 0, sizeof(*d));
+    memset(d, 0, sizeof(*d));
 }
 
 /*
@@ -657,248 +697,283 @@ static void release_sa(struct my_sa_data *d)
  */
 static LPSECURITY_ATTRIBUTES get_sa(struct my_sa_data *d)
 {
-	SID_IDENTIFIER_AUTHORITY sid_auth_world = SECURITY_WORLD_SID_AUTHORITY;
+    SID_IDENTIFIER_AUTHORITY sid_auth_world = SECURITY_WORLD_SID_AUTHORITY;
 #define NR_EA (1)
-	EXPLICIT_ACCESS ea[NR_EA];
-	DWORD dwResult;
+    EXPLICIT_ACCESS ea[NR_EA];
+    DWORD           dwResult;
 
-	if (!AllocateAndInitializeSid(&sid_auth_world, 1,
-				      SECURITY_WORLD_RID, 0,0,0,0,0,0,0,
-				      &d->pEveryoneSID)) {
-		DWORD gle = GetLastError();
-		trace2_data_intmax("ipc-debug", NULL, "alloc-world-sid/gle",
-				   (intmax_t)gle);
-		goto fail;
-	}
+    if (!AllocateAndInitializeSid(&sid_auth_world, 1,
+                                  SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0,
+                                  &d->pEveryoneSID))
+    {
+        DWORD gle = GetLastError();
+        trace2_data_intmax("ipc-debug", NULL, "alloc-world-sid/gle",
+                           (intmax_t)gle);
+        goto fail;
+    }
 
-	memset(ea, 0, NR_EA * sizeof(EXPLICIT_ACCESS));
+    memset(ea, 0, NR_EA * sizeof(EXPLICIT_ACCESS));
 
-	ea[0].grfAccessPermissions = GENERIC_READ | GENERIC_WRITE;
-	ea[0].grfAccessMode = SET_ACCESS;
-	ea[0].grfInheritance = NO_INHERITANCE;
-	ea[0].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea[0].Trustee.ptstrName = (LPTSTR)d->pEveryoneSID;
+    ea[0].grfAccessPermissions             = GENERIC_READ | GENERIC_WRITE;
+    ea[0].grfAccessMode                    = SET_ACCESS;
+    ea[0].grfInheritance                   = NO_INHERITANCE;
+    ea[0].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+    ea[0].Trustee.TrusteeForm              = TRUSTEE_IS_SID;
+    ea[0].Trustee.TrusteeType              = TRUSTEE_IS_WELL_KNOWN_GROUP;
+    ea[0].Trustee.ptstrName                = (LPTSTR)d->pEveryoneSID;
 
-	dwResult = SetEntriesInAcl(NR_EA, ea, NULL, &d->pACL);
-	if (dwResult != ERROR_SUCCESS) {
-		DWORD gle = GetLastError();
-		trace2_data_intmax("ipc-debug", NULL, "set-acl-entry/gle",
-				   (intmax_t)gle);
-		trace2_data_intmax("ipc-debug", NULL, "set-acl-entry/dw",
-				   (intmax_t)dwResult);
-		goto fail;
-	}
+    dwResult = SetEntriesInAcl(NR_EA, ea, NULL, &d->pACL);
+    if (dwResult != ERROR_SUCCESS)
+    {
+        DWORD gle = GetLastError();
+        trace2_data_intmax("ipc-debug", NULL, "set-acl-entry/gle",
+                           (intmax_t)gle);
+        trace2_data_intmax("ipc-debug", NULL, "set-acl-entry/dw",
+                           (intmax_t)dwResult);
+        goto fail;
+    }
 
-	d->pSD = (PSECURITY_DESCRIPTOR)LocalAlloc(
-		LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
-	if (!InitializeSecurityDescriptor(d->pSD, SECURITY_DESCRIPTOR_REVISION)) {
-		DWORD gle = GetLastError();
-		trace2_data_intmax("ipc-debug", NULL, "init-sd/gle", (intmax_t)gle);
-		goto fail;
-	}
+    d->pSD = (PSECURITY_DESCRIPTOR)LocalAlloc(
+        LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
+    if (!InitializeSecurityDescriptor(d->pSD, SECURITY_DESCRIPTOR_REVISION))
+    {
+        DWORD gle = GetLastError();
+        trace2_data_intmax("ipc-debug", NULL, "init-sd/gle", (intmax_t)gle);
+        goto fail;
+    }
 
-	if (!SetSecurityDescriptorDacl(d->pSD, TRUE, d->pACL, FALSE)) {
-		DWORD gle = GetLastError();
-		trace2_data_intmax("ipc-debug", NULL, "set-sd-dacl/gle", (intmax_t)gle);
-		goto fail;
-	}
+    if (!SetSecurityDescriptorDacl(d->pSD, TRUE, d->pACL, FALSE))
+    {
+        DWORD gle = GetLastError();
+        trace2_data_intmax("ipc-debug", NULL, "set-sd-dacl/gle", (intmax_t)gle);
+        goto fail;
+    }
 
-	d->lpSA = (LPSECURITY_ATTRIBUTES)LocalAlloc(LPTR, sizeof(SECURITY_ATTRIBUTES));
-	d->lpSA->nLength = sizeof(SECURITY_ATTRIBUTES);
-	d->lpSA->lpSecurityDescriptor = d->pSD;
-	d->lpSA->bInheritHandle = FALSE;
+    d->lpSA                       = (LPSECURITY_ATTRIBUTES)LocalAlloc(LPTR, sizeof(SECURITY_ATTRIBUTES));
+    d->lpSA->nLength              = sizeof(SECURITY_ATTRIBUTES);
+    d->lpSA->lpSecurityDescriptor = d->pSD;
+    d->lpSA->bInheritHandle       = FALSE;
 
-	return d->lpSA;
+    return d->lpSA;
 
 fail:
-	release_sa(d);
-	return NULL;
+    release_sa(d);
+    return NULL;
 }
 
 static HANDLE create_new_pipe(wchar_t *wpath, int is_first)
 {
-	HANDLE hPipe;
-	DWORD dwOpenMode, dwPipeMode;
-	struct my_sa_data my_sa_data;
+    HANDLE            hPipe;
+    DWORD             dwOpenMode, dwPipeMode;
+    struct my_sa_data my_sa_data;
 
-	init_sa(&my_sa_data);
+    init_sa(&my_sa_data);
 
-	dwOpenMode = PIPE_ACCESS_INBOUND | PIPE_ACCESS_OUTBOUND |
-		FILE_FLAG_OVERLAPPED;
+    dwOpenMode = PIPE_ACCESS_INBOUND | PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED;
 
-	dwPipeMode = PIPE_TYPE_MESSAGE | PIPE_READMODE_BYTE | PIPE_WAIT |
-		PIPE_REJECT_REMOTE_CLIENTS;
+    dwPipeMode = PIPE_TYPE_MESSAGE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS;
 
-	if (is_first) {
-		dwOpenMode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
+    if (is_first)
+    {
+        dwOpenMode |= FILE_FLAG_FIRST_PIPE_INSTANCE;
 
-		/*
-		 * On Windows, the first server pipe instance gets to
-		 * set the ACL / Security Attributes on the named
-		 * pipe; subsequent instances inherit and cannot
-		 * change them.
-		 */
-		get_sa(&my_sa_data);
-	}
+        /*
+         * On Windows, the first server pipe instance gets to
+         * set the ACL / Security Attributes on the named
+         * pipe; subsequent instances inherit and cannot
+         * change them.
+         */
+        get_sa(&my_sa_data);
+    }
 
-	hPipe = CreateNamedPipeW(wpath, dwOpenMode, dwPipeMode,
-				 PIPE_UNLIMITED_INSTANCES, 1024, 1024, 0,
-				 my_sa_data.lpSA);
+    hPipe = CreateNamedPipeW(wpath, dwOpenMode, dwPipeMode,
+                             PIPE_UNLIMITED_INSTANCES, 1024, 1024, 0,
+                             my_sa_data.lpSA);
 
-	release_sa(&my_sa_data);
+    release_sa(&my_sa_data);
 
-	return hPipe;
+    return hPipe;
 }
 
-int ipc_server_run_async(struct ipc_server_data **returned_server_data,
-			 const char *path, const struct ipc_server_opts *opts,
-			 ipc_server_application_cb *application_cb,
-			 void *application_data)
+int ipc_server_init_async(struct ipc_server_data **returned_server_data,
+                          const char *path, const struct ipc_server_opts *opts,
+                          ipc_server_application_cb *application_cb,
+                          void                      *application_data)
 {
-	struct ipc_server_data *server_data;
-	wchar_t wpath[MAX_PATH];
-	HANDLE hPipeFirst = INVALID_HANDLE_VALUE;
-	int k;
-	int ret = 0;
-	int nr_threads = opts->nr_threads;
+    struct ipc_server_data *server_data;
+    wchar_t                 wpath[MAX_PATH];
+    HANDLE                  hPipeFirst = INVALID_HANDLE_VALUE;
+    int                     k;
+    int                     ret        = 0;
+    int                     nr_threads = opts->nr_threads;
 
-	*returned_server_data = NULL;
+    *returned_server_data = NULL;
 
-	ret = initialize_pipe_name(path, wpath, ARRAY_SIZE(wpath));
-	if (ret < 0) {
-		errno = EINVAL;
-		return -1;
-	}
+    ret = initialize_pipe_name(path, wpath, ARRAY_SIZE(wpath));
+    if (ret < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
 
-	hPipeFirst = create_new_pipe(wpath, 1);
-	if (hPipeFirst == INVALID_HANDLE_VALUE) {
-		errno = EADDRINUSE;
-		return -2;
-	}
+    hPipeFirst = create_new_pipe(wpath, 1);
+    if (hPipeFirst == INVALID_HANDLE_VALUE)
+    {
+        errno = EADDRINUSE;
+        return -2;
+    }
 
-	server_data = xcalloc(1, sizeof(*server_data));
-	server_data->magic = MAGIC_SERVER_DATA;
-	server_data->application_cb = application_cb;
-	server_data->application_data = application_data;
-	server_data->hEventStopRequested = CreateEvent(NULL, TRUE, FALSE, NULL);
-	strbuf_init(&server_data->buf_path, 0);
-	strbuf_addstr(&server_data->buf_path, path);
-	wcscpy(server_data->wpath, wpath);
+    server_data                      = xcalloc(1, sizeof(*server_data));
+    server_data->magic               = MAGIC_SERVER_DATA;
+    server_data->application_cb      = application_cb;
+    server_data->application_data    = application_data;
+    server_data->hEventStopRequested = CreateEvent(NULL, TRUE, FALSE, NULL);
+    strbuf_init(&server_data->buf_path, 0);
+    strbuf_addstr(&server_data->buf_path, path);
+    wcscpy(server_data->wpath, wpath);
 
-	if (nr_threads < 1)
-		nr_threads = 1;
+    /*
+     * Hold the startup_barrier lock so that no threads will progress
+     * until ipc_server_start_async() is called.
+     */
+    pthread_mutex_init(&server_data->startup_barrier, NULL);
+    pthread_mutex_lock(&server_data->startup_barrier);
 
-	for (k = 0; k < nr_threads; k++) {
-		struct ipc_server_thread_data *std;
+    if (nr_threads < 1)
+        nr_threads = 1;
 
-		std = xcalloc(1, sizeof(*std));
-		std->magic = MAGIC_SERVER_THREAD_DATA;
-		std->server_data = server_data;
-		std->hPipe = INVALID_HANDLE_VALUE;
+    for (k = 0; k < nr_threads; k++)
+    {
+        struct ipc_server_thread_data *std;
 
-		std->hPipe = (k == 0)
-			? hPipeFirst
-			: create_new_pipe(server_data->wpath, 0);
+        std              = xcalloc(1, sizeof(*std));
+        std->magic       = MAGIC_SERVER_THREAD_DATA;
+        std->server_data = server_data;
+        std->hPipe       = INVALID_HANDLE_VALUE;
 
-		if (std->hPipe == INVALID_HANDLE_VALUE) {
-			/*
-			 * If we've reached a pipe instance limit for
-			 * this path, just use fewer threads.
-			 */
-			free(std);
-			break;
-		}
+        std->hPipe = (k == 0)
+                         ? hPipeFirst
+                         : create_new_pipe(server_data->wpath, 0);
 
-		if (pthread_create(&std->pthread_id, NULL,
-				   server_thread_proc, std)) {
-			/*
-			 * Likewise, if we're out of threads, just use
-			 * fewer threads than requested.
-			 *
-			 * However, we just give up if we can't even get
-			 * one thread.  This should not happen.
-			 */
-			if (k == 0)
-				die(_("could not start thread[0] for '%s'"),
-				    path);
+        if (std->hPipe == INVALID_HANDLE_VALUE)
+        {
+            /*
+             * If we've reached a pipe instance limit for
+             * this path, just use fewer threads.
+             */
+            free(std);
+            break;
+        }
 
-			CloseHandle(std->hPipe);
-			free(std);
-			break;
-		}
+        if (pthread_create(&std->pthread_id, NULL,
+                           server_thread_proc, std))
+        {
+            /*
+             * Likewise, if we're out of threads, just use
+             * fewer threads than requested.
+             *
+             * However, we just give up if we can't even get
+             * one thread.  This should not happen.
+             */
+            if (k == 0)
+                die(_("could not start thread[0] for '%s'"),
+                    path);
 
-		std->next_thread = server_data->thread_list;
-		server_data->thread_list = std;
-	}
+            CloseHandle(std->hPipe);
+            free(std);
+            break;
+        }
 
-	*returned_server_data = server_data;
-	return 0;
+        std->next_thread         = server_data->thread_list;
+        server_data->thread_list = std;
+    }
+
+    *returned_server_data = server_data;
+    return 0;
+}
+
+void ipc_server_start_async(struct ipc_server_data *server_data)
+{
+    if (!server_data || server_data->started)
+        return;
+
+    server_data->started = 1;
+    pthread_mutex_unlock(&server_data->startup_barrier);
 }
 
 int ipc_server_stop_async(struct ipc_server_data *server_data)
 {
-	if (!server_data)
-		return 0;
+    if (!server_data)
+        return 0;
 
-	/*
-	 * Gently tell all of the ipc_server threads to shutdown.
-	 * This will be seen the next time they are idle (and waiting
-	 * for a connection).
-	 *
-	 * We DO NOT attempt to force them to drop an active connection.
-	 */
-	SetEvent(server_data->hEventStopRequested);
-	return 0;
+    /*
+     * Gently tell all of the ipc_server threads to shutdown.
+     * This will be seen the next time they are idle (and waiting
+     * for a connection).
+     *
+     * We DO NOT attempt to force them to drop an active connection.
+     */
+    SetEvent(server_data->hEventStopRequested);
+
+    /*
+     * If we haven't yet told the threads they are allowed to run,
+     * do so now, so they can receive the shutdown event.
+     */
+    ipc_server_start_async(server_data);
+
+    return 0;
 }
 
 int ipc_server_await(struct ipc_server_data *server_data)
 {
-	DWORD dwWaitResult;
+    DWORD dwWaitResult;
 
-	if (!server_data)
-		return 0;
+    if (!server_data)
+        return 0;
 
-	dwWaitResult = WaitForSingleObject(server_data->hEventStopRequested, INFINITE);
-	if (dwWaitResult != WAIT_OBJECT_0)
-		return error(_("wait for hEvent failed for '%s'"),
-			     server_data->buf_path.buf);
+    dwWaitResult = WaitForSingleObject(server_data->hEventStopRequested, INFINITE);
+    if (dwWaitResult != WAIT_OBJECT_0)
+        return error(_("wait for hEvent failed for '%s'"),
+                     server_data->buf_path.buf);
 
-	while (server_data->thread_list) {
-		struct ipc_server_thread_data *std = server_data->thread_list;
+    while (server_data->thread_list)
+    {
+        struct ipc_server_thread_data *std = server_data->thread_list;
 
-		pthread_join(std->pthread_id, NULL);
+        pthread_join(std->pthread_id, NULL);
 
-		server_data->thread_list = std->next_thread;
-		free(std);
-	}
+        server_data->thread_list = std->next_thread;
+        free(std);
+    }
 
-	server_data->is_stopped = 1;
+    server_data->is_stopped = 1;
 
-	return 0;
+    return 0;
 }
 
 void ipc_server_free(struct ipc_server_data *server_data)
 {
-	if (!server_data)
-		return;
+    if (!server_data)
+        return;
 
-	if (!server_data->is_stopped)
-		BUG("cannot free ipc-server while running for '%s'",
-		    server_data->buf_path.buf);
+    if (!server_data->is_stopped)
+        BUG("cannot free ipc-server while running for '%s'",
+            server_data->buf_path.buf);
 
-	strbuf_release(&server_data->buf_path);
+    strbuf_release(&server_data->buf_path);
 
-	if (server_data->hEventStopRequested != INVALID_HANDLE_VALUE)
-		CloseHandle(server_data->hEventStopRequested);
+    if (server_data->hEventStopRequested != INVALID_HANDLE_VALUE)
+        CloseHandle(server_data->hEventStopRequested);
 
-	while (server_data->thread_list) {
-		struct ipc_server_thread_data *std = server_data->thread_list;
+    while (server_data->thread_list)
+    {
+        struct ipc_server_thread_data *std = server_data->thread_list;
 
-		server_data->thread_list = std->next_thread;
-		free(std);
-	}
+        server_data->thread_list = std->next_thread;
+        free(std);
+    }
 
-	free(server_data);
+    pthread_mutex_destroy(&server_data->startup_barrier);
+
+    free(server_data);
 }

@@ -18,9 +18,9 @@ struct reftable_writer
 {
     ssize_t (*write)(void *, const void *, size_t);
     int (*flush)(void *);
-    void         *write_arg;
-    int           pending_padding;
-    struct strbuf last_key;
+    void               *write_arg;
+    int                 pending_padding;
+    struct reftable_buf last_key;
 
     /* offset of next block to write. */
     uint64_t                      next;

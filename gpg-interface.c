@@ -48,8 +48,8 @@ struct gpg_format
                                 size_t                  signature_size);
     int (*sign_buffer)(struct strbuf *buffer, struct strbuf *signature,
                        const char *signing_key);
-    const char *(*get_default_key)(void);
-    const char *(*get_key_id)(void);
+    char *(*get_default_key)(void);
+    char *(*get_key_id)(void);
 };
 
 static const char *openpgp_verify_args[] = {
@@ -84,9 +84,9 @@ static int sign_buffer_gpg(struct strbuf *buffer, struct strbuf *signature,
 static int sign_buffer_ssh(struct strbuf *buffer, struct strbuf *signature,
                            const char *signing_key);
 
-static const char *get_default_ssh_signing_key(void);
+static char *get_default_ssh_signing_key(void);
 
-static const char *get_ssh_key_id(void);
+static char *get_ssh_key_id(void);
 
 static struct gpg_format gpg_format[] = {
     {
@@ -448,7 +448,7 @@ static void parse_ssh_output(struct signature_check *sigc)
      * Note that "PRINCIPAL" can contain whitespace, "RSA" and
      * "SHA256" part could be a different token that names of
      * the algorithms used, and "FINGERPRINT" is a hexadecimal
-     * string.  By finding the last occurence of " with ", we can
+     * string.  By finding the last occurrence of " with ", we can
      * reliably parse out the PRINCIPAL.
      */
     sigc->result      = 'B';
@@ -988,7 +988,7 @@ static char *get_ssh_key_fingerprint(const char *signing_key)
 }
 
 /* Returns the first public key from an ssh-agent to use for signing */
-static const char *get_default_ssh_signing_key(void)
+static char *get_default_ssh_signing_key(void)
 {
     struct child_process ssh_default_key = CHILD_PROCESS_INIT;
     int                  ret             = -1;
@@ -1051,13 +1051,16 @@ static const char *get_default_ssh_signing_key(void)
     return default_key;
 }
 
-static const char *get_ssh_key_id(void)
+static char *get_ssh_key_id(void)
 {
-    return get_ssh_key_fingerprint(get_signing_key());
+    char *signing_key = get_signing_key();
+    char *key_id      = get_ssh_key_fingerprint(signing_key);
+    free(signing_key);
+    return key_id;
 }
 
 /* Returns a textual but unique representation of the signing key */
-const char *get_signing_key_id(void)
+char *get_signing_key_id(void)
 {
     gpg_interface_lazy_init();
 
@@ -1070,20 +1073,18 @@ const char *get_signing_key_id(void)
     return get_signing_key();
 }
 
-const char *get_signing_key(void)
+char *get_signing_key(void)
 {
     gpg_interface_lazy_init();
 
     if (configured_signing_key)
-    {
-        return configured_signing_key;
-    }
+        return xstrdup(configured_signing_key);
     if (use_format->get_default_key)
     {
         return use_format->get_default_key();
     }
 
-    return git_committer_info(IDENT_STRICT | IDENT_NO_DATE);
+    return xstrdup(git_committer_info(IDENT_STRICT | IDENT_NO_DATE));
 }
 
 const char *gpg_trust_level_to_str(enum signature_trust_level level)

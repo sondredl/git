@@ -1,3 +1,5 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "config.h"
 #include "editor.h"
@@ -105,23 +107,16 @@ const char *git_pager(int stdout_is_tty)
     if (!pager)
     {
         if (!pager_program)
-        {
-            read_early_config(core_pager_config, NULL);
-        }
+            read_early_config(the_repository,
+                              core_pager_config, NULL);
         pager = pager_program;
     }
     if (!pager)
-    {
         pager = getenv("PAGER");
-    }
     if (!pager)
-    {
         pager = DEFAULT_PAGER;
-    }
     if (!*pager || !strcmp(pager, "cat"))
-    {
         pager = NULL;
-    }
 
     return pager;
 }
@@ -274,23 +269,21 @@ int term_columns(void)
  */
 void term_clear_line(void)
 {
+    if (!isatty(2))
+        return;
     if (is_terminal_dumb())
-    {
         /*
          * Fall back to print a terminal width worth of space
          * characters (hoping that the terminal is still as wide
          * as it was upon the first call to term_columns()).
          */
         fprintf(stderr, "\r%*s\r", term_columns(), "");
-    }
     else
-    {
         /*
          * On non-dumb terminals use an escape sequence to clear
          * the whole line, no matter how wide the terminal.
          */
         fputs("\r\033[K", stderr);
-    }
 }
 
 /*
@@ -347,7 +340,7 @@ int check_pager_config(const char *cmd)
     data.want  = -1;
     data.value = NULL;
 
-    read_early_config(pager_command_config, &data);
+    read_early_config(the_repository, pager_command_config, &data);
 
     if (data.value)
     {

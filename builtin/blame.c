@@ -4,14 +4,13 @@
  * Copyright (c) 2006, 2014 by its authors
  * See COPYING for licensing conditions
  */
-
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "color.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
-#include "repository.h"
 #include "commit.h"
 #include "diff.h"
 #include "revision.h"
@@ -1053,7 +1052,10 @@ static void build_ignorelist(struct blame_scoreboard *sb,
     }
 }
 
-int cmd_blame(int argc, const char **argv, const char *prefix)
+int cmd_blame(int                     argc,
+              const char            **argv,
+              const char             *prefix,
+              struct repository *repo UNUSED)
 {
     struct rev_info         revs;
     char                   *path = NULL;
@@ -1275,9 +1277,7 @@ parse_done:
         {
             case 2: /* (1b) */
                 if (argc != 4)
-                {
                     usage_with_options(opt_usage, options);
-                }
                 /* reorder for the new way: <rev> -- <path> */
                 argv[1] = argv[3];
                 argv[3] = argv[2];
@@ -1294,9 +1294,7 @@ parse_done:
     else
     {
         if (argc < 2)
-        {
             usage_with_options(opt_usage, options);
-        }
         if (argc == 3 && is_a_rev(argv[argc - 1]))
         { /* (2b) */
             path    = add_prefix(prefix, argv[1]);
@@ -1304,10 +1302,8 @@ parse_done:
         }
         else
         { /* (2a) */
-            if (argc == 2 && is_a_rev(argv[1]) && !get_git_work_tree())
-            {
+            if (argc == 2 && is_a_rev(argv[1]) && !repo_get_work_tree(the_repository))
                 die("missing <path> to blame");
-            }
             path = add_prefix(prefix, argv[argc - 1]);
         }
         argv[argc - 1] = "--";

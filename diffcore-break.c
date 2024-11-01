@@ -154,8 +154,8 @@ static int should_break(struct repository    *r,
 
 void diffcore_break(struct repository *r, int break_score)
 {
-    struct diff_queue_struct *q = &diff_queued_diff;
-    struct diff_queue_struct  outq;
+    struct diff_queue_struct *q    = &diff_queued_diff;
+    struct diff_queue_struct  outq = DIFF_QUEUE_INIT;
 
     /* When the filepair has this much edit (insert and delete),
      * it is first considered to be a rewrite and broken into a
@@ -205,8 +205,6 @@ void diffcore_break(struct repository *r, int break_score)
     {
         merge_score = DEFAULT_MERGE_SCORE;
     }
-
-    DIFF_QUEUE_CLEAR(&outq);
 
     for (i = 0; i < q->nr; i++)
     {
@@ -307,30 +305,25 @@ static void merge_broken(struct diff_filepair     *p,
      * in the resulting tree.
      */
     d->one->rename_used++;
-    diff_free_filespec_data(d->two);
-    diff_free_filespec_data(c->one);
+    free_filespec(d->two);
+    free_filespec(c->one);
     free(d);
     free(c);
 }
 
 void diffcore_merge_broken(void)
 {
-    struct diff_queue_struct *q = &diff_queued_diff;
-    struct diff_queue_struct  outq;
-    int                       i;
-    int                       j;
-
-    DIFF_QUEUE_CLEAR(&outq);
+    struct diff_queue_struct *q    = &diff_queued_diff;
+    struct diff_queue_struct  outq = DIFF_QUEUE_INIT;
+    int                       i, j;
 
     for (i = 0; i < q->nr; i++)
     {
         struct diff_filepair *p = q->queue[i];
         if (!p)
-        {
             /* we already merged this with its peer */
             continue;
-        }
-        if (p->broken_pair && !strcmp(p->one->path, p->two->path))
+        else if (p->broken_pair && !strcmp(p->one->path, p->two->path))
         {
             /* If the peer also survived rename/copy, then
              * we merge them back together.
@@ -352,11 +345,11 @@ void diffcore_merge_broken(void)
             diff_q(&outq, p);
         }
         else
-        {
             diff_q(&outq, p);
-        }
     next:;
     }
     free(q->queue);
     *q = outq;
+
+    return;
 }

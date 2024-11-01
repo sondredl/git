@@ -622,7 +622,7 @@ void restore_term(void)
 {
 }
 
-char *git_terminal_prompt(const char *prompt, int echo)
+char *git_terminal_prompt(const char *prompt, int echo UNUSED)
 {
     return getpass(prompt);
 }

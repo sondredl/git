@@ -1,3 +1,4 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "bulk-checkin.h"
 #include "config.h"
@@ -732,7 +733,10 @@ static void unpack_all(void)
     }
 }
 
-int cmd_unpack_objects(int argc, const char **argv, const char *prefix UNUSED)
+int cmd_unpack_objects(int                     argc,
+                       const char            **argv,
+                       const char *prefix      UNUSED,
+                       struct repository *repo UNUSED)
 {
     int              i;
     struct object_id oid;

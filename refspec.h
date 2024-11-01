@@ -51,9 +51,9 @@ struct refspec
     int                  alloc;
     int                  nr;
 
-    const char **raw;
-    int          raw_alloc;
-    int          raw_nr;
+    char **raw;
+    int    raw_alloc;
+    int    raw_nr;
 
     int fetch;
 };

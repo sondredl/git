@@ -553,8 +553,6 @@ struct bloom_filter *get_or_compute_bloom_filter(struct repository              
                 *last_slash = '\0';
 
             } while (*path);
-
-            diff_free_filepair(diff_queued_diff.queue[i]);
         }
 
         if (hashmap_get_size(&pathmap) > settings->max_changed_paths)
@@ -594,10 +592,6 @@ struct bloom_filter *get_or_compute_bloom_filter(struct repository              
     }
     else
     {
-        for (i = 0; i < diff_queued_diff.nr; i++)
-        {
-            diff_free_filepair(diff_queued_diff.queue[i]);
-        }
         init_truncated_large_filter(filter, settings->hash_version);
 
         if (computed)
@@ -611,9 +605,7 @@ struct bloom_filter *get_or_compute_bloom_filter(struct repository              
         *computed |= BLOOM_COMPUTED;
     }
 
-    free(diff_queued_diff.queue);
-    DIFF_QUEUE_CLEAR(&diff_queued_diff);
-
+    diff_queue_clear(&diff_queued_diff);
     return filter;
 }
 

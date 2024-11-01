@@ -192,11 +192,11 @@ void stage_updated_gitmodules(struct index_state *istate)
     }
 }
 
-static struct string_list added_submodule_odb_paths = STRING_LIST_INIT_NODUP;
+static struct string_list added_submodule_odb_paths = STRING_LIST_INIT_DUP;
 
 void add_submodule_odb_by_path(const char *path)
 {
-    string_list_insert(&added_submodule_odb_paths, xstrdup(path));
+    string_list_insert(&added_submodule_odb_paths, path);
 }
 
 int register_all_submodule_odb_as_alternates(void)
@@ -501,6 +501,11 @@ int parse_submodule_update_strategy(const char                       *value,
     }
 
     return 0;
+}
+
+void submodule_update_strategy_release(struct submodule_update_strategy *strategy)
+{
+    free((char *)strategy->command);
 }
 
 const char *submodule_update_type_to_string(enum submodule_update_type type)
@@ -2177,6 +2182,8 @@ int fetch_submodules(struct repository   *r,
 out:
     free_submodules_data(&spf.changed_submodule_names);
     string_list_clear(&spf.seen_submodule_names, 0);
+    strbuf_release(&spf.submodules_with_errors);
+    free(spf.oid_fetch_tasks);
     return spf.result;
 }
 
@@ -2891,9 +2898,7 @@ void absorb_git_dir_into_superproject(const char *path,
          */
         sub = submodule_from_path(the_repository, null_oid(), path);
         if (!sub)
-        {
             die(_("could not lookup name for submodule '%s'"), path);
-        }
         submodule_name_to_gitdir(&sub_gitdir, the_repository, sub->name);
         connect_work_tree_and_git_dir(path, sub_gitdir.buf, 0);
         strbuf_release(&sub_gitdir);
@@ -2902,7 +2907,7 @@ void absorb_git_dir_into_superproject(const char *path,
     {
         /* Is it already absorbed into the superprojects git dir? */
         char *real_sub_git_dir    = real_pathdup(sub_git_dir, 1);
-        char *real_common_git_dir = real_pathdup(get_git_common_dir(), 1);
+        char *real_common_git_dir = real_pathdup(repo_get_common_dir(the_repository), 1);
 
         if (!starts_with(real_sub_git_dir, real_common_git_dir))
         {

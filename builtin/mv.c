@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2006 Johannes Schindelin
  */
+#define USE_THE_REPOSITORY_VARIABLE
 
 #include "builtin.h"
 #include "abspath.h"
@@ -18,7 +19,7 @@
 #include "string-list.h"
 #include "parse-options.h"
 #include "read-cache-ll.h"
-#include "repository.h"
+
 #include "setup.h"
 #include "strvec.h"
 #include "submodule.h"
@@ -205,7 +206,10 @@ static void remove_empty_src_dirs(const char **src_dir, size_t src_dir_nr)
     strbuf_release(&a_src_dir);
 }
 
-int cmd_mv(int argc, const char **argv, const char *prefix)
+int cmd_mv(int                     argc,
+           const char            **argv,
+           const char             *prefix,
+           struct repository *repo UNUSED)
 {
     int           i;
     int           flags;

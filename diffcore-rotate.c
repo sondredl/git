@@ -9,10 +9,9 @@
 
 void diffcore_rotate(struct diff_options *opt)
 {
-    struct diff_queue_struct *q = &diff_queued_diff;
-    struct diff_queue_struct  outq;
-    int                       rotate_to;
-    int                       i;
+    struct diff_queue_struct *q    = &diff_queued_diff;
+    struct diff_queue_struct  outq = DIFF_QUEUE_INIT;
+    int                       rotate_to, i;
 
     if (!q->nr)
     {
@@ -42,7 +41,6 @@ void diffcore_rotate(struct diff_options *opt)
         return;
     }
 
-    DIFF_QUEUE_CLEAR(&outq);
     rotate_to = i;
 
     for (i = rotate_to; i < q->nr; i++)

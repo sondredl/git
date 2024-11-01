@@ -1257,9 +1257,7 @@ static void try_to_simplify_commit(struct rev_info *revs, struct commit *commit)
              * in the path we are limited to by the pathspec.
              */
             if (revs->first_parent_only)
-            {
                 break;
-            }
             /*
              * If this will remain a potentially-simplifiable
              * merge, remember per-parent treesame if needed.
@@ -1270,17 +1268,13 @@ static void try_to_simplify_commit(struct rev_info *revs, struct commit *commit)
             {
                 ts = initialise_treesame(revs, commit);
                 if (!(irrelevant_change || relevant_change))
-                {
                     ts->treesame[0] = 1;
-                }
             }
         }
         if (repo_parse_commit(revs->repo, p) < 0)
-        {
             die("cannot simplify commit %s (because of %s)",
                 oid_to_hex(&commit->object.oid),
                 oid_to_hex(&p->object.oid));
-        }
         switch (rev_compare_tree(revs, p, commit, nth_parent))
         {
             case REV_TREE_SAME:
@@ -1293,12 +1287,14 @@ static void try_to_simplify_commit(struct rev_info *revs, struct commit *commit)
                      * merge, so we just keep going.
                      */
                     if (ts)
-                    {
                         ts->treesame[nth_parent] = 1;
-                    }
                     continue;
                 }
-                parent->next    = NULL;
+
+                free_commit_list(parent->next);
+                parent->next = NULL;
+                while (commit->parents != parent)
+                    pop_commit(&commit->parents);
                 commit->parents = parent;
 
                 /*
@@ -1329,24 +1325,19 @@ static void try_to_simplify_commit(struct rev_info *revs, struct commit *commit)
                      * "root" commit.
                      */
                     if (repo_parse_commit(revs->repo, p) < 0)
-                    {
                         die("cannot simplify commit %s (invalid %s)",
                             oid_to_hex(&commit->object.oid),
                             oid_to_hex(&p->object.oid));
-                    }
+                    free_commit_list(p->parents);
                     p->parents = NULL;
                 }
             /* fallthrough */
             case REV_TREE_OLD:
             case REV_TREE_DIFFERENT:
                 if (relevant_commit(p))
-                {
                     relevant_change = 1;
-                }
                 else
-                {
                     irrelevant_change = 1;
-                }
 
                 if (!nth_parent)
                 {
@@ -4145,10 +4136,9 @@ static int remove_duplicate_parents(struct rev_info *revs, struct commit *commit
         if (parent->object.flags & TMP_MARK)
         {
             *pp = p->next;
+            free(p);
             if (ts)
-            {
                 compact_treesame(revs, commit, surviving_parents);
-            }
             continue;
         }
         parent->object.flags |= TMP_MARK;
@@ -5073,6 +5063,7 @@ int rewrite_parents(struct rev_info *revs, struct commit *commit,
                 break;
             case rewrite_one_noparents:
                 *pp = parent->next;
+                free(parent);
                 continue;
             case rewrite_one_error:
                 return -1;
@@ -5323,12 +5314,18 @@ static void save_parents(struct rev_info *revs, struct commit *commit)
     }
 }
 
+static void free_saved_parent(struct commit_list **parents)
+{
+    if (*parents != EMPTY_PARENT_LIST)
+        free_commit_list(*parents);
+}
+
 static void free_saved_parents(struct rev_info *revs)
 {
-    if (revs->saved_parents_slab)
-    {
-        clear_saved_parents(revs->saved_parents_slab);
-    }
+    if (!revs->saved_parents_slab)
+        return;
+    deep_clear_saved_parents(revs->saved_parents_slab, free_saved_parent);
+    FREE_AND_NULL(revs->saved_parents_slab);
 }
 
 struct commit_list *get_saved_parents(struct rev_info *revs, const struct commit *commit)
@@ -5587,9 +5584,8 @@ static struct commit *get_revision_internal(struct rev_info *revs)
                 revs->skip_count--;
                 c = get_revision_1(revs);
                 if (!c)
-                {
                     break;
-                }
+                free_commit_buffer(revs->repo->parsed_objects, c);
             }
         }
 

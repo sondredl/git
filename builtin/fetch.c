@@ -1,13 +1,13 @@
 /*
  * "git fetch"
  */
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
 #include "gettext.h"
 #include "environment.h"
 #include "hex.h"
-#include "repository.h"
 #include "refs.h"
 #include "refspec.h"
 #include "object-name.h"
@@ -503,6 +503,7 @@ static void filter_prefetch_refspec(struct refspec *rs)
 
             free(rs->items[i].src);
             free(rs->items[i].dst);
+            free(rs->raw[i]);
 
             for (j = i + 1; j < rs->nr; j++)
             {
@@ -1364,7 +1365,7 @@ static int store_updated_refs(struct display_state   *display_state,
         rm                              = ref_map;
         if (check_connected(iterate_ref_map, &rm, &opt))
         {
-            rc = error(_("%s did not send all necessary objects\n"),
+            rc = error(_("%s did not send all necessary objects"),
                        display_state->url);
             goto abort;
         }
@@ -1718,15 +1719,11 @@ static void set_option(struct transport *transport, const char *name, const char
 {
     int r = transport_set_option(transport, name, value);
     if (r < 0)
-    {
         die(_("option \"%s\" value \"%s\" is not valid for %s"),
             name, value, transport->url);
-    }
     if (r > 0)
-    {
-        warning(_("option \"%s\" is ignored for %s\n"),
+        warning(_("option \"%s\" is ignored for %s"),
                 name, transport->url);
-    }
 }
 
 static int add_oid(const char *refname     UNUSED,
@@ -2076,11 +2073,7 @@ static int do_fetch(struct transport          *transport,
 
         retcode = ref_transaction_commit(transaction, &err);
         if (retcode)
-        {
-            ref_transaction_free(transaction);
-            transaction = NULL;
             goto cleanup;
-        }
     }
 
     commit_fetch_head(&fetch_head);
@@ -2166,11 +2159,12 @@ cleanup:
             strbuf_reset(&err);
         }
         if (transaction && ref_transaction_abort(transaction, &err) && err.len)
-        {
             error("%s", err.buf);
-        }
+        transaction = NULL;
     }
 
+    if (transaction)
+        ref_transaction_free(transaction);
     display_state_release(&display_state);
     close_fetch_head(&fetch_head);
     strbuf_release(&err);
@@ -2403,6 +2397,8 @@ static int fetch_multiple(struct string_list *list, int max_children,
     strvec_pushl(&argv, "-c", "fetch.bundleURI=",
                  "fetch", "--append", "--no-auto-gc",
                  "--no-write-commit-graph", NULL);
+    for (i = 0; i < server_options.nr; i++)
+        strvec_pushf(&argv, "--server-option=%s", server_options.items[i].string);
     add_options_to_argv(&argv, config);
 
     if (max_children != 1 && list->nr != 1)
@@ -2607,7 +2603,10 @@ static int fetch_one(struct remote *remote, int argc, const char **argv,
     return exit_code;
 }
 
-int cmd_fetch(int argc, const char **argv, const char *prefix)
+int cmd_fetch(int                     argc,
+              const char            **argv,
+              const char             *prefix,
+              struct repository *repo UNUSED)
 {
     struct fetch_config config = {
         .display_format       = DISPLAY_FORMAT_FULL,
@@ -2955,32 +2954,47 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
         }
         result = transport_fetch_refs(gtransport, NULL);
 
+        trace2_region_enter("fetch", "negotiate-only", the_repository);
+        if (!remote)
+            die(_("must supply remote when using --negotiate-only"));
+        gtransport = prepare_transport(remote, 1);
+        if (gtransport->smart_options)
+        {
+            gtransport->smart_options->acked_commits = &acked_commits;
+        }
+        else
+        {
+            warning(_("protocol does not support --negotiate-only, exiting"));
+            result = 1;
+            trace2_region_leave("fetch", "negotiate-only", the_repository);
+            goto cleanup;
+        }
+        if (server_options.nr)
+            gtransport->server_options = &server_options;
+        result = transport_fetch_refs(gtransport, NULL);
+
         oidset_iter_init(&acked_commits, &iter);
         while ((oid = oidset_iter_next(&iter)))
-        {
             printf("%s\n", oid_to_hex(oid));
-        }
         oidset_clear(&acked_commits);
+        trace2_region_leave("fetch", "negotiate-only", the_repository);
     }
     else if (remote)
     {
         if (filter_options.choice || repo_has_promisor_remote(the_repository))
         {
+            trace2_region_enter("fetch", "setup-partial", the_repository);
             fetch_one_setup_partial(remote);
+            trace2_region_leave("fetch", "setup-partial", the_repository);
         }
+        trace2_region_enter("fetch", "fetch-one", the_repository);
         result = fetch_one(remote, argc, argv, prune_tags_ok, stdin_refspecs,
                            &config);
+        trace2_region_leave("fetch", "fetch-one", the_repository);
     }
     else
     {
         int max_children = max_jobs;
-
-        if (filter_options.choice)
-        {
-            die(_(
-                "--filter can only be used with the remote "
-                "configured in extensions.partialclone"));
-        }
 
         if (atomic_fetch)
         {
@@ -3005,99 +3019,79 @@ int cmd_fetch(int argc, const char **argv, const char *prefix)
         result = fetch_multiple(&list, max_children, &config);
     }
 
-    /*
-     * This is only needed after fetch_one(), which does not fetch
-     * submodules by itself.
-     *
-     * When we fetch from multiple remotes, fetch_multiple() has
-     * already updated submodules to grab commits necessary for
-     * the fetched history from each remote, so there is no need
-     * to fetch submodules from here.
-     */
-    if (!result && remote && (config.recurse_submodules != RECURSE_SUBMODULES_OFF))
+    /* TODO should this also die if we have a previous partial-clone? */
+    trace2_region_enter("fetch", "fetch-multiple", the_repository);
+    result = fetch_multiple(&list, max_children, &config);
+    trace2_region_leave("fetch", "fetch-multiple", the_repository);
+}
+
+if (max_children < 0)
+{
+    max_children = config.submodule_fetch_jobs;
+}
+if (max_children < 0)
+{
+    max_children = config.parallel;
+}
+
+add_options_to_argv(&options, &config);
+result = fetch_submodules(the_repository,
+                          &options,
+                          submodule_prefix,
+                          config.recurse_submodules,
+                          recurse_submodules_default,
+                          verbosity < 0,
+                          max_children);
+strvec_clear(&options);
+}
+
+add_options_to_argv(&options, &config);
+trace2_region_enter_printf("fetch", "recurse-submodule", the_repository, "%s", submodule_prefix);
+result = fetch_submodules(the_repository,
+                          &options,
+                          submodule_prefix,
+                          config.recurse_submodules,
+                          recurse_submodules_default,
+                          verbosity < 0,
+                          max_children);
+trace2_region_leave_printf("fetch", "recurse-submodule", the_repository, "%s", submodule_prefix);
+strvec_clear(&options);
+}
+
+prepare_repo_settings(the_repository);
+if (fetch_write_commit_graph > 0 || (fetch_write_commit_graph < 0 && the_repository->settings.fetch_write_commit_graph))
+{
+    int commit_graph_flags = COMMIT_GRAPH_WRITE_SPLIT;
+
+    if (progress)
     {
-        struct strvec options      = STRVEC_INIT;
-        int           max_children = max_jobs;
-
-        if (max_children < 0)
-        {
-            max_children = config.submodule_fetch_jobs;
-        }
-        if (max_children < 0)
-        {
-            max_children = config.parallel;
-        }
-
-        add_options_to_argv(&options, &config);
-        result = fetch_submodules(the_repository,
-                                  &options,
-                                  submodule_prefix,
-                                  config.recurse_submodules,
-                                  recurse_submodules_default,
-                                  verbosity < 0,
-                                  max_children);
-        strvec_clear(&options);
+        commit_graph_flags |= COMMIT_GRAPH_WRITE_PROGRESS;
     }
 
-    /*
-     * Skip irrelevant tasks because we know objects were not
-     * fetched.
-     *
-     * NEEDSWORK: as a future optimization, we can return early
-     * whenever objects were not fetched e.g. if we already have all
-     * of them.
-     */
-    if (negotiate_only)
-    {
-        goto cleanup;
-    }
+    write_commit_graph_reachable(the_repository->objects->odb,
+                                 commit_graph_flags,
+                                 NULL);
+}
 
-    prepare_repo_settings(the_repository);
-    if (fetch_write_commit_graph > 0 || (fetch_write_commit_graph < 0 && the_repository->settings.fetch_write_commit_graph))
-    {
-        int commit_graph_flags = COMMIT_GRAPH_WRITE_SPLIT;
+trace2_region_enter("fetch", "write-commit-graph", the_repository);
+write_commit_graph_reachable(the_repository->objects->odb,
+                             commit_graph_flags,
+                             NULL);
+trace2_region_leave("fetch", "write-commit-graph", the_repository);
+}
 
-        if (progress)
-        {
-            commit_graph_flags |= COMMIT_GRAPH_WRITE_PROGRESS;
-        }
+if (git_config_get_int("maintenance.incremental-repack.auto", &opt_val))
+{
+    opt_val = -1;
+}
+if (opt_val != 0)
+{
+    git_config_push_parameter("maintenance.incremental-repack.auto=-1");
+}
+}
+run_auto_maintenance(verbosity < 0);
+}
 
-        write_commit_graph_reachable(the_repository->objects->odb,
-                                     commit_graph_flags,
-                                     NULL);
-    }
-
-    if (enable_auto_gc)
-    {
-        if (refetch)
-        {
-            /*
-             * Hint auto-maintenance strongly to encourage repacking,
-             * but respect config settings disabling it.
-             */
-            int opt_val;
-            if (git_config_get_int("gc.autopacklimit", &opt_val))
-            {
-                opt_val = -1;
-            }
-            if (opt_val != 0)
-            {
-                git_config_push_parameter("gc.autoPackLimit=1");
-            }
-
-            if (git_config_get_int("maintenance.incremental-repack.auto", &opt_val))
-            {
-                opt_val = -1;
-            }
-            if (opt_val != 0)
-            {
-                git_config_push_parameter("maintenance.incremental-repack.auto=-1");
-            }
-        }
-        run_auto_maintenance(verbosity < 0);
-    }
-
-cleanup:
-    string_list_clear(&list, 0);
-    return result;
+cleanup : string_list_clear(&list, 0);
+return result;
 }

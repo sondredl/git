@@ -7,8 +7,9 @@
  *
  * Clone a repository into a different directory that does not yet exist.
  */
-
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
+
 #include "abspath.h"
 #include "advice.h"
 #include "config.h"
@@ -1146,37 +1147,30 @@ static int path_exists(const char *path)
     return !stat(path, &sb);
 }
 
-int cmd_clone(int argc, const char **argv, const char *prefix)
+int cmd_clone(int                           argc,
+              const char                  **argv,
+              const char                   *prefix,
+              struct repository *repository UNUSED)
 {
-    int                     is_bundle = 0;
-    int                     is_local;
+    int                     is_bundle      = 0, is_local;
     int                     reject_shallow = 0;
-    const char             *repo_name;
-    const char             *repo;
-    const char             *work_tree;
-    const char             *git_dir;
+    const char             *repo_name, *repo, *work_tree, *git_dir;
     char                   *repo_to_free = NULL;
-    char                   *path         = NULL;
-    char                   *dir;
-    char                   *display_repo = NULL;
-    int                     dest_exists;
-    int                     real_dest_exists = 0;
-    const struct ref       *refs;
-    const struct ref       *remote_head;
+    char                   *path = NULL, *dir, *display_repo = NULL;
+    int                     dest_exists, real_dest_exists = 0;
+    const struct ref       *refs, *remote_head;
     struct ref             *remote_head_points_at = NULL;
     const struct ref       *our_head_points_at;
     char                   *unborn_head = NULL;
     struct ref             *mapped_refs = NULL;
     const struct ref       *ref;
-    struct strbuf           key            = STRBUF_INIT;
-    struct strbuf           buf            = STRBUF_INIT;
-    struct strbuf           branch_top     = STRBUF_INIT;
-    struct strbuf           reflog_msg     = STRBUF_INIT;
+    struct strbuf           key        = STRBUF_INIT;
+    struct strbuf           buf        = STRBUF_INIT;
+    struct strbuf           branch_top = STRBUF_INIT, reflog_msg = STRBUF_INIT;
     struct transport       *transport      = NULL;
     const char             *src_ref_prefix = "refs/heads/";
     struct remote          *remote;
-    int                     err                        = 0;
-    int                     complete_refs_before_fetch = 1;
+    int                     err = 0, complete_refs_before_fetch = 1;
     int                     submodule_progress;
     int                     filter_submodules = 0;
     int                     hash_algo;
@@ -1194,55 +1188,39 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
                          builtin_clone_usage, 0);
 
     if (argc > 2)
-    {
         usage_msg_opt(_("Too many arguments."),
                       builtin_clone_usage, builtin_clone_options);
-    }
 
     if (argc == 0)
-    {
         usage_msg_opt(_("You must specify a repository to clone."),
                       builtin_clone_usage, builtin_clone_options);
-    }
 
     if (option_depth || option_since || option_not.nr)
-    {
         deepen = 1;
-    }
     if (option_single_branch == -1)
-    {
         option_single_branch = deepen ? 1 : 0;
-    }
 
     if (ref_format)
     {
         ref_storage_format = ref_storage_format_by_name(ref_format);
         if (ref_storage_format == REF_STORAGE_FORMAT_UNKNOWN)
-        {
             die(_("unknown ref storage format '%s'"), ref_format);
-        }
     }
 
     if (option_mirror)
-    {
         option_bare = 1;
-    }
 
     if (option_bare)
     {
         if (real_git_dir)
-        {
             die(_("options '%s' and '%s' cannot be used together"), "--bare", "--separate-git-dir");
-        }
         option_no_checkout = 1;
     }
 
     if (bundle_uri && deepen)
-    {
         die(_("options '%s' and '%s' cannot be used together"),
             "--bundle-uri",
             "--depth/--shallow-since/--shallow-exclude");
-    }
 
     repo_name = argv[0];
 
@@ -1258,43 +1236,31 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
         display_repo = transport_anonymize_url(repo);
     }
     else
-    {
         die(_("repository '%s' does not exist"), repo_name);
-    }
 
     /* no need to be strict, transport_set_option() will validate it again */
     if (option_depth && atoi(option_depth) < 1)
-    {
         die(_("depth %s is not a positive number"), option_depth);
-    }
 
     if (argc == 2)
-    {
         dir = xstrdup(argv[1]);
-    }
     else
-    {
         dir = git_url_basename(repo_name, is_bundle, option_bare);
-    }
     strip_dir_trailing_slashes(dir);
 
     dest_exists = path_exists(dir);
     if (dest_exists && !is_empty_dir(dir))
-    {
         die(_("destination path '%s' already exists and is not "
               "an empty directory."),
             dir);
-    }
 
     if (real_git_dir)
     {
         real_dest_exists = path_exists(real_git_dir);
         if (real_dest_exists && !is_empty_dir(real_git_dir))
-        {
             die(_("repository path '%s' already exists and is not "
                   "an empty directory."),
                 real_git_dir);
-        }
     }
 
     strbuf_addf(&reflog_msg, "clone: from %s",
@@ -1302,22 +1268,16 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     free(display_repo);
 
     if (option_bare)
-    {
         work_tree = NULL;
-    }
     else
     {
         work_tree = getenv("GIT_WORK_TREE");
         if (work_tree && path_exists(work_tree))
-        {
             die(_("working tree '%s' already exists."), work_tree);
-        }
     }
 
     if (option_bare || work_tree)
-    {
         git_dir = xstrdup(dir);
-    }
     else
     {
         work_tree = dir;
@@ -1330,19 +1290,13 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     if (!option_bare)
     {
         if (safe_create_leading_directories_const(work_tree) < 0)
-        {
             die_errno(_("could not create leading directories of '%s'"),
                       work_tree);
-        }
         if (dest_exists)
-        {
             junk_work_tree_flags |= REMOVE_DIR_KEEP_TOPLEVEL;
-        }
         else if (mkdir(work_tree, 0777))
-        {
             die_errno(_("could not create work tree dir '%s'"),
                       work_tree);
-        }
         junk_work_tree = work_tree;
         set_git_work_tree(work_tree);
     }
@@ -1350,34 +1304,24 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     if (real_git_dir)
     {
         if (real_dest_exists)
-        {
             junk_git_dir_flags |= REMOVE_DIR_KEEP_TOPLEVEL;
-        }
         junk_git_dir = real_git_dir;
     }
     else
     {
         if (dest_exists)
-        {
             junk_git_dir_flags |= REMOVE_DIR_KEEP_TOPLEVEL;
-        }
         junk_git_dir = git_dir;
     }
     if (safe_create_leading_directories_const(git_dir) < 0)
-    {
         die(_("could not create leading directories of '%s'"), git_dir);
-    }
 
     if (0 <= option_verbosity)
     {
         if (option_bare)
-        {
             fprintf(stderr, _("Cloning into bare repository '%s'...\n"), dir);
-        }
         else
-        {
             fprintf(stderr, _("Cloning into '%s'...\n"), dir);
-        }
     }
 
     if (option_recurse_submodules.nr > 0)
@@ -1403,16 +1347,12 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
         }
 
         if (!git_config_get_bool("submodule.stickyRecursiveClone", &val) && val)
-        {
             string_list_append(&option_config, "submodule.recurse=true");
-        }
 
         if (option_required_reference.nr && option_optional_reference.nr)
-        {
             die(_(
                 "clone --recursive is not compatible with "
                 "both --reference and --reference-if-able"));
-        }
         else if (option_required_reference.nr)
         {
             string_list_append(&option_config,
@@ -1506,26 +1446,18 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
      * ignore config_reject_shallow from git_clone_config.
      */
     if (config_reject_shallow != -1)
-    {
         reject_shallow = config_reject_shallow;
-    }
     if (option_reject_shallow != -1)
-    {
         reject_shallow = option_reject_shallow;
-    }
 
     /*
      * If option_filter_submodules is specified from CLI option,
      * ignore config_filter_submodules from git_clone_config.
      */
     if (config_filter_submodules != -1)
-    {
         filter_submodules = config_filter_submodules;
-    }
     if (option_filter_submodules != -1)
-    {
         filter_submodules = option_filter_submodules;
-    }
 
     /*
      * Exit if the user seems to be doing something silly with submodule
@@ -1533,15 +1465,11 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
      * set-and-forget).
      */
     if (option_filter_submodules > 0 && !filter_options.choice)
-    {
         die(_("the option '%s' requires '%s'"),
             "--also-filter-submodules", "--filter");
-    }
     if (option_filter_submodules > 0 && !option_recurse_submodules.nr)
-    {
         die(_("the option '%s' requires '%s'"),
             "--also-filter-submodules", "--recurse-submodules");
-    }
 
     /*
      * apply the remote name provided by --origin only after this second
@@ -1554,21 +1482,15 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     }
 
     if (!remote_name)
-    {
         remote_name = xstrdup("origin");
-    }
 
     if (!valid_remote_name(remote_name))
-    {
         die(_("'%s' is not a valid remote name"), remote_name);
-    }
 
     if (option_bare)
     {
         if (option_mirror)
-        {
             src_ref_prefix = "refs/";
-        }
         strbuf_addstr(&branch_top, src_ref_prefix);
 
         git_config_set("core.bare", "true");
@@ -1590,9 +1512,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     }
 
     if (option_required_reference.nr || option_optional_reference.nr)
-    {
         setup_reference();
-    }
 
     remote = remote_get_early(remote_name);
 
@@ -1604,38 +1524,24 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     if (is_local)
     {
         if (option_depth)
-        {
             warning(_("--depth is ignored in local clones; use file:// instead."));
-        }
         if (option_since)
-        {
             warning(_("--shallow-since is ignored in local clones; use file:// instead."));
-        }
         if (option_not.nr)
-        {
             warning(_("--shallow-exclude is ignored in local clones; use file:// instead."));
-        }
         if (filter_options.choice)
-        {
             warning(_("--filter is ignored in local clones; use file:// instead."));
-        }
         if (!access(mkpath("%s/shallow", path), F_OK))
         {
             if (reject_shallow)
-            {
                 die(_("source repository is shallow, reject to clone."));
-            }
             if (option_local > 0)
-            {
                 warning(_("source repository is shallow, ignoring --local"));
-            }
             is_local = 0;
         }
     }
     if (option_local > 0 && !is_local)
-    {
         warning(_("--local is ignored"));
-    }
 
     transport = transport_get(remote, path ? path : remote->url.v[0]);
     transport_set_verbosity(transport, option_verbosity, option_progress);
@@ -1649,52 +1555,34 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
         int                  has_filter = header.filter.choice != LOFC_DISABLED;
 
         if (fd > 0)
-        {
             close(fd);
-        }
         bundle_header_release(&header);
         if (has_filter)
-        {
             die(_("cannot clone from filtered bundle"));
-        }
     }
 
     transport_set_option(transport, TRANS_OPT_KEEP, "yes");
 
     if (reject_shallow)
-    {
         transport_set_option(transport, TRANS_OPT_REJECT_SHALLOW, "1");
-    }
     if (option_depth)
-    {
         transport_set_option(transport, TRANS_OPT_DEPTH,
                              option_depth);
-    }
     if (option_since)
-    {
         transport_set_option(transport, TRANS_OPT_DEEPEN_SINCE,
                              option_since);
-    }
     if (option_not.nr)
-    {
         transport_set_option(transport, TRANS_OPT_DEEPEN_NOT,
                              (const char *)&option_not);
-    }
     if (option_single_branch)
-    {
         transport_set_option(transport, TRANS_OPT_FOLLOWTAGS, "1");
-    }
 
     if (option_upload_pack)
-    {
         transport_set_option(transport, TRANS_OPT_UPLOADPACK,
                              option_upload_pack);
-    }
 
     if (server_options.nr)
-    {
         transport->server_options = &server_options;
-    }
 
     if (filter_options.choice)
     {
@@ -1706,23 +1594,17 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     }
 
     if (transport->smart_options && !deepen && !filter_options.choice)
-    {
         transport->smart_options->check_self_contained_and_connected = 1;
-    }
 
     strvec_push(&transport_ls_refs_options.ref_prefixes, "HEAD");
     refspec_ref_prefixes(&remote->fetch,
                          &transport_ls_refs_options.ref_prefixes);
     if (option_branch)
-    {
         expand_ref_prefix(&transport_ls_refs_options.ref_prefixes,
                           option_branch);
-    }
     if (!option_no_tags)
-    {
         strvec_push(&transport_ls_refs_options.ref_prefixes,
                     "refs/tags/");
-    }
 
     refs = transport_get_remote_refs(transport, &transport_ls_refs_options);
 
@@ -1741,22 +1623,29 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
      */
     if (bundle_uri)
     {
-        int has_heuristic = 0;
+        struct remote_state *state;
+        int                  has_heuristic = 0;
+
+        /*
+         * We need to save the remote state as our remote's lifetime is
+         * tied to it.
+         */
+        state                        = the_repository->remote_state;
+        the_repository->remote_state = NULL;
+        repo_clear(the_repository);
 
         /* At this point, we need the_repository to match the cloned repo. */
         if (repo_init(the_repository, git_dir, work_tree))
-        {
             warning(_("failed to initialize the repo, skipping bundle URI"));
-        }
         else if (fetch_bundle_uri(the_repository, bundle_uri, &has_heuristic))
-        {
             warning(_("failed to fetch objects from bundle URI '%s'"),
                     bundle_uri);
-        }
         else if (has_heuristic)
-        {
             git_config_set_gently("fetch.bundleuri", bundle_uri);
-        }
+
+        remote_state_clear(the_repository->remote_state);
+        free(the_repository->remote_state);
+        the_repository->remote_state = state;
     }
     else
     {
@@ -1768,16 +1657,26 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 
         if (transport->bundles && hashmap_get_size(&transport->bundles->bundles))
         {
+            struct remote_state *state;
+
+            /*
+             * We need to save the remote state as our remote's
+             * lifetime is tied to it.
+             */
+            state                        = the_repository->remote_state;
+            the_repository->remote_state = NULL;
+            repo_clear(the_repository);
+
             /* At this point, we need the_repository to match the cloned repo. */
             if (repo_init(the_repository, git_dir, work_tree))
-            {
                 warning(_("failed to initialize the repo, skipping bundle URI"));
-            }
             else if (fetch_bundle_list(the_repository,
                                        transport->bundles))
-            {
                 warning(_("failed to fetch advertised bundles"));
-            }
+
+            remote_state_clear(the_repository->remote_state);
+            free(the_repository->remote_state);
+            the_repository->remote_state = state;
         }
         else
         {
@@ -1787,9 +1686,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     }
 
     if (refs)
-    {
         mapped_refs = wanted_peer_refs(refs, &remote->fetch);
-    }
 
     if (mapped_refs)
     {
@@ -1804,20 +1701,16 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
          * remote HEAD check.
          */
         for (ref = refs; ref; ref = ref->next)
-        {
             if (is_null_oid(&ref->old_oid))
             {
                 complete_refs_before_fetch = 0;
                 break;
             }
-        }
 
         if (!is_local && !complete_refs_before_fetch)
         {
             if (transport_fetch_refs(transport, mapped_refs))
-            {
                 die(_("remote transport reported error"));
-            }
         }
     }
 
@@ -1828,10 +1721,8 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     {
         our_head_points_at = find_remote_branch(mapped_refs, option_branch);
         if (!our_head_points_at)
-        {
             die(_("Remote branch %s not found in upstream %s"),
                 option_branch, remote_name);
-        }
     }
     else if (remote_head_points_at)
     {
@@ -1882,20 +1773,14 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
                          remote_head_points_at, &branch_top);
 
     if (filter_options.choice)
-    {
         partial_clone_register(remote_name, &filter_options);
-    }
 
     if (is_local)
-    {
         clone_local(path, git_dir);
-    }
     else if (mapped_refs && complete_refs_before_fetch)
     {
         if (transport_fetch_refs(transport, mapped_refs))
-        {
             die(_("remote transport reported error"));
-        }
     }
 
     update_remote_refs(refs, mapped_refs, remote_head_points_at,
@@ -1922,9 +1807,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
     }
 
     if (option_sparse_checkout && git_sparse_checkout_init(dir))
-    {
         return 1;
-    }
 
     junk_mode = JUNK_LEAVE_REPO;
     err       = checkout(submodule_progress, filter_submodules,

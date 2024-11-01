@@ -20,6 +20,7 @@
 #include "object-store-ll.h"
 #include "path.h"
 #include "refs.h"
+#include "repository.h"
 #include "wildmatch.h"
 #include "pathspec.h"
 #include "utf8.h"
@@ -2453,31 +2454,34 @@ static enum path_treatment treat_directory(struct dir_struct          *dir,
         }
     }
 
-    /*
-     * We may need to ignore some of the untracked paths we found while
-     * traversing subdirectories.
-     */
-    if ((dir->flags & DIR_SHOW_IGNORED_TOO) && !(dir->flags & DIR_KEEP_UNTRACKED_CONTENTS))
+    if (want_ignored_subpaths)
     {
-        int i;
-        for (i = old_untracked_nr + 1; i < dir->nr; ++i)
-        {
-            FREE_AND_NULL(dir->entries[i]);
-        }
-        dir->nr = old_untracked_nr;
+        /*
+         * with --ignored=matching, we want the subpaths
+         * INSTEAD of the directory itself.
+         */
+        state = path_none;
     }
-
-    /*
-     * If there is nothing under the current directory and we are not
-     * hiding empty directories, then we need to report on the
-     * untracked or ignored status of the directory itself.
-     */
-    if (state == path_none && !(dir->flags & DIR_HIDE_EMPTY_DIRECTORIES))
+    else
     {
-        state = excluded ? path_excluded : path_untracked;
+        for (int i = old_ignored_nr; i < dir->ignored_nr; i++)
+            FREE_AND_NULL(dir->ignored[i]);
+        dir->ignored_nr = old_ignored_nr;
     }
+}
 
-    return state;
+/*
+ * We may need to ignore some of the untracked paths we found while
+ * traversing subdirectories.
+ */
+if ((dir->flags & DIR_SHOW_IGNORED_TOO) && !(dir->flags & DIR_KEEP_UNTRACKED_CONTENTS))
+{
+    for (int i = old_untracked_nr; i < dir->nr; i++)
+        FREE_AND_NULL(dir->entries[i]);
+    dir->nr = old_untracked_nr;
+}
+
+return state;
 }
 
 /*
@@ -3266,14 +3270,10 @@ static const char *get_ident_string(void)
     struct utsname       uts;
 
     if (sb.len)
-    {
         return sb.buf;
-    }
     if (uname(&uts) < 0)
-    {
         die_errno(_("failed to get kernel name and information"));
-    }
-    strbuf_addf(&sb, "Location %s, system %s", get_git_work_tree(),
+    strbuf_addf(&sb, "Location %s, system %s", repo_get_work_tree(the_repository),
                 uts.sysname);
     return sb.buf;
 }

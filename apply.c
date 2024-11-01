@@ -30,6 +30,7 @@
 #include "path.h"
 #include "quote.h"
 #include "read-cache.h"
+#include "repository.h"
 #include "rerere.h"
 #include "apply.h"
 #include "entry.h"
@@ -317,13 +318,27 @@ struct line
  */
 struct image
 {
-    char        *buf;
-    size_t       len;
-    size_t       nr;
-    size_t       alloc;
-    struct line *line_allocated;
-    struct line *line;
+    struct strbuf buf;
+    struct line  *line;
+    size_t        line_nr, line_alloc;
 };
+#define IMAGE_INIT          \
+    {                       \
+        .buf = STRBUF_INIT, \
+    }
+
+static void image_init(struct image *image)
+{
+    struct image empty = IMAGE_INIT;
+    memcpy(image, &empty, sizeof(*image));
+}
+
+static void image_clear(struct image *image)
+{
+    strbuf_release(&image->buf);
+    free(image->line);
+    image_init(image);
+}
 
 static uint32_t hash_line(const char *cp, size_t len)
 {
@@ -339,64 +354,13 @@ static uint32_t hash_line(const char *cp, size_t len)
     return h;
 }
 
-/*
- * Compare lines s1 of length n1 and s2 of length n2, ignoring
- * whitespace difference. Returns 1 if they match, 0 otherwise
- */
-static int fuzzy_matchlines(const char *s1, size_t n1,
-                            const char *s2, size_t n2)
+static void image_add_line(struct image *img, const char *bol, size_t len, unsigned flag)
 {
-    const char *end1 = s1 + n1;
-    const char *end2 = s2 + n2;
-
-    /* ignore line endings */
-    while (s1 < end1 && (end1[-1] == '\r' || end1[-1] == '\n'))
-    {
-        end1--;
-    }
-    while (s2 < end2 && (end2[-1] == '\r' || end2[-1] == '\n'))
-    {
-        end2--;
-    }
-
-    while (s1 < end1 && s2 < end2)
-    {
-        if (isspace(*s1))
-        {
-            /*
-             * Skip whitespace. We check on both buffers
-             * because we don't want "a b" to match "ab".
-             */
-            if (!isspace(*s2))
-            {
-                return 0;
-            }
-            while (s1 < end1 && isspace(*s1))
-            {
-                s1++;
-            }
-            while (s2 < end2 && isspace(*s2))
-            {
-                s2++;
-            }
-        }
-        else if (*s1++ != *s2++)
-        {
-            return 0;
-        }
-    }
-
-    /* If we reached the end on one side only, lines don't match. */
-    return s1 == end1 && s2 == end2;
-}
-
-static void add_line_info(struct image *img, const char *bol, size_t len, unsigned flag)
-{
-    ALLOC_GROW(img->line_allocated, img->nr + 1, img->alloc);
-    img->line_allocated[img->nr].len  = len;
-    img->line_allocated[img->nr].hash = hash_line(bol, len);
-    img->line_allocated[img->nr].flag = flag;
-    img->nr++;
+    ALLOC_GROW(img->line, img->line_nr + 1, img->line_alloc);
+    img->line[img->line_nr].len  = len;
+    img->line[img->line_nr].hash = hash_line(bol, len);
+    img->line[img->line_nr].flag = flag;
+    img->line_nr++;
 }
 
 /*
@@ -404,45 +368,47 @@ static void add_line_info(struct image *img, const char *bol, size_t len, unsign
  * attach it to "image" and add line-based index to it.
  * "image" now owns the "buf".
  */
-static void prepare_image(struct image *image, char *buf, size_t len,
+static void image_prepare(struct image *image, char *buf, size_t len,
                           int prepare_linetable)
 {
     const char *cp;
     const char *ep;
 
-    memset(image, 0, sizeof(*image));
-    image->buf = buf;
-    image->len = len;
+    image_clear(image);
+    strbuf_attach(&image->buf, buf, len, len + 1);
 
     if (!prepare_linetable)
     {
         return;
     }
 
-    ep = image->buf + image->len;
-    cp = image->buf;
+    ep = image->buf.buf + image->buf.len;
+    cp = image->buf.buf;
     while (cp < ep)
     {
         const char *next;
         for (next = cp; next < ep && *next != '\n'; next++)
-        {
             ;
-        }
         if (next < ep)
-        {
             next++;
-        }
-        add_line_info(image, cp, next - cp, 0);
+        image_add_line(image, cp, next - cp, 0);
         cp = next;
     }
-    image->line = image->line_allocated;
 }
 
-static void clear_image(struct image *image)
+static void image_remove_first_line(struct image *img)
 {
-    free(image->buf);
-    free(image->line_allocated);
-    memset(image, 0, sizeof(*image));
+    strbuf_remove(&img->buf, 0, img->line[0].len);
+    img->line_nr--;
+    if (img->line_nr)
+        MOVE_ARRAY(img->line, img->line + 1, img->line_nr);
+}
+
+static void image_remove_last_line(struct image *img)
+{
+    size_t last_line_len = img->line[img->line_nr - 1].len;
+    strbuf_setlen(&img->buf, img->buf.len - last_line_len);
+    img->line_nr--;
 }
 
 /* fmt must contain _one_ %s and no other substitution */
@@ -2806,77 +2772,45 @@ static int read_old_data(struct stat *st, struct patch *patch,
 
 /*
  * Update the preimage, and the common lines in postimage,
- * from buffer buf of length len. If postlen is 0 the postimage
- * is updated in place, otherwise it's updated on a new buffer
- * of length postlen
+ * from buffer buf of length len.
  */
-
 static void update_pre_post_images(struct image *preimage,
                                    struct image *postimage,
-                                   char         *buf,
-                                   size_t len, size_t postlen)
+                                   char *buf, size_t len)
 {
-    int          i;
-    int          ctx;
-    int          reduced;
-    char        *new_buf;
-    char        *old_buf;
-    char        *fixed;
-    struct image fixed_preimage;
+    struct image fixed_preimage = IMAGE_INIT;
+    size_t       insert_pos     = 0;
+    int          i, ctx, reduced;
+    const char  *fixed;
 
     /*
      * Update the preimage with whitespace fixes.  Note that we
      * are not losing preimage->buf -- apply_one_fragment() will
      * free "oldlines".
      */
-    prepare_image(&fixed_preimage, buf, len, 1);
-    assert(postlen
-               ? fixed_preimage.nr == preimage->nr
-               : fixed_preimage.nr <= preimage->nr);
-    for (i = 0; i < fixed_preimage.nr; i++)
-    {
+    image_prepare(&fixed_preimage, buf, len, 1);
+    for (i = 0; i < fixed_preimage.line_nr; i++)
         fixed_preimage.line[i].flag = preimage->line[i].flag;
-    }
-    free(preimage->line_allocated);
+    image_clear(preimage);
     *preimage = fixed_preimage;
+    fixed     = preimage->buf.buf;
 
     /*
-     * Adjust the common context lines in postimage. This can be
-     * done in-place when we are shrinking it with whitespace
-     * fixing, but needs a new buffer when ignoring whitespace or
-     * expanding leading tabs to spaces.
-     *
-     * We trust the caller to tell us if the update can be done
-     * in place (postlen==0) or not.
+     * Adjust the common context lines in postimage.
      */
-    old_buf = postimage->buf;
-    if (postlen)
-    {
-        new_buf = postimage->buf = xmalloc(postlen);
-    }
-    else
-    {
-        new_buf = old_buf;
-    }
-    fixed = preimage->buf;
-
-    for (i = reduced = ctx = 0; i < postimage->nr; i++)
+    for (i = reduced = ctx = 0; i < postimage->line_nr; i++)
     {
         size_t l_len = postimage->line[i].len;
+
         if (!(postimage->line[i].flag & LINE_COMMON))
         {
             /* an added line -- no counterparts in preimage */
-            memmove(new_buf, old_buf, l_len);
-            old_buf += l_len;
-            new_buf += l_len;
+            insert_pos += l_len;
             continue;
         }
 
-        /* a common context -- skip it in the original postimage */
-        old_buf += l_len;
-
         /* and find the corresponding one in the fixed preimage */
-        while (ctx < preimage->nr && !(preimage->line[ctx].flag & LINE_COMMON))
+        while (ctx < preimage->line_nr && !(preimage->line[ctx].flag & LINE_COMMON))
         {
             fixed += preimage->line[ctx].len;
             ctx++;
@@ -2886,7 +2820,7 @@ static void update_pre_post_images(struct image *preimage,
          * preimage is expected to run out, if the caller
          * fixed addition of trailing blank lines.
          */
-        if (preimage->nr <= ctx)
+        if (preimage->line_nr <= ctx)
         {
             reduced++;
             continue;
@@ -2894,24 +2828,55 @@ static void update_pre_post_images(struct image *preimage,
 
         /* and copy it in, while fixing the line length */
         l_len = preimage->line[ctx].len;
-        memcpy(new_buf, fixed, l_len);
-        new_buf += l_len;
+        strbuf_splice(&postimage->buf, insert_pos, postimage->line[i].len,
+                      fixed, l_len);
+        insert_pos += l_len;
         fixed += l_len;
         postimage->line[i].len = l_len;
         ctx++;
     }
 
-    if (postlen
-            ? postlen < new_buf - postimage->buf
-            : postimage->len < new_buf - postimage->buf)
+    /* Fix the length of the whole thing */
+    postimage->line_nr -= reduced;
+}
+
+/*
+ * Compare lines s1 of length n1 and s2 of length n2, ignoring
+ * whitespace difference. Returns 1 if they match, 0 otherwise
+ */
+static int fuzzy_matchlines(const char *s1, size_t n1,
+                            const char *s2, size_t n2)
+{
+    const char *end1 = s1 + n1;
+    const char *end2 = s2 + n2;
+
+    /* ignore line endings */
+    while (s1 < end1 && (end1[-1] == '\r' || end1[-1] == '\n'))
+        end1--;
+    while (s2 < end2 && (end2[-1] == '\r' || end2[-1] == '\n'))
+        end2--;
+
+    while (s1 < end1 && s2 < end2)
     {
-        BUG("caller miscounted postlen: asked %d, orig = %d, used = %d",
-            (int)postlen, (int)postimage->len, (int)(new_buf - postimage->buf));
+        if (isspace(*s1))
+        {
+            /*
+             * Skip whitespace. We check on both buffers
+             * because we don't want "a b" to match "ab".
+             */
+            if (!isspace(*s2))
+                return 0;
+            while (s1 < end1 && isspace(*s1))
+                s1++;
+            while (s2 < end2 && isspace(*s2))
+                s2++;
+        }
+        else if (*s1++ != *s2++)
+            return 0;
     }
 
-    /* Fix the length of the whole thing */
-    postimage->len = new_buf - postimage->buf;
-    postimage->nr -= reduced;
+    /* If we reached the end on one side only, lines don't match. */
+    return s1 == end1 && s2 == end2;
 }
 
 static int line_by_line_fuzzy_match(struct image *img,
@@ -2922,9 +2887,8 @@ static int line_by_line_fuzzy_match(struct image *img,
                                     int           preimage_limit)
 {
     int           i;
-    size_t        imgoff  = 0;
-    size_t        preoff  = 0;
-    size_t        postlen = postimage->len;
+    size_t        imgoff = 0;
+    size_t        preoff = 0;
     size_t        extra_chars;
     char         *buf;
     char         *preimage_eof;
@@ -2938,15 +2902,9 @@ static int line_by_line_fuzzy_match(struct image *img,
         size_t prelen = preimage->line[i].len;
         size_t imglen = img->line[current_lno + i].len;
 
-        if (!fuzzy_matchlines(img->buf + current + imgoff, imglen,
-                              preimage->buf + preoff, prelen))
-        {
+        if (!fuzzy_matchlines(img->buf.buf + current + imgoff, imglen,
+                              preimage->buf.buf + preoff, prelen))
             return 0;
-        }
-        if (preimage->line[i].flag & LINE_COMMON)
-        {
-            postlen += imglen - prelen;
-        }
         imgoff += imglen;
         preoff += prelen;
     }
@@ -2962,19 +2920,13 @@ static int line_by_line_fuzzy_match(struct image *img,
      * are whitespace characters. (This can only happen if
      * we are removing blank lines at the end of the file.)
      */
-    buf = preimage_eof = preimage->buf + preoff;
-    for (; i < preimage->nr; i++)
-    {
+    buf = preimage_eof = preimage->buf.buf + preoff;
+    for (; i < preimage->line_nr; i++)
         preoff += preimage->line[i].len;
-    }
-    preimage_end = preimage->buf + preoff;
+    preimage_end = preimage->buf.buf + preoff;
     for (; buf < preimage_end; buf++)
-    {
         if (!isspace(*buf))
-        {
             return 0;
-        }
-    }
 
     /*
      * Update the preimage and the common postimage context
@@ -2985,11 +2937,11 @@ static int line_by_line_fuzzy_match(struct image *img,
      */
     extra_chars = preimage_end - preimage_eof;
     strbuf_init(&fixed, imgoff + extra_chars);
-    strbuf_add(&fixed, img->buf + current, imgoff);
+    strbuf_add(&fixed, img->buf.buf + current, imgoff);
     strbuf_add(&fixed, preimage_eof, extra_chars);
     fixed_buf = strbuf_detach(&fixed, &fixed_len);
     update_pre_post_images(preimage, postimage,
-                           fixed_buf, fixed_len, postlen);
+                           fixed_buf, fixed_len);
     return 1;
 }
 
@@ -3003,20 +2955,20 @@ static int match_fragment(struct apply_state *state,
                           int match_beginning, int match_end)
 {
     int           i;
-    const char   *orig;
-    const char   *target;
+    const char   *orig, *target;
     struct strbuf fixed = STRBUF_INIT;
-    size_t        postlen;
+    char         *fixed_buf;
+    size_t        fixed_len;
     int           preimage_limit;
     int           ret;
 
-    if (preimage->nr + current_lno <= img->nr)
+    if (preimage->line_nr + current_lno <= img->line_nr)
     {
         /*
          * The hunk falls within the boundaries of img.
          */
-        preimage_limit = preimage->nr;
-        if (match_end && (preimage->nr + current_lno != img->nr))
+        preimage_limit = preimage->line_nr;
+        if (match_end && (preimage->line_nr + current_lno != img->line_nr))
         {
             ret = 0;
             goto out;
@@ -3031,7 +2983,7 @@ static int match_fragment(struct apply_state *state,
          * match with img, and the remainder of the preimage
          * must be blank.
          */
-        preimage_limit = img->nr - current_lno;
+        preimage_limit = img->line_nr - current_lno;
     }
     else
     {
@@ -3060,7 +3012,7 @@ static int match_fragment(struct apply_state *state,
         }
     }
 
-    if (preimage_limit == preimage->nr)
+    if (preimage_limit == preimage->line_nr)
     {
         /*
          * Do we have an exact match?  If we were told to match
@@ -3070,9 +3022,9 @@ static int match_fragment(struct apply_state *state,
          * exactly.
          */
         if ((match_end
-                 ? (current + preimage->len == img->len)
-                 : (current + preimage->len <= img->len))
-            && !memcmp(img->buf + current, preimage->buf, preimage->len))
+                 ? (current + preimage->buf.len == img->buf.len)
+                 : (current + preimage->buf.len <= img->buf.len))
+            && !memcmp(img->buf.buf + current, preimage->buf.buf, preimage->buf.len))
         {
             ret = 1;
             goto out;
@@ -3087,15 +3039,12 @@ static int match_fragment(struct apply_state *state,
          * There must be one non-blank context line that match
          * a line before the end of img.
          */
-        const char *buf;
-        const char *buf_end;
+        const char *buf, *buf_end;
 
-        buf     = preimage->buf;
+        buf     = preimage->buf.buf;
         buf_end = buf;
         for (i = 0; i < preimage_limit; i++)
-        {
             buf_end += preimage->line[i].len;
-        }
 
         for (; buf < buf_end; buf++)
         {
@@ -3144,24 +3093,14 @@ static int match_fragment(struct apply_state *state,
      * fixed.
      */
 
-    /* First count added lines in postimage */
-    postlen = 0;
-    for (i = 0; i < postimage->nr; i++)
-    {
-        if (!(postimage->line[i].flag & LINE_COMMON))
-        {
-            postlen += postimage->line[i].len;
-        }
-    }
-
     /*
      * The preimage may extend beyond the end of the file,
      * but in this loop we will only handle the part of the
      * preimage that falls within the file.
      */
-    strbuf_grow(&fixed, preimage->len + 1);
-    orig   = preimage->buf;
-    target = img->buf + current;
+    strbuf_grow(&fixed, preimage->buf.len + 1);
+    orig   = preimage->buf.buf;
+    target = img->buf.buf + current;
     for (i = 0; i < preimage_limit; i++)
     {
         size_t        oldlen   = preimage->line[i].len;
@@ -3189,12 +3128,6 @@ static int match_fragment(struct apply_state *state,
          */
         match = (tgtfix.len == fixed.len - fixstart && !memcmp(tgtfix.buf, fixed.buf + fixstart, fixed.len - fixstart));
 
-        /* Add the length if this is common with the postimage */
-        if (preimage->line[i].flag & LINE_COMMON)
-        {
-            postlen += tgtfix.len;
-        }
-
         strbuf_release(&tgtfix);
         if (!match)
         {
@@ -3218,17 +3151,41 @@ static int match_fragment(struct apply_state *state,
         size_t oldlen   = preimage->line[i].len;
         int    j;
 
-        /* Try fixing the line in the preimage */
-        ws_fix_copy(&fixed, orig, oldlen, ws_rule, NULL);
-
-        for (j = fixstart; j < fixed.len; j++)
+        /*
+         * Now handle the lines in the preimage that falls beyond the
+         * end of the file (if any). They will only match if they are
+         * empty or only contain whitespace (if WS_BLANK_AT_EOL is
+         * false).
+         */
+        for (; i < preimage->line_nr; i++)
         {
-            if (!isspace(fixed.buf[j]))
+            size_t fixstart = fixed.len; /* start of the fixed preimage */
+            size_t oldlen   = preimage->line[i].len;
+            int    j;
+
+            for (j = fixstart; j < fixed.len; j++)
             {
-                ret = 0;
-                goto out;
+                if (!isspace(fixed.buf[j]))
+                {
+                    ret = 0;
+                    goto out;
+                }
             }
+
+            orig += oldlen;
         }
+
+        /*
+         * Yes, the preimage is based on an older version that still
+         * has whitespace breakages unfixed, and fixing them makes the
+         * hunk match.  Update the context lines in the postimage.
+         */
+        if (postlen < postimage->len)
+        {
+            postlen = 0;
+        }
+        update_pre_post_images(preimage, postimage,
+                               fixed.buf, fixed.len, postlen);
 
         orig += oldlen;
     }
@@ -3238,12 +3195,9 @@ static int match_fragment(struct apply_state *state,
      * has whitespace breakages unfixed, and fixing them makes the
      * hunk match.  Update the context lines in the postimage.
      */
-    if (postlen < postimage->len)
-    {
-        postlen = 0;
-    }
+    fixed_buf = strbuf_detach(&fixed, &fixed_len);
     update_pre_post_images(preimage, postimage,
-                           fixed.buf, fixed.len, postlen);
+                           fixed_buf, fixed_len);
 
     ret = 1;
 
@@ -3274,10 +3228,8 @@ static int find_pos(struct apply_state *state,
      * and that *still* needs to match the end. So trust `match_end` more
      * than `match_beginning`.
      */
-    if (state->allow_overlap && match_beginning && match_end && img->nr - preimage->nr != 0)
-    {
+    if (state->allow_overlap && match_beginning && match_end && img->line_nr - preimage->line_nr != 0)
         match_beginning = 0;
-    }
 
     /*
      * If match_beginning or match_end is specified, there is no
@@ -3285,23 +3237,17 @@ static int find_pos(struct apply_state *state,
      * wander around and wait for a match at the specified end.
      */
     if (match_beginning)
-    {
         line = 0;
-    }
     else if (match_end)
-    {
-        line = img->nr - preimage->nr;
-    }
+        line = img->line_nr - preimage->line_nr;
 
     /*
      * Because the comparison is unsigned, the following test
      * will also take care of a negative line number that can
      * result when match_end and preimage is larger than the target.
      */
-    if ((size_t)line > img->nr)
-    {
-        line = img->nr;
-    }
+    if ((size_t)line > img->line_nr)
+        line = img->line_nr;
 
     current = 0;
     for (i = 0; i < line; i++)
@@ -3329,10 +3275,8 @@ static int find_pos(struct apply_state *state,
         }
 
     again:
-        if (backwards_lno == 0 && forwards_lno == img->nr)
-        {
+        if (backwards_lno == 0 && forwards_lno == img->line_nr)
             break;
-        }
 
         if (i & 1)
         {
@@ -3348,7 +3292,7 @@ static int find_pos(struct apply_state *state,
         }
         else
         {
-            if (forwards_lno == img->nr)
+            if (forwards_lno == img->line_nr)
             {
                 i++;
                 goto again;
@@ -3360,19 +3304,6 @@ static int find_pos(struct apply_state *state,
         }
     }
     return -1;
-}
-
-static void remove_first_line(struct image *img)
-{
-    img->buf += img->line[0].len;
-    img->len -= img->line[0].len;
-    img->line++;
-    img->nr--;
-}
-
-static void remove_last_line(struct image *img)
-{
-    img->len -= img->line[--img->nr].len;
 }
 
 /*
@@ -3390,11 +3321,9 @@ static void update_image(struct apply_state *state,
      * remove the copy of preimage at offset in img
      * and replace it with postimage
      */
-    int    i;
-    int    nr;
-    size_t remove_count;
-    size_t insert_count;
-    size_t applied_at = 0;
+    int    i, nr;
+    size_t remove_count, insert_count, applied_at = 0;
+    size_t result_alloc;
     char  *result;
     int    preimage_limit;
 
@@ -3407,11 +3336,9 @@ static void update_image(struct apply_state *state,
      * to the number of lines in the preimage that falls
      * within the boundaries.
      */
-    preimage_limit = preimage->nr;
-    if (preimage_limit > img->nr - applied_pos)
-    {
-        preimage_limit = img->nr - applied_pos;
-    }
+    preimage_limit = preimage->line_nr;
+    if (preimage_limit > img->line_nr - applied_pos)
+        preimage_limit = img->line_nr - applied_pos;
 
     for (i = 0; i < applied_pos; i++)
     {
@@ -3420,49 +3347,37 @@ static void update_image(struct apply_state *state,
 
     remove_count = 0;
     for (i = 0; i < preimage_limit; i++)
-    {
         remove_count += img->line[applied_pos + i].len;
-    }
-    insert_count = postimage->len;
+    insert_count = postimage->buf.len;
 
     /* Adjust the contents */
-    result = xmalloc(st_add3(st_sub(img->len, remove_count), insert_count, 1));
-    memcpy(result, img->buf, applied_at);
-    memcpy(result + applied_at, postimage->buf, postimage->len);
-    memcpy(result + applied_at + postimage->len,
-           img->buf + (applied_at + remove_count),
-           img->len - (applied_at + remove_count));
-    free(img->buf);
-    img->buf = result;
-    img->len += insert_count - remove_count;
-    result[img->len] = '\0';
+    result_alloc = st_add3(st_sub(img->buf.len, remove_count), insert_count, 1);
+    result       = xmalloc(result_alloc);
+    memcpy(result, img->buf.buf, applied_at);
+    memcpy(result + applied_at, postimage->buf.buf, postimage->buf.len);
+    memcpy(result + applied_at + postimage->buf.len,
+           img->buf.buf + (applied_at + remove_count),
+           img->buf.len - (applied_at + remove_count));
+    strbuf_attach(&img->buf, result, postimage->buf.len + img->buf.len - remove_count,
+                  result_alloc);
 
     /* Adjust the line table */
-    nr = img->nr + postimage->nr - preimage_limit;
-    if (preimage_limit < postimage->nr)
-    {
+    nr = img->line_nr + postimage->line_nr - preimage_limit;
+    if (preimage_limit < postimage->line_nr)
         /*
-         * NOTE: this knows that we never call remove_first_line()
+         * NOTE: this knows that we never call image_remove_first_line()
          * on anything other than pre/post image.
          */
         REALLOC_ARRAY(img->line, nr);
-        img->line_allocated = img->line;
-    }
-    if (preimage_limit != postimage->nr)
-    {
-        MOVE_ARRAY(img->line + applied_pos + postimage->nr,
+    if (preimage_limit != postimage->line_nr)
+        MOVE_ARRAY(img->line + applied_pos + postimage->line_nr,
                    img->line + applied_pos + preimage_limit,
-                   img->nr - (applied_pos + preimage_limit));
-    }
-    COPY_ARRAY(img->line + applied_pos, postimage->line, postimage->nr);
+                   img->line_nr - (applied_pos + preimage_limit));
+    COPY_ARRAY(img->line + applied_pos, postimage->line, postimage->line_nr);
     if (!state->allow_overlap)
-    {
-        for (i = 0; i < postimage->nr; i++)
-        {
+        for (i = 0; i < postimage->line_nr; i++)
             img->line[applied_pos + i].flag |= LINE_PATCHED;
-        }
-    }
-    img->nr = nr;
+    img->line_nr = nr;
 }
 
 /*
@@ -3475,25 +3390,19 @@ static int apply_one_fragment(struct apply_state *state,
                               int inaccurate_eof, unsigned ws_rule,
                               int nth_fragment)
 {
-    int           match_beginning;
-    int           match_end;
+    int           match_beginning, match_end;
     const char   *patch = frag->patch;
     int           size  = frag->size;
-    char         *old;
-    char         *oldlines;
+    char         *old, *oldlines;
     struct strbuf newlines;
     int           new_blank_lines_at_end       = 0;
     int           found_new_blank_lines_at_end = 0;
     int           hunk_linenr                  = frag->linenr;
-    unsigned long leading;
-    unsigned long trailing;
-    int           pos;
-    int           applied_pos;
-    struct image  preimage;
-    struct image  postimage;
+    unsigned long leading, trailing;
+    int           pos, applied_pos;
+    struct image  preimage  = IMAGE_INIT;
+    struct image  postimage = IMAGE_INIT;
 
-    memset(&preimage, 0, sizeof(preimage));
-    memset(&postimage, 0, sizeof(postimage));
     oldlines = xmalloc(size);
     strbuf_init(&newlines, size);
 
@@ -3542,38 +3451,30 @@ static int apply_one_fragment(struct apply_state *state,
             case '\n':
                 /* Newer GNU diff, empty context line */
                 if (plen < 0)
-                {
                     /* ... followed by '\No newline'; nothing */
                     break;
-                }
                 *old++ = '\n';
                 strbuf_addch(&newlines, '\n');
-                add_line_info(&preimage, "\n", 1, LINE_COMMON);
-                add_line_info(&postimage, "\n", 1, LINE_COMMON);
+                image_add_line(&preimage, "\n", 1, LINE_COMMON);
+                image_add_line(&postimage, "\n", 1, LINE_COMMON);
                 is_blank_context = 1;
                 break;
             case ' ':
                 if (plen && (ws_rule & WS_BLANK_AT_EOF) && ws_blank_line(patch + 1, plen))
-                {
                     is_blank_context = 1;
-                }
                 /* fallthrough */
             case '-':
                 memcpy(old, patch + 1, plen);
-                add_line_info(&preimage, old, plen,
-                              (first == ' ' ? LINE_COMMON : 0));
+                image_add_line(&preimage, old, plen,
+                               (first == ' ' ? LINE_COMMON : 0));
                 old += plen;
                 if (first == '-')
-                {
                     break;
-                }
                 /* fallthrough */
             case '+':
                 /* --no-add does not add new lines */
                 if (first == '+' && state->no_add)
-                {
                     break;
-                }
 
                 start = newlines.len;
                 if (first != '+' || !state->whitespace_error || state->ws_error_action != correct_ws_error)
@@ -3584,12 +3485,10 @@ static int apply_one_fragment(struct apply_state *state,
                 {
                     ws_fix_copy(&newlines, patch + 1, plen, ws_rule, &state->applied_after_fixing_ws);
                 }
-                add_line_info(&postimage, newlines.buf + start, newlines.len - start,
-                              (first == '+' ? 0 : LINE_COMMON));
+                image_add_line(&postimage, newlines.buf + start, newlines.len - start,
+                               (first == '+' ? 0 : LINE_COMMON));
                 if (first == '+' && (ws_rule & WS_BLANK_AT_EOF) && ws_blank_line(patch + 1, plen))
-                {
                     added_blank_line = 1;
-                }
                 break;
             case '@':
             case '\\':
@@ -3597,28 +3496,20 @@ static int apply_one_fragment(struct apply_state *state,
                 break;
             default:
                 if (state->apply_verbosity > verbosity_normal)
-                {
                     error(_("invalid start of line: '%c'"), first);
-                }
                 applied_pos = -1;
                 goto out;
         }
         if (added_blank_line)
         {
             if (!new_blank_lines_at_end)
-            {
                 found_new_blank_lines_at_end = hunk_linenr;
-            }
             new_blank_lines_at_end++;
         }
         else if (is_blank_context)
-        {
             ;
-        }
         else
-        {
             new_blank_lines_at_end = 0;
-        }
         patch += len;
         size -= len;
         hunk_linenr++;
@@ -3627,8 +3518,8 @@ static int apply_one_fragment(struct apply_state *state,
     {
         old--;
         strbuf_setlen(&newlines, newlines.len - 1);
-        preimage.line_allocated[preimage.nr - 1].len--;
-        postimage.line_allocated[postimage.nr - 1].len--;
+        preimage.line[preimage.line_nr - 1].len--;
+        postimage.line[postimage.line_nr - 1].len--;
     }
 
     leading  = frag->leading;
@@ -3656,13 +3547,9 @@ static int apply_one_fragment(struct apply_state *state,
      */
     match_end = !state->unidiff_zero && !trailing;
 
-    pos            = frag->newpos ? (frag->newpos - 1) : 0;
-    preimage.buf   = oldlines;
-    preimage.len   = old - oldlines;
-    postimage.buf  = newlines.buf;
-    postimage.len  = newlines.len;
-    preimage.line  = preimage.line_allocated;
-    postimage.line = postimage.line_allocated;
+    pos = frag->newpos ? (frag->newpos - 1) : 0;
+    strbuf_add(&preimage.buf, oldlines, old - oldlines);
+    strbuf_swap(&postimage.buf, &newlines);
 
     for (;;)
     {
@@ -3693,31 +3580,29 @@ static int apply_one_fragment(struct apply_state *state,
          */
         if (leading >= trailing)
         {
-            remove_first_line(&preimage);
-            remove_first_line(&postimage);
+            image_remove_first_line(&preimage);
+            image_remove_first_line(&postimage);
             pos--;
             leading--;
         }
         if (trailing > leading)
         {
-            remove_last_line(&preimage);
-            remove_last_line(&postimage);
+            image_remove_last_line(&preimage);
+            image_remove_last_line(&postimage);
             trailing--;
         }
     }
 
     if (applied_pos >= 0)
     {
-        if (new_blank_lines_at_end && preimage.nr + applied_pos >= img->nr && (ws_rule & WS_BLANK_AT_EOF) && state->ws_error_action != nowarn_ws_error)
+        if (new_blank_lines_at_end && preimage.line_nr + applied_pos >= img->line_nr && (ws_rule & WS_BLANK_AT_EOF) && state->ws_error_action != nowarn_ws_error)
         {
             record_ws_error(state, WS_BLANK_AT_EOF, "+", 1,
                             found_new_blank_lines_at_end);
             if (state->ws_error_action == correct_ws_error)
             {
                 while (new_blank_lines_at_end--)
-                {
-                    remove_last_line(&postimage);
-                }
+                    image_remove_last_line(&postimage);
             }
             /*
              * We would want to prevent write_out_results()
@@ -3727,9 +3612,7 @@ static int apply_one_fragment(struct apply_state *state,
              * apply_data->apply_fragments->apply_one_fragment
              */
             if (state->ws_error_action == die_on_ws_error)
-            {
                 state->apply = 0;
-            }
         }
 
         if (state->apply_verbosity > verbosity_normal && applied_pos != pos)
@@ -3770,8 +3653,8 @@ static int apply_one_fragment(struct apply_state *state,
 out:
     free(oldlines);
     strbuf_release(&newlines);
-    free(preimage.line_allocated);
-    free(postimage.line_allocated);
+    image_clear(&preimage);
+    image_clear(&postimage);
 
     return (applied_pos < 0);
 }
@@ -3794,32 +3677,26 @@ static int apply_binary_fragment(struct apply_state *state,
     if (state->apply_in_reverse)
     {
         if (!fragment->next)
-        {
             return error(_("cannot reverse-apply a binary patch "
                            "without the reverse hunk to '%s'"),
                          patch->new_name
                              ? patch->new_name
                              : patch->old_name);
-        }
         fragment = fragment->next;
     }
     switch (fragment->binary_patch_method)
     {
         case BINARY_DELTA_DEFLATED:
-            dst = patch_delta(img->buf, img->len, fragment->patch,
+            dst = patch_delta(img->buf.buf, img->buf.len, fragment->patch,
                               fragment->size, &len);
             if (!dst)
-            {
                 return -1;
-            }
-            clear_image(img);
-            img->buf = dst;
-            img->len = len;
+            image_clear(img);
+            strbuf_attach(&img->buf, dst, len, len + 1);
             return 0;
         case BINARY_LITERAL_DEFLATED:
-            clear_image(img);
-            img->len = fragment->size;
-            img->buf = xmemdupz(fragment->patch, img->len);
+            image_clear(img);
+            strbuf_add(&img->buf, fragment->patch, fragment->size);
             return 0;
     }
     return -1;
@@ -3856,31 +3733,27 @@ static int apply_binary(struct apply_state *state,
          * See if the old one matches what the patch
          * applies to.
          */
-        hash_object_file(the_hash_algo, img->buf, img->len, OBJ_BLOB,
-                         &oid);
-        if (strcmp(oid_to_hex(&oid), patch->old_oid_prefix) != 0)
-        {
+        hash_object_file(the_hash_algo, img->buf.buf, img->buf.len,
+                         OBJ_BLOB, &oid);
+        if (strcmp(oid_to_hex(&oid), patch->old_oid_prefix))
             return error(_("the patch applies to '%s' (%s), "
                            "which does not match the "
                            "current contents."),
                          name, oid_to_hex(&oid));
-        }
     }
     else
     {
         /* Otherwise, the old one must be empty. */
-        if (img->len)
-        {
+        if (img->buf.len)
             return error(_("the patch applies to an empty "
                            "'%s' but it is not empty"),
                          name);
-        }
     }
 
     get_oid_hex(patch->new_oid_prefix, &oid);
     if (is_null_oid(&oid))
     {
-        clear_image(img);
+        image_clear(img);
         return 0; /* deletion patch */
     }
 
@@ -3894,14 +3767,11 @@ static int apply_binary(struct apply_state *state,
         result = repo_read_object_file(the_repository, &oid, &type,
                                        &size);
         if (!result)
-        {
             return error(_("the necessary postimage %s for "
                            "'%s' cannot be read"),
                          patch->new_oid_prefix, name);
-        }
-        clear_image(img);
-        img->buf = result;
-        img->len = size;
+        image_clear(img);
+        strbuf_attach(&img->buf, result, size, size + 1);
     }
     else
     {
@@ -3911,19 +3781,15 @@ static int apply_binary(struct apply_state *state,
          * in the patch->fragments->{patch,size}.
          */
         if (apply_binary_fragment(state, img, patch))
-        {
             return error(_("binary patch does not apply to '%s'"),
                          name);
-        }
 
         /* verify that the result matches */
-        hash_object_file(the_hash_algo, img->buf, img->len, OBJ_BLOB,
+        hash_object_file(the_hash_algo, img->buf.buf, img->buf.len, OBJ_BLOB,
                          &oid);
-        if (strcmp(oid_to_hex(&oid), patch->new_oid_prefix) != 0)
-        {
+        if (strcmp(oid_to_hex(&oid), patch->new_oid_prefix))
             return error(_("binary patch to '%s' creates incorrect result (expecting %s, got %s)"),
                          name, patch->new_oid_prefix, oid_to_hex(&oid));
-        }
     }
 
     return 0;
@@ -4235,7 +4101,7 @@ static int load_preimage(struct apply_state *state,
     }
 
     img = strbuf_detach(&buf, &len);
-    prepare_image(image, img, len, !patch->is_binary);
+    image_prepare(image, img, len, !patch->is_binary);
     return 0;
 }
 
@@ -4243,16 +4109,14 @@ static int resolve_to(struct image *image, const struct object_id *result_id)
 {
     unsigned long    size;
     enum object_type type;
+    char            *data;
 
-    clear_image(image);
+    image_clear(image);
 
-    image->buf = repo_read_object_file(the_repository, result_id, &type,
-                                       &size);
-    if (!image->buf || type != OBJ_BLOB)
-    {
+    data = repo_read_object_file(the_repository, result_id, &type, &size);
+    if (!data || type != OBJ_BLOB)
         die("unable to read blob object %s", oid_to_hex(result_id));
-    }
-    image->len = size;
+    strbuf_attach(&image->buf, data, size, size + 1);
 
     return 0;
 }
@@ -4264,11 +4128,10 @@ static int three_way_merge(struct apply_state     *state,
                            const struct object_id *ours,
                            const struct object_id *theirs)
 {
-    mmfile_t             base_file;
-    mmfile_t             our_file;
-    mmfile_t             their_file;
-    mmbuffer_t           result = {NULL};
-    enum ll_merge_result status;
+    mmfile_t                base_file, our_file, their_file;
+    struct ll_merge_options merge_opts = LL_MERGE_OPTIONS_INIT;
+    mmbuffer_t              result     = {NULL};
+    enum ll_merge_result    status;
 
     /* resolve trivial cases first */
     if (oideq(base, ours))
@@ -4283,17 +4146,16 @@ static int three_way_merge(struct apply_state     *state,
     read_mmblob(&base_file, base);
     read_mmblob(&our_file, ours);
     read_mmblob(&their_file, theirs);
-    status = ll_merge(&result, path,
-                      &base_file, "base",
-                      &our_file, "ours",
-                      &their_file, "theirs",
-                      state->repo->index,
-                      NULL);
+    merge_opts.variant = state->merge_variant;
+    status             = ll_merge(&result, path,
+                                  &base_file, "base",
+                                  &our_file, "ours",
+                                  &their_file, "theirs",
+                                  state->repo->index,
+                                  &merge_opts);
     if (status == LL_MERGE_BINARY_CONFLICT)
-    {
         warning("Cannot merge binary files: %s (%s vs. %s)",
                 path, "ours", "theirs");
-    }
     free(base_file.ptr);
     free(our_file.ptr);
     free(their_file.ptr);
@@ -4302,9 +4164,8 @@ static int three_way_merge(struct apply_state     *state,
         free(result.ptr);
         return -1;
     }
-    clear_image(image);
-    image->buf = result.ptr;
-    image->len = result.size;
+    image_clear(image);
+    strbuf_attach(&image->buf, result.ptr, result.size, result.size);
 
     return status;
 }
@@ -4357,15 +4218,11 @@ static int load_current(struct apply_state *state,
 
     status = load_patch_target(state, &buf, ce, &st, patch, name, mode);
     if (status < 0)
-    {
         return status;
-    }
-    if (status)
-    {
+    else if (status)
         return -1;
-    }
     img = strbuf_detach(&buf, &len);
-    prepare_image(image, img, len, !patch->is_binary);
+    image_prepare(image, img, len, !patch->is_binary);
     return 0;
 }
 
@@ -4375,14 +4232,12 @@ static int try_threeway(struct apply_state       *state,
                         struct stat              *st,
                         const struct cache_entry *ce)
 {
-    struct object_id pre_oid;
-    struct object_id post_oid;
-    struct object_id our_oid;
+    struct object_id pre_oid, post_oid, our_oid;
     struct strbuf    buf = STRBUF_INIT;
     size_t           len;
     int              status;
     char            *img;
-    struct image     tmp_image;
+    struct image     tmp_image = IMAGE_INIT;
 
     /* No point falling back to 3-way merge in these cases */
     if (patch->is_delete || S_ISGITLINK(patch->old_mode) || S_ISGITLINK(patch->new_mode) || (patch->is_new && !patch->direct_to_threeway) || (patch->is_rename && !patch->lines_added && !patch->lines_deleted))
@@ -4406,36 +4261,32 @@ static int try_threeway(struct apply_state       *state,
     }
 
     img = strbuf_detach(&buf, &len);
-    prepare_image(&tmp_image, img, len, 1);
+    image_prepare(&tmp_image, img, len, 1);
     /* Apply the patch to get the post image */
     if (apply_fragments(state, &tmp_image, patch) < 0)
     {
-        clear_image(&tmp_image);
+        image_clear(&tmp_image);
         return -1;
     }
     /* post_oid is theirs */
-    write_object_file(tmp_image.buf, tmp_image.len, OBJ_BLOB, &post_oid);
-    clear_image(&tmp_image);
+    write_object_file(tmp_image.buf.buf, tmp_image.buf.len, OBJ_BLOB, &post_oid);
+    image_clear(&tmp_image);
 
     /* our_oid is ours */
     if (patch->is_new)
     {
         if (load_current(state, &tmp_image, patch))
-        {
             return error(_("cannot read the current contents of '%s'"),
                          patch->new_name);
-        }
     }
     else
     {
         if (load_preimage(state, &tmp_image, patch, st, ce))
-        {
             return error(_("cannot read the current contents of '%s'"),
                          patch->old_name);
-        }
     }
-    write_object_file(tmp_image.buf, tmp_image.len, OBJ_BLOB, &our_oid);
-    clear_image(&tmp_image);
+    write_object_file(tmp_image.buf.buf, tmp_image.buf.len, OBJ_BLOB, &our_oid);
+    image_clear(&tmp_image);
 
     /* in-core three-way merge between post and our using pre as base */
     status = three_way_merge(state, image, patch->new_name,
@@ -4485,7 +4336,7 @@ static int try_threeway(struct apply_state       *state,
 static int apply_data(struct apply_state *state, struct patch *patch,
                       struct stat *st, const struct cache_entry *ce)
 {
-    struct image image;
+    struct image image = IMAGE_INIT;
 
     if (load_preimage(state, &image, patch, st, ce) < 0)
     {
@@ -4502,14 +4353,13 @@ static int apply_data(struct apply_state *state, struct patch *patch,
         /* Note: with --reject, apply_fragments() returns 0 */
         if (patch->direct_to_threeway || apply_fragments(state, &image, patch) < 0)
         {
-            clear_image(&image);
+            image_clear(&image);
             return -1;
         }
     }
-    patch->result     = image.buf;
-    patch->resultsize = image.len;
+    patch->result = strbuf_detach(&image.buf, &patch->resultsize);
     add_to_fn_table(state, patch);
-    free(image.line_allocated);
+    free(image.line);
 
     if (0 < patch->is_delete && patch->resultsize)
     {
@@ -4994,11 +4844,10 @@ static int check_patch_list(struct apply_state *state, struct patch *patch)
 static int read_apply_cache(struct apply_state *state)
 {
     if (state->index_file)
-    {
         return read_index_from(state->repo->index, state->index_file,
-                               get_git_dir());
-    }
-    return repo_read_index(state->repo);
+                               repo_get_git_dir(the_repository));
+    else
+        return repo_read_index(state->repo);
 }
 
 /* This function tries to read the object name from the current index */
@@ -6291,6 +6140,15 @@ int apply_parse_options(int argc, const char **argv,
                  N_("also apply the patch (use with --stat/--summary/--check)")),
         OPT_BOOL('3', "3way", &state->threeway,
                  N_("attempt three-way merge, fall back on normal patch if that fails")),
+        OPT_SET_INT_F(0, "ours", &state->merge_variant,
+                      N_("for conflicts, use our version"),
+                      XDL_MERGE_FAVOR_OURS, PARSE_OPT_NONEG),
+        OPT_SET_INT_F(0, "theirs", &state->merge_variant,
+                      N_("for conflicts, use their version"),
+                      XDL_MERGE_FAVOR_THEIRS, PARSE_OPT_NONEG),
+        OPT_SET_INT_F(0, "union", &state->merge_variant,
+                      N_("for conflicts, use a union version"),
+                      XDL_MERGE_FAVOR_UNION, PARSE_OPT_NONEG),
         OPT_FILENAME(0, "build-fake-ancestor", &state->fake_ancestor,
                      N_("build a temporary index based on embedded index information")),
         /* Think twice before adding "--nul" synonym to this */
@@ -6329,5 +6187,10 @@ int apply_parse_options(int argc, const char **argv,
                  N_("don't return error for empty patches")),
         OPT_END()};
 
-    return parse_options(argc, argv, state->prefix, builtin_apply_options, apply_usage, 0);
+    argc = parse_options(argc, argv, state->prefix, builtin_apply_options, apply_usage, 0);
+
+    if (state->merge_variant && !state->threeway)
+        die(_("--ours, --theirs, and --union require --3way"));
+
+    return argc;
 }

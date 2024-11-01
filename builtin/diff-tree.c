@@ -1,3 +1,4 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "diff.h"
@@ -6,7 +7,6 @@
 #include "hex.h"
 #include "log-tree.h"
 #include "read-cache-ll.h"
-#include "repository.h"
 #include "revision.h"
 #include "tmp-objdir.h"
 #include "tree.h"
@@ -131,7 +131,10 @@ static void diff_tree_tweak_rev(struct rev_info *rev)
     }
 }
 
-int cmd_diff_tree(int argc, const char **argv, const char *prefix)
+int cmd_diff_tree(int                     argc,
+                  const char            **argv,
+                  const char             *prefix,
+                  struct repository *repo UNUSED)
 {
     char                      line[1000];
     struct object            *tree1;
@@ -206,16 +209,6 @@ int cmd_diff_tree(int argc, const char **argv, const char *prefix)
 
     opt->diffopt.rotate_to_strict = 1;
 
-    if (opt->remerge_diff)
-    {
-        opt->remerge_objdir = tmp_objdir_create("remerge-diff");
-        if (!opt->remerge_objdir)
-        {
-            die(_("unable to create temporary object directory"));
-        }
-        tmp_objdir_replace_primary_odb(opt->remerge_objdir, 1);
-    }
-
     /*
      * NOTE!  We expect "a..b" to expand to "^a b" but it is
      * perfectly valid for revision range parser to yield "b ^a",
@@ -227,9 +220,7 @@ int cmd_diff_tree(int argc, const char **argv, const char *prefix)
     {
         case 0:
             if (!read_stdin)
-            {
                 usage(diff_tree_usage);
-            }
             break;
         case 1:
             tree1 = opt->pending.objects[0].item;
@@ -297,11 +288,5 @@ int cmd_diff_tree(int argc, const char **argv, const char *prefix)
         diff_free(&opt->diffopt);
     }
 
-    if (opt->remerge_diff)
-    {
-        tmp_objdir_destroy(opt->remerge_objdir);
-        opt->remerge_objdir = NULL;
-    }
-
-    return diff_result_code(&opt->diffopt);
+    return diff_result_code(opt);
 }

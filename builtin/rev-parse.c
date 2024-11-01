@@ -3,8 +3,9 @@
  *
  * Copyright (C) Linus Torvalds, 2005
  */
-
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
+
 #include "abspath.h"
 #include "config.h"
 #include "commit.h"
@@ -19,6 +20,8 @@
 #include "path.h"
 #include "diff.h"
 #include "read-cache-ll.h"
+#include "repo-settings.h"
+#include "repository.h"
 #include "revision.h"
 #include "setup.h"
 #include "split-index.h"
@@ -833,7 +836,10 @@ static void print_path(const char *path, const char *prefix, enum format_type fo
     free(cwd);
 }
 
-int cmd_rev_parse(int argc, const char **argv, const char *prefix)
+int cmd_rev_parse(int                     argc,
+                  const char            **argv,
+                  const char             *prefix,
+                  struct repository *repo UNUSED)
 {
     int                         i;
     int                         as_is          = 0;
@@ -955,9 +961,7 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (!strcmp(arg, "--git-path"))
             {
                 if (!argv[i + 1])
-                {
                     die(_("--git-path requires an argument"));
-                }
                 strbuf_reset(&buf);
                 print_path(git_path("%s", argv[i + 1]), prefix,
                            format,
@@ -968,9 +972,7 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (!strcmp(arg, "-n"))
             {
                 if (++i >= argc)
-                {
                     die(_("-n requires an argument"));
-                }
                 if ((filter & DO_FLAGS) && (filter & DO_REVS))
                 {
                     show(arg);
@@ -981,17 +983,13 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (starts_with(arg, "-n"))
             {
                 if ((filter & DO_FLAGS) && (filter & DO_REVS))
-                {
                     show(arg);
-                }
                 continue;
             }
             if (opt_with_value(arg, "--path-format", &arg))
             {
                 if (!arg)
-                {
                     die(_("--path-format requires an argument"));
-                }
                 if (!strcmp(arg, "absolute"))
                 {
                     format = FORMAT_CANONICAL;
@@ -1010,18 +1008,14 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             {
                 def = argv[++i];
                 if (!def)
-                {
                     die(_("--default requires an argument"));
-                }
                 continue;
             }
             if (!strcmp(arg, "--prefix"))
             {
                 prefix = argv[++i];
                 if (!prefix)
-                {
                     die(_("--prefix requires an argument"));
-                }
                 startup_info->prefix = prefix;
                 output_prefix        = 1;
                 continue;
@@ -1061,16 +1055,14 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (opt_with_value(arg, "--output-object-format", &arg))
             {
                 if (!arg)
-                {
                     die(_("no object format specified"));
-                }
                 if (!strcmp(arg, the_hash_algo->name) || !strcmp(arg, "storage"))
                 {
                     flags |= GET_OID_HASH_ANY;
                     output_algo = the_hash_algo;
                     continue;
                 }
-                if (compat && !strcmp(arg, compat->name))
+                else if (compat && !strcmp(arg, compat->name))
                 {
                     flags |= GET_OID_HASH_ANY;
                     output_algo = compat;
@@ -1085,18 +1077,12 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
                 verify = 1;
                 abbrev = DEFAULT_ABBREV;
                 if (!arg)
-                {
                     continue;
-                }
                 abbrev = strtoul(arg, NULL, 10);
                 if (abbrev < MINIMUM_ABBREV)
-                {
                     abbrev = MINIMUM_ABBREV;
-                }
                 else if ((int)the_hash_algo->hexsz <= abbrev)
-                {
                     abbrev = the_hash_algo->hexsz;
-                }
                 continue;
             }
             if (!strcmp(arg, "--sq"))
@@ -1121,23 +1107,18 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             }
             if (opt_with_value(arg, "--abbrev-ref", &arg))
             {
-                abbrev_ref        = 1;
-                abbrev_ref_strict = warn_ambiguous_refs;
+                abbrev_ref = 1;
+                abbrev_ref_strict =
+                    repo_settings_get_warn_ambiguous_refs(the_repository);
                 if (arg)
                 {
                     if (!strcmp(arg, "strict"))
-                    {
                         abbrev_ref_strict = 1;
-                    }
                     else if (!strcmp(arg, "loose"))
-                    {
                         abbrev_ref_strict = 0;
-                    }
                     else
-                    {
                         die(_("unknown mode for --abbrev-ref: %s"),
                             arg);
-                    }
                 }
                 continue;
             }
@@ -1169,20 +1150,16 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (opt_with_value(arg, "--branches", &arg))
             {
                 if (ref_excludes.hidden_refs_configured)
-                {
                     return error(_("options '%s' and '%s' cannot be used together"),
                                  "--exclude-hidden", "--branches");
-                }
                 handle_ref_opt(arg, "refs/heads/");
                 continue;
             }
             if (opt_with_value(arg, "--tags", &arg))
             {
                 if (ref_excludes.hidden_refs_configured)
-                {
                     return error(_("options '%s' and '%s' cannot be used together"),
                                  "--exclude-hidden", "--tags");
-                }
                 handle_ref_opt(arg, "refs/tags/");
                 continue;
             }
@@ -1194,10 +1171,8 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (opt_with_value(arg, "--remotes", &arg))
             {
                 if (ref_excludes.hidden_refs_configured)
-                {
                     return error(_("options '%s' and '%s' cannot be used together"),
                                  "--exclude-hidden", "--remotes");
-                }
                 handle_ref_opt(arg, "refs/remotes/");
                 continue;
             }
@@ -1213,37 +1188,27 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             }
             if (!strcmp(arg, "--show-toplevel"))
             {
-                const char *work_tree = get_git_work_tree();
+                const char *work_tree = repo_get_work_tree(the_repository);
                 if (work_tree)
-                {
                     print_path(work_tree, prefix, format, DEFAULT_UNMODIFIED);
-                }
                 else
-                {
                     die(_("this operation must be run in a work tree"));
-                }
                 continue;
             }
             if (!strcmp(arg, "--show-superproject-working-tree"))
             {
                 struct strbuf superproject = STRBUF_INIT;
                 if (get_superproject_working_tree(&superproject))
-                {
                     print_path(superproject.buf, prefix, format, DEFAULT_UNMODIFIED);
-                }
                 strbuf_release(&superproject);
                 continue;
             }
             if (!strcmp(arg, "--show-prefix"))
             {
                 if (prefix)
-                {
                     puts(prefix);
-                }
                 else
-                {
                     putchar('\n');
-                }
                 continue;
             }
             if (!strcmp(arg, "--show-cdup"))
@@ -1252,11 +1217,9 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
                 if (!is_inside_work_tree())
                 {
                     const char *work_tree =
-                        get_git_work_tree();
+                        repo_get_work_tree(the_repository);
                     if (work_tree)
-                    {
                         printf("%s\n", work_tree);
-                    }
                     continue;
                 }
                 while (pfx)
@@ -1294,9 +1257,7 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
                 { /* --absolute-git-dir */
                     wanted = FORMAT_CANONICAL;
                     if (!gitdir && !prefix)
-                    {
                         gitdir = ".git";
-                    }
                     if (gitdir)
                     {
                         struct strbuf realpath = STRBUF_INIT;
@@ -1316,7 +1277,7 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             }
             if (!strcmp(arg, "--git-common-dir"))
             {
-                print_path(get_git_common_dir(), prefix, format, DEFAULT_RELATIVE_IF_SHARED);
+                print_path(repo_get_common_dir(the_repository), prefix, format, DEFAULT_RELATIVE_IF_SHARED);
                 continue;
             }
             if (!strcmp(arg, "--is-inside-git-dir"))
@@ -1347,9 +1308,7 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
             if (!strcmp(arg, "--shared-index-path"))
             {
                 if (repo_read_index(the_repository) < 0)
-                {
                     die(_("Could not read the index"));
-                }
                 if (the_repository->index->split_index)
                 {
                     const struct object_id *oid  = &the_repository->index->split_index->base_oid;

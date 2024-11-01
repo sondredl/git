@@ -8,7 +8,6 @@
 #include "transport.h"
 #include "parse-options.h"
 #include "pkt-line.h"
-#include "repository.h"
 
 static void create_output_file(const char *output_file)
 {
@@ -91,7 +90,10 @@ static int run_remote_archiver(int argc, const char **argv,
 
 #define PARSE_OPT_KEEP_ALL (PARSE_OPT_KEEP_DASHDASH | PARSE_OPT_KEEP_ARGV0 | PARSE_OPT_KEEP_UNKNOWN_OPT | PARSE_OPT_NO_INTERNAL_HELP)
 
-int cmd_archive(int argc, const char **argv, const char *prefix)
+int cmd_archive(int                argc,
+                const char       **argv,
+                const char        *prefix,
+                struct repository *repo)
 {
     const char   *exec         = "git-upload-archive";
     char         *output       = NULL;
@@ -118,13 +120,15 @@ int cmd_archive(int argc, const char **argv, const char *prefix)
 
     if (remote)
     {
-        return run_remote_archiver(argc, argv, remote, exec, output);
+        ret = run_remote_archiver(argc, argv, remote, exec, output);
+        goto out;
     }
 
     setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
 
-    ret = write_archive(argc, argv, prefix, the_repository, output, 0);
+    ret = write_archive(argc, argv, prefix, repo, output, 0);
 
+out:
     free(output);
     return ret;
 }

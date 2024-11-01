@@ -353,7 +353,7 @@ enum
     BRACKET = '['
 };
 
-static DWORD WINAPI console_thread(LPVOID unused)
+static DWORD WINAPI console_thread(LPVOID data UNUSED)
 {
     unsigned char buffer[BUFFER_SIZE];
     DWORD         bytes;

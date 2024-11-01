@@ -1,3 +1,4 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
@@ -163,17 +164,15 @@ static int parse_mirror_opt(const struct option *opt, const char *arg, int not )
 
 static int add(int argc, const char **argv, const char *prefix)
 {
-    int                fetch      = 0;
-    int                fetch_tags = TAGS_DEFAULT;
-    unsigned           mirror     = MIRROR_NONE;
-    struct string_list track      = STRING_LIST_INIT_NODUP;
-    const char        *master     = NULL;
+    int                fetch = 0, fetch_tags = TAGS_DEFAULT;
+    unsigned           mirror = MIRROR_NONE;
+    struct string_list track  = STRING_LIST_INIT_NODUP;
+    const char        *master = NULL;
     struct remote     *remote;
-    struct strbuf      buf  = STRBUF_INIT;
-    struct strbuf      buf2 = STRBUF_INIT;
-    const char        *name;
-    const char        *url;
+    struct strbuf      buf = STRBUF_INIT, buf2 = STRBUF_INIT;
+    const char        *name, *url;
     int                i;
+    int                result = 0;
 
     struct option options[] = {
         OPT_BOOL('f', "fetch", &fetch, N_("fetch the remote branches")),
@@ -256,7 +255,8 @@ static int add(int argc, const char **argv, const char *prefix)
 
     if (fetch && fetch_remote(name))
     {
-        return 1;
+        result = 1;
+        goto out;
     }
 
     if (master)
@@ -268,16 +268,15 @@ static int add(int argc, const char **argv, const char *prefix)
         strbuf_addf(&buf2, "refs/remotes/%s/%s", name, master);
 
         if (refs_update_symref(get_main_ref_store(the_repository), buf.buf, buf2.buf, "remote add"))
-        {
-            return error(_("Could not setup master '%s'"), master);
-        }
+            result = error(_("Could not setup master '%s'"), master);
     }
 
+out:
     strbuf_release(&buf);
     strbuf_release(&buf2);
     string_list_clear(&track, 0);
 
-    return 0;
+    return result;
 }
 
 struct branch_info
@@ -853,18 +852,14 @@ static int mv(int argc, const char **argv, const char *prefix)
     struct option options[]     = {
             OPT_BOOL(0, "progress", &show_progress, N_("force progress reporting")),
             OPT_END()};
-    struct remote     *oldremote;
-    struct remote     *newremote;
-    struct strbuf      buf                = STRBUF_INIT;
-    struct strbuf      buf2               = STRBUF_INIT;
-    struct strbuf      buf3               = STRBUF_INIT;
-    struct strbuf      old_remote_context = STRBUF_INIT;
-    struct string_list remote_branches    = STRING_LIST_INIT_DUP;
+    struct remote *oldremote, *newremote;
+    struct strbuf  buf = STRBUF_INIT, buf2 = STRBUF_INIT, buf3 = STRBUF_INIT,
+                  old_remote_context   = STRBUF_INIT;
+    struct string_list remote_branches = STRING_LIST_INIT_DUP;
     struct rename_info rename;
-    int                i;
-    int                refs_renamed_nr = 0;
-    int                refspec_updated = 0;
-    struct progress   *progress        = NULL;
+    int                i, refs_renamed_nr = 0, refspec_updated = 0;
+    struct progress   *progress = NULL;
+    int                result   = 0;
 
     argc = parse_options(argc, argv, prefix, options,
                          builtin_remote_rename_usage, 0);
@@ -907,8 +902,9 @@ static int mv(int argc, const char **argv, const char *prefix)
     strbuf_addf(&buf2, "remote.%s", rename.new_name);
     if (repo_config_rename_section(the_repository, buf.buf, buf2.buf) < 1)
     {
-        return error(_("Could not rename config section '%s' to '%s'"),
-                     buf.buf, buf2.buf);
+        result = error(_("Could not rename config section '%s' to '%s'"),
+                       buf.buf, buf2.buf);
+        goto out;
     }
 
     if (oldremote->fetch.raw_nr)
@@ -1057,7 +1053,7 @@ out:
     strbuf_release(&buf);
     strbuf_release(&buf2);
     strbuf_release(&buf3);
-    return 0;
+    return result;
 }
 
 static int rm(int argc, const char **argv, const char *prefix)
@@ -2174,7 +2170,10 @@ out:
     return 0;
 }
 
-int cmd_remote(int argc, const char **argv, const char *prefix)
+int cmd_remote(int                     argc,
+               const char            **argv,
+               const char             *prefix,
+               struct repository *repo UNUSED)
 {
     parse_opt_subcommand_fn *fn        = NULL;
     struct option            options[] = {

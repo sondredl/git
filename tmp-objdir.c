@@ -13,6 +13,7 @@
 #include "strvec.h"
 #include "quote.h"
 #include "object-store-ll.h"
+#include "repository.h"
 
 struct tmp_objdir
 {
@@ -146,7 +147,8 @@ struct tmp_objdir *tmp_objdir_create(const char *prefix)
      * can recognize any stale objdirs left behind by a crash and delete
      * them.
      */
-    strbuf_addf(&t->path, "%s/tmp_objdir-%s-XXXXXX", get_object_directory(), prefix);
+    strbuf_addf(&t->path, "%s/tmp_objdir-%s-XXXXXX",
+                repo_get_object_directory(the_repository), prefix);
 
     if (!mkdtemp(t->path.buf))
     {
@@ -169,7 +171,7 @@ struct tmp_objdir *tmp_objdir_create(const char *prefix)
     }
 
     env_append(&t->env, ALTERNATE_DB_ENVIRONMENT,
-               absolute_path(get_object_directory()));
+               absolute_path(repo_get_object_directory(the_repository)));
     env_replace(&t->env, DB_ENVIRONMENT, absolute_path(t->path.buf));
     env_replace(&t->env, GIT_QUARANTINE_ENVIRONMENT,
                 absolute_path(t->path.buf));
@@ -237,35 +239,37 @@ static int read_dir_paths(struct string_list *out, const char *path)
     return 0;
 }
 
-static int migrate_paths(struct strbuf *src, struct strbuf *dst);
+static int migrate_paths(struct strbuf *src, struct strbuf *dst,
+                         enum finalize_object_file_flags flags);
 
-static int migrate_one(struct strbuf *src, struct strbuf *dst)
+static int migrate_one(struct strbuf *src, struct strbuf *dst,
+                       enum finalize_object_file_flags flags)
 {
     struct stat st;
 
     if (stat(src->buf, &st) < 0)
-    {
         return -1;
-    }
     if (S_ISDIR(st.st_mode))
     {
         if (!mkdir(dst->buf, 0777))
         {
             if (adjust_shared_perm(dst->buf))
-            {
                 return -1;
-            }
         }
         else if (errno != EEXIST)
-        {
             return -1;
-        }
-        return migrate_paths(src, dst);
+        return migrate_paths(src, dst, flags);
     }
-    return finalize_object_file(src->buf, dst->buf);
+    return finalize_object_file_flags(src->buf, dst->buf, flags);
 }
 
-static int migrate_paths(struct strbuf *src, struct strbuf *dst)
+static int is_loose_object_shard(const char *name)
+{
+    return strlen(name) == 2 && isxdigit(name[0]) && isxdigit(name[1]);
+}
+
+static int migrate_paths(struct strbuf *src, struct strbuf *dst,
+                         enum finalize_object_file_flags flags)
 {
     size_t             src_len = src->len;
     size_t             dst_len = dst->len;
@@ -282,12 +286,16 @@ static int migrate_paths(struct strbuf *src, struct strbuf *dst)
 
     for (i = 0; i < paths.nr; i++)
     {
-        const char *name = paths.items[i].string;
+        const char                     *name       = paths.items[i].string;
+        enum finalize_object_file_flags flags_copy = flags;
 
         strbuf_addf(src, "/%s", name);
         strbuf_addf(dst, "/%s", name);
 
-        ret |= migrate_one(src, dst);
+        if (is_loose_object_shard(name))
+            flags_copy |= FOF_SKIP_COLLISION_CHECK;
+
+        ret |= migrate_one(src, dst, flags_copy);
 
         strbuf_setlen(src, src_len);
         strbuf_setlen(dst, dst_len);
@@ -319,9 +327,9 @@ int tmp_objdir_migrate(struct tmp_objdir *t)
     }
 
     strbuf_addbuf(&src, &t->path);
-    strbuf_addstr(&dst, get_object_directory());
+    strbuf_addstr(&dst, repo_get_object_directory(the_repository));
 
-    ret = migrate_paths(&src, &dst);
+    ret = migrate_paths(&src, &dst, 0);
 
     strbuf_release(&src);
     strbuf_release(&dst);

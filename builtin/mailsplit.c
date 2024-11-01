@@ -323,7 +323,10 @@ out:
     return ret;
 }
 
-int cmd_mailsplit(int argc, const char **argv, const char *prefix)
+int cmd_mailsplit(int                     argc,
+                  const char            **argv,
+                  const char             *prefix,
+                  struct repository *repo UNUSED)
 {
     int                nr         = 0;
     int                nr_prec    = 4;

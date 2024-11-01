@@ -1130,31 +1130,26 @@ static int notes_display_config(const char *k, const char *v,
     return 0;
 }
 
-const char *default_notes_ref(void)
+char *default_notes_ref(struct repository *repo)
 {
-    const char *notes_ref = NULL;
+    char *notes_ref = NULL;
+
     if (!notes_ref)
-    {
-        notes_ref = getenv(GIT_NOTES_REF_ENVIRONMENT);
-    }
+        notes_ref = xstrdup_or_null(getenv(GIT_NOTES_REF_ENVIRONMENT));
     if (!notes_ref)
-    {
-        notes_ref = notes_ref_name; /* value of core.notesRef config */
-    }
+        repo_config_get_string(repo, "core.notesref", &notes_ref);
     if (!notes_ref)
-    {
-        notes_ref = GIT_NOTES_DEFAULT_REF;
-    }
+        notes_ref = xstrdup(GIT_NOTES_DEFAULT_REF);
     return notes_ref;
 }
 
 void init_notes(struct notes_tree *t, const char *notes_ref,
                 combine_notes_fn combine_notes, int flags)
 {
-    struct object_id oid;
-    struct object_id object_oid;
+    struct object_id oid, object_oid;
     unsigned short   mode;
     struct leaf_node root_tree;
+    char            *to_free = NULL;
 
     if (!t)
     {
@@ -1163,9 +1158,7 @@ void init_notes(struct notes_tree *t, const char *notes_ref,
     assert(!t->initialized);
 
     if (!notes_ref)
-    {
-        notes_ref = default_notes_ref();
-    }
+        notes_ref = to_free = default_notes_ref(the_repository);
     update_ref_namespace(NAMESPACE_NOTES, xstrdup(notes_ref));
 
     if (!combine_notes)
@@ -1183,22 +1176,19 @@ void init_notes(struct notes_tree *t, const char *notes_ref,
     t->dirty          = 0;
 
     if (flags & NOTES_INIT_EMPTY || repo_get_oid_treeish(the_repository, notes_ref, &object_oid))
-    {
-        return;
-    }
+        goto out;
     if (flags & NOTES_INIT_WRITABLE && refs_read_ref(get_main_ref_store(the_repository), notes_ref, &object_oid))
-    {
         die("Cannot use notes ref %s", notes_ref);
-    }
     if (get_tree_entry(the_repository, &object_oid, "", &oid, &mode))
-    {
         die("Failed to read notes tree referenced by %s (%s)",
             notes_ref, oid_to_hex(&object_oid));
-    }
 
     oidclr(&root_tree.key_oid, the_repository->hash_algo);
     oidcpy(&root_tree.val_oid, &oid);
     load_subtree(t, &root_tree, t->root, 0);
+
+out:
+    free(to_free);
 }
 
 struct notes_tree **load_notes_trees(struct string_list *refs, int flags)
@@ -1263,7 +1253,7 @@ void load_display_notes(struct display_notes_opt *opt)
 
     if (!opt || opt->use_default_notes > 0 || (opt->use_default_notes == -1 && !opt->extra_notes_refs.nr))
     {
-        string_list_append(&display_notes_refs, default_notes_ref());
+        string_list_append_nodup(&display_notes_refs, default_notes_ref(the_repository));
         display_ref_env = getenv(GIT_NOTES_DISPLAY_REF_ENVIRONMENT);
         if (display_ref_env)
         {
@@ -1272,9 +1262,7 @@ void load_display_notes(struct display_notes_opt *opt)
             load_config_refs = 0;
         }
         else
-        {
             load_config_refs = 1;
-        }
     }
 
     git_config(notes_display_config, &load_config_refs);

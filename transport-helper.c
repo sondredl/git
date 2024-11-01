@@ -101,16 +101,19 @@ static int recvline(struct helper_data *helper, struct strbuf *buffer)
     return recvline_fh(helper->out, buffer);
 }
 
-static void write_constant(int fd, const char *str)
+static int write_constant_gently(int fd, const char *str)
 {
     if (debug)
-    {
         fprintf(stderr, "Debug: Remote helper: -> %s", str);
-    }
     if (write_in_full(fd, str, strlen(str)) < 0)
-    {
+        return -1;
+    return 0;
+}
+
+static void write_constant(int fd, const char *str)
+{
+    if (write_constant_gently(fd, str) < 0)
         die_errno(_("full write to remote helper failed"));
-    }
 }
 
 static const char *remove_ext_force(const char *url)
@@ -163,10 +166,8 @@ static struct child_process *get_helper(struct transport *transport)
     helper->silent_exec_failure = 1;
 
     if (have_git_dir())
-    {
         strvec_pushf(&helper->env, "%s=%s",
-                     GIT_DIR_ENVIRONMENT, get_git_dir());
-    }
+                     GIT_DIR_ENVIRONMENT, repo_get_git_dir(the_repository));
 
     helper->trace2_child_class = helper->args.v[0]; /* "remote-<name>" */
 
@@ -197,17 +198,17 @@ static struct child_process *get_helper(struct transport *transport)
     }
     data->out = xfdopen(duped, "r");
 
-    write_constant(helper->in, "capabilities\n");
+    sigchain_push(SIGPIPE, SIG_IGN);
+    if (write_constant_gently(helper->in, "capabilities\n") < 0)
+        die("remote helper '%s' aborted session", data->name);
+    sigchain_pop(SIGPIPE);
 
     while (1)
     {
-        const char *capname;
-        const char *arg;
+        const char *capname, *arg;
         int         mandatory = 0;
         if (recvline(data, &buf))
-        {
-            exit(128);
-        }
+            die("remote helper '%s' aborted session", data->name);
 
         if (!*buf.buf)
         {
@@ -889,7 +890,12 @@ static int fetch_refs(struct transport *transport,
 
     if (!data->get_refs_list_called)
     {
-        get_refs_list_using_list(transport, 0);
+        /*
+         * We do not care about the list of refs returned, but only
+         * that the "list" command was sent.
+         */
+        struct ref *dummy = get_refs_list_using_list(transport, 0);
+        free_refs(dummy);
     }
 
     count = 0;
@@ -1313,12 +1319,11 @@ static int push_refs_with_push(struct transport *transport,
                 {
                     reject_atomic_push(remote_refs, mirror);
                     string_list_clear(&cas_options, 0);
+                    strbuf_release(&buf);
                     return 0;
                 }
                 else
-                {
                     continue;
-                }
             case REF_STATUS_UPTODATE:
                 continue;
             default:; /* do nothing */

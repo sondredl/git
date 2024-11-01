@@ -4656,13 +4656,14 @@ static int error_failed_squash(struct repository  *r,
     return error_with_patch(r, commit, subject, subject_len, opts, 1, 0);
 }
 
-static int do_exec(struct repository *r, const char *command_line)
+static int do_exec(struct repository *r, const char *command_line, int quiet)
 {
     struct child_process cmd = CHILD_PROCESS_INIT;
     int                  dirty;
     int                  status;
 
-    fprintf(stderr, _("Executing: %s\n"), command_line);
+    if (!quiet)
+        fprintf(stderr, _("Executing: %s\n"), command_line);
     cmd.use_shell = 1;
     strvec_push(&cmd.args, command_line);
     strvec_push(&cmd.env, "GIT_CHERRY_PICK_HELP");
@@ -6112,11 +6113,9 @@ static int pick_commits(struct repository  *r,
             int   saved      = *end_of_arg;
 
             if (!opts->verbose)
-            {
                 term_clear_line();
-            }
             *end_of_arg = '\0';
-            res         = do_exec(r, arg);
+            res         = do_exec(r, arg, opts->quiet);
             *end_of_arg = saved;
 
             if (res)
@@ -7086,21 +7085,16 @@ static int make_script_with_merges(struct pretty_print_context *pp,
     int                  rebase_cousins = flags & TODO_LIST_REBASE_COUSINS;
     int                  root_with_onto = flags & TODO_LIST_ROOT_WITH_ONTO;
     int                  skipped_commit = 0;
-    struct strbuf        buf            = STRBUF_INIT;
-    struct strbuf        oneline        = STRBUF_INIT;
-    struct strbuf        label          = STRBUF_INIT;
-    struct commit_list  *commits        = NULL;
-    struct commit_list **tail           = &commits;
-    struct commit_list  *iter;
-    struct commit_list  *tips      = NULL;
-    struct commit_list **tips_tail = &tips;
+    struct strbuf        buf = STRBUF_INIT, oneline = STRBUF_INIT;
+    struct strbuf        label_from_message = STRBUF_INIT;
+    struct commit_list  *commits = NULL, **tail = &commits, *iter;
+    struct commit_list  *tips = NULL, **tips_tail = &tips;
     struct commit       *commit;
     struct oidmap        commit2todo = OIDMAP_INIT;
     struct string_entry *entry;
-    struct oidset        interesting = OIDSET_INIT;
-    struct oidset        child_seen  = OIDSET_INIT;
-    struct oidset        shown       = OIDSET_INIT;
-    struct label_state   state =
+    struct oidset        interesting = OIDSET_INIT, child_seen = OIDSET_INIT,
+                  shown = OIDSET_INIT;
+    struct label_state state =
         {OIDMAP_INIT, {NULL}, STRBUF_INIT, GIT_MAX_LABEL_LENGTH};
 
     int         abbr      = flags & TODO_LIST_ABBREVIATE_CMDS;
@@ -7115,6 +7109,7 @@ static int make_script_with_merges(struct pretty_print_context *pp,
     oidmap_init(&state.commit2label, 0);
     hashmap_init(&state.labels, labels_cmp, NULL, 0);
     strbuf_init(&state.buf, 32);
+    load_branch_decorations();
 
     if (revs->cmdline.nr && (revs->cmdline.rev[0].flags & BOTTOM))
     {
@@ -7186,22 +7181,16 @@ static int make_script_with_merges(struct pretty_print_context *pp,
             continue;
         }
 
-        /* Create a label */
-        strbuf_reset(&label);
+        /* Create a label from the commit message */
+        strbuf_reset(&label_from_message);
         if (skip_prefix(oneline.buf, "Merge ", &p1) && (p1 = strchr(p1, '\'')) && (p2 = strchr(++p1, '\'')))
-        {
-            strbuf_add(&label, p1, p2 - p1);
-        }
+            strbuf_add(&label_from_message, p1, p2 - p1);
         else if (skip_prefix(oneline.buf, "Merge pull request ",
                              &p1)
                  && (p1 = strstr(p1, " from ")))
-        {
-            strbuf_addstr(&label, p1 + strlen(" from "));
-        }
+            strbuf_addstr(&label_from_message, p1 + strlen(" from "));
         else
-        {
-            strbuf_addbuf(&label, &oneline);
-        }
+            strbuf_addbuf(&label_from_message, &oneline);
 
         strbuf_reset(&buf);
         strbuf_addf(&buf, "%s -C %s",
@@ -7210,6 +7199,14 @@ static int make_script_with_merges(struct pretty_print_context *pp,
         /* label the tips of merged branches */
         for (; to_merge; to_merge = to_merge->next)
         {
+            const char                   *label = label_from_message.buf;
+            const struct name_decoration *decoration =
+                get_name_decoration(&to_merge->item->object);
+
+            if (decoration)
+                skip_prefix(decoration->name, "refs/heads/",
+                            &label);
+
             oid = &to_merge->item->object.oid;
             strbuf_addch(&buf, ' ');
 
@@ -7224,7 +7221,7 @@ static int make_script_with_merges(struct pretty_print_context *pp,
                                             tips_tail)
                              ->next;
 
-            strbuf_addstr(&buf, label_oid(oid, label.buf, &state));
+            strbuf_addstr(&buf, label_oid(oid, label, &state));
         }
         strbuf_addf(&buf, " # %s", oneline.buf);
 
@@ -7366,7 +7363,7 @@ static int make_script_with_merges(struct pretty_print_context *pp,
     free_commit_list(commits);
     free_commit_list(tips);
 
-    strbuf_release(&label);
+    strbuf_release(&label_from_message);
     strbuf_release(&oneline);
     strbuf_release(&buf);
 
@@ -7798,16 +7795,7 @@ static int add_decorations_to_list(const struct commit            *commit,
  */
 static int todo_list_add_update_ref_commands(struct todo_list *todo_list)
 {
-    int                       i;
-    int                       res;
-    static struct string_list decorate_refs_exclude        = STRING_LIST_INIT_NODUP;
-    static struct string_list decorate_refs_exclude_config = STRING_LIST_INIT_NODUP;
-    static struct string_list decorate_refs_include        = STRING_LIST_INIT_NODUP;
-    struct decoration_filter  decoration_filter            = {
-                    .include_ref_pattern        = &decorate_refs_include,
-                    .exclude_ref_pattern        = &decorate_refs_exclude,
-                    .exclude_ref_config_pattern = &decorate_refs_exclude_config,
-    };
+    int                            i, res;
     struct todo_add_branch_context ctx = {
         .buf          = &todo_list->buf,
         .refs_to_oids = STRING_LIST_INIT_DUP,
@@ -7816,8 +7804,7 @@ static int todo_list_add_update_ref_commands(struct todo_list *todo_list)
     ctx.items_alloc = 2 * todo_list->nr + 1;
     ALLOC_ARRAY(ctx.items, ctx.items_alloc);
 
-    string_list_append(&decorate_refs_include, "refs/heads/");
-    load_ref_decorations(&decoration_filter, 0);
+    load_branch_decorations();
 
     for (i = 0; i < todo_list->nr;)
     {

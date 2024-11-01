@@ -601,15 +601,11 @@ static void init_pathspec_item(struct pathspec_item *item, unsigned flags,
             const char *hint_path;
 
             if (!have_git_dir())
-            {
                 die(_("'%s' is outside the directory tree"),
                     copyfrom);
-            }
-            hint_path = get_git_work_tree();
+            hint_path = repo_get_work_tree(the_repository);
             if (!hint_path)
-            {
-                hint_path = get_git_dir();
-            }
+                hint_path = repo_get_git_dir(the_repository);
             die(_("%s: '%s' is outside repository at '%s'"), elt,
                 copyfrom, absolute_path(hint_path));
         }

@@ -4,6 +4,7 @@
  * Based on git-am.sh by Junio C Hamano.
  */
 
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "abspath.h"
 #include "advice.h"
@@ -38,7 +39,6 @@
 #include "string-list.h"
 #include "pager.h"
 #include "path.h"
-#include "repository.h"
 #include "pretty.h"
 
 /**
@@ -1791,7 +1791,8 @@ static int run_apply(const struct am_state *state, const char *index_file)
     {
         /* Reload index as apply_all_patches() will have modified it. */
         discard_index(the_repository->index);
-        read_index_from(the_repository->index, index_file, get_git_dir());
+        read_index_from(the_repository->index, index_file,
+                        repo_get_git_dir(the_repository));
     }
 
     return 0;
@@ -1841,7 +1842,7 @@ static int fall_back_threeway(const struct am_state *state, const char *index_pa
     }
 
     discard_index(the_repository->index);
-    read_index_from(the_repository->index, index_path, get_git_dir());
+    read_index_from(the_repository->index, index_path, repo_get_git_dir(the_repository));
 
     if (write_index_as_tree(&bases[0], the_repository->index, index_path, 0, NULL))
     {
@@ -1938,10 +1939,10 @@ static void do_commit(const struct am_state *state)
         exit(1);
     }
 
-    if (write_index_as_tree(&tree, the_repository->index, get_index_file(), 0, NULL))
-    {
+    if (write_index_as_tree(&tree, the_repository->index,
+                            repo_get_index_file(the_repository),
+                            0, NULL))
         die(_("git write-tree failed to write a tree"));
-    }
 
     if (!repo_get_oid_commit(the_repository, "HEAD", &parent))
     {
@@ -2439,10 +2440,10 @@ static int clean_index(const struct object_id *head, const struct object_id *rem
         return -1;
     }
 
-    if (write_index_as_tree(&index, the_repository->index, get_index_file(), 0, NULL))
-    {
+    if (write_index_as_tree(&index, the_repository->index,
+                            repo_get_index_file(the_repository),
+                            0, NULL))
         return -1;
-    }
 
     index_tree = parse_tree_indirect(&index);
     if (!index_tree)
@@ -2726,7 +2727,10 @@ static int parse_opt_show_current_patch(const struct option *opt, const char *ar
     return 0;
 }
 
-int cmd_am(int argc, const char **argv, const char *prefix)
+int cmd_am(int                     argc,
+           const char            **argv,
+           const char             *prefix,
+           struct repository *repo UNUSED)
 {
     struct am_state  state;
     int              binary       = -1;

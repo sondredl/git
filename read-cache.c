@@ -31,6 +31,7 @@
 #include "path.h"
 #include "preload-index.h"
 #include "read-cache.h"
+#include "repository.h"
 #include "resolve-undo.h"
 #include "revision.h"
 #include "strbuf.h"
@@ -2585,10 +2586,9 @@ static unsigned long load_cache_entries_threaded(struct index_state *istate, con
 
         err = pthread_join(p->pthread, NULL);
         if (err)
-        {
             die(_("unable to join load_cache_entries thread: %s"), strerror(err));
-        }
         mem_pool_combine(istate->ce_mem_pool, p->ce_mem_pool);
+        free(p->ce_mem_pool);
         consumed += p->consumed;
     }
 
@@ -3699,10 +3699,9 @@ static int do_write_index(struct index_state *istate, struct tempfile *tempfile,
 
 out:
     if (f)
-    {
         free_hashfile(f);
-    }
     strbuf_release(&sb);
+    free(eoie_c);
     free(ieot);
     return ret;
 }
@@ -3785,8 +3784,6 @@ static int write_split_index(struct index_state *istate,
     return ret;
 }
 
-static const char *shared_index_expire = "2.weeks.ago";
-
 static unsigned long get_shared_index_expire_date(void)
 {
     static unsigned long shared_index_expire_date;
@@ -3794,10 +3791,18 @@ static unsigned long get_shared_index_expire_date(void)
 
     if (!shared_index_expire_date_prepared)
     {
+        const char *shared_index_expire = "2.weeks.ago";
+        char       *value               = NULL;
+
         repo_config_get_expiry(the_repository, "splitindex.sharedindexexpire",
-                               &shared_index_expire);
+                               &value);
+        if (value)
+            shared_index_expire = value;
+
         shared_index_expire_date          = approxidate(shared_index_expire);
         shared_index_expire_date_prepared = 1;
+
+        free(value);
     }
 
     return shared_index_expire_date;
@@ -3829,12 +3834,11 @@ static int should_delete_shared_index(const char *shared_index_path)
 static int clean_shared_index_files(const char *current_hex)
 {
     struct dirent *de;
-    DIR           *dir = opendir(get_git_dir());
+    DIR           *dir = opendir(repo_get_git_dir(the_repository));
 
     if (!dir)
-    {
-        return error_errno(_("unable to open git dir: %s"), get_git_dir());
-    }
+        return error_errno(_("unable to open git dir: %s"),
+                           repo_get_git_dir(the_repository));
 
     while ((de = readdir(dir)) != NULL)
     {
@@ -3944,10 +3948,8 @@ int write_locked_index(struct index_state *istate, struct lock_file *lock,
     int                 test_split_index_env;
     struct split_index *si = istate->split_index;
 
-    if (git_env_bool("GIT_TEST_CHECK_CACHE_TREE", 0))
-    {
-        cache_tree_verify(the_repository, istate);
-    }
+    if (git_env_bool("GIT_TEST_CHECK_CACHE_TREE", 0) && cache_tree_verify(the_repository, istate) < 0)
+        return -1;
 
     if ((flags & SKIP_IF_UNCHANGED) && !istate->cache_changed)
     {

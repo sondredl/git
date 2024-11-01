@@ -367,11 +367,9 @@ static int process_request(void)
     }
 
     if (client_hash_algo != hash_algo_by_ptr(the_repository->hash_algo))
-    {
-        die("mismatched object format: server %s; client %s\n",
+        die("mismatched object format: server %s; client %s",
             the_repository->hash_algo->name,
             hash_algos[client_hash_algo].name);
-    }
 
     command->command(the_repository, &reader);
 

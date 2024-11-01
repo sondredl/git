@@ -83,15 +83,13 @@ static void flush_bulk_checkin_packfile(struct bulk_checkin_packfile *state)
         close(fd);
     }
 
-    strbuf_addf(&packname, "%s/pack/pack-%s.", get_object_directory(),
+    strbuf_addf(&packname, "%s/pack/pack-%s.", repo_get_object_directory(the_repository),
                 hash_to_hex(hash));
     finish_tmp_packfile(&packname, state->pack_tmp_name,
                         state->written, state->nr_written,
                         &state->pack_idx_opts, hash);
     for (i = 0; i < state->nr_written; i++)
-    {
         free(state->written[i]);
-    }
 
 clear_exit:
     free(state->pack_tmp_name);
@@ -125,7 +123,7 @@ static void flush_batch_fsync(void)
      * to ensure that the data in each new object file is durable before
      * the final name is visible.
      */
-    strbuf_addf(&temp_path, "%s/bulk_fsync_XXXXXX", get_object_directory());
+    strbuf_addf(&temp_path, "%s/bulk_fsync_XXXXXX", repo_get_object_directory(the_repository));
     temp = xmks_tempfile(temp_path.buf);
     fsync_or_die(get_tempfile_fd(temp), get_tempfile_path(temp));
     delete_tempfile(&temp);

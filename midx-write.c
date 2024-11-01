@@ -759,7 +759,7 @@ static void write_midx_reverse_index(char *midx_name, unsigned char *midx_hash,
                                      struct write_midx_context *ctx)
 {
     struct strbuf buf = STRBUF_INIT;
-    const char   *tmp_file;
+    char         *tmp_file;
 
     trace2_region_enter("midx", "write_midx_reverse_index", the_repository);
 
@@ -774,6 +774,7 @@ static void write_midx_reverse_index(char *midx_name, unsigned char *midx_hash,
     }
 
     strbuf_release(&buf);
+    free(tmp_file);
 
     trace2_region_leave("midx", "write_midx_reverse_index", the_repository);
 }
@@ -1003,10 +1004,9 @@ static int write_midx_bitmap(const char          *midx_name,
         index[i] = &pdata->objects[i].idx;
     }
 
-    bitmap_writer_init(&writer, the_repository);
+    bitmap_writer_init(&writer, the_repository, pdata);
     bitmap_writer_show_progress(&writer, flags & MIDX_PROGRESS);
-    bitmap_writer_build_type_index(&writer, pdata, index,
-                                   pdata->nr_objects);
+    bitmap_writer_build_type_index(&writer, index);
 
     /*
      * bitmap_writer_finish expects objects in lex order, but pack_order
@@ -1027,15 +1027,12 @@ static int write_midx_bitmap(const char          *midx_name,
     }
 
     bitmap_writer_select_commits(&writer, commits, commits_nr);
-    ret = bitmap_writer_build(&writer, pdata);
+    ret = bitmap_writer_build(&writer);
     if (ret < 0)
-    {
         goto cleanup;
-    }
 
     bitmap_writer_set_checksum(&writer, midx_hash);
-    bitmap_writer_finish(&writer, index, pdata->nr_objects, bitmap_name,
-                         options);
+    bitmap_writer_finish(&writer, index, bitmap_name, options);
 
 cleanup:
     free(index);
@@ -1229,8 +1226,7 @@ static int write_midx_internal(const char         *object_dir,
 {
     struct strbuf             midx_name = STRBUF_INIT;
     unsigned char             midx_hash[GIT_MAX_RAWSZ];
-    uint32_t                  i;
-    uint32_t                  start_pack;
+    uint32_t                  i, start_pack;
     struct hashfile          *f = NULL;
     struct lock_file          lk;
     struct tempfile          *incr;
@@ -1246,25 +1242,17 @@ static int write_midx_internal(const char         *object_dir,
 
     ctx.incremental = !!(flags & MIDX_WRITE_INCREMENTAL);
     if (ctx.incremental && (flags & MIDX_WRITE_BITMAP))
-    {
         die(_("cannot write incremental MIDX with bitmap"));
-    }
 
     if (ctx.incremental)
-    {
         strbuf_addf(&midx_name,
                     "%s/pack/multi-pack-index.d/tmp_midx_XXXXXX",
                     object_dir);
-    }
     else
-    {
         get_midx_filename(&midx_name, object_dir);
-    }
     if (safe_create_leading_directories(midx_name.buf))
-    {
         die_errno(_("unable to create leading directories of %s"),
                   midx_name.buf);
-    }
 
     if (!packs_to_include || ctx.incremental)
     {
@@ -1285,13 +1273,9 @@ static int write_midx_internal(const char         *object_dir,
              * present.
              */
             if (ctx.incremental)
-            {
                 ctx.base_midx = m;
-            }
             else if (!packs_to_include)
-            {
                 ctx.m = m;
-            }
         }
     }
 
@@ -1318,13 +1302,9 @@ static int write_midx_internal(const char         *object_dir,
 
     ctx.pack_paths_checked = 0;
     if (flags & MIDX_PROGRESS)
-    {
         ctx.progress = start_delayed_progress(_("Adding packfiles to multi-pack-index"), 0);
-    }
     else
-    {
         ctx.progress = NULL;
-    }
 
     ctx.to_include = packs_to_include;
 
@@ -1348,17 +1328,13 @@ static int write_midx_internal(const char         *object_dir,
              * corresponding bitmap (or one wasn't requested).
              */
             if (!want_bitmap)
-            {
                 clear_midx_files_ext(object_dir, "bitmap", NULL);
-            }
             goto cleanup;
         }
     }
 
     if (ctx.incremental && !ctx.nr)
-    {
         goto cleanup; /* nothing to do */
-    }
 
     if (preferred_pack_name)
     {
@@ -1375,10 +1351,8 @@ static int write_midx_internal(const char         *object_dir,
         }
 
         if (ctx.preferred_pack_idx == -1)
-        {
             warning(_("unknown preferred pack: '%s'"),
                     preferred_pack_name);
-        }
     }
     else if (ctx.nr && (flags & (MIDX_WRITE_REV_INDEX | MIDX_WRITE_BITMAP)))
     {
@@ -1386,9 +1360,7 @@ static int write_midx_internal(const char         *object_dir,
         ctx.preferred_pack_idx    = 0;
 
         if (packs_to_drop && packs_to_drop->nr)
-        {
             BUG("cannot write a MIDX bitmap during expiration");
-        }
 
         /*
          * set a preferred pack when writing a bitmap to ensure that
@@ -1445,13 +1417,9 @@ static int write_midx_internal(const char         *object_dir,
     for (i = 0; i < ctx.entries_nr; i++)
     {
         if (ctx.entries[i].offset > 0x7fffffff)
-        {
             ctx.num_large_offsets++;
-        }
         if (ctx.entries[i].offset > 0xffffffff)
-        {
             ctx.large_offsets_needed = 1;
-        }
     }
 
     QSORT(ctx.info, ctx.nr, pack_info_compare);
@@ -1515,9 +1483,7 @@ static int write_midx_internal(const char         *object_dir,
     for (i = 0; i < ctx.nr; i++)
     {
         if (ctx.info[i].expired)
-        {
             continue;
-        }
         pack_name_concat_len += strlen(ctx.info[i].pack_name) + 1;
         bitmapped_packs_concat_len += 2 * sizeof(uint32_t);
     }
@@ -1533,16 +1499,26 @@ static int write_midx_internal(const char         *object_dir,
         {
             uint32_t perm = ctx.pack_perm[preferred->orig_pack_int_id];
             if (perm == PACK_EXPIRED)
-            {
                 warning(_("preferred pack '%s' is expired"),
                         preferred_pack_name);
-            }
         }
     }
 
     if (pack_name_concat_len % MIDX_CHUNK_ALIGNMENT)
-    {
         pack_name_concat_len += MIDX_CHUNK_ALIGNMENT - (pack_name_concat_len % MIDX_CHUNK_ALIGNMENT);
+
+    if (ctx.nr - dropped_packs == 0)
+    {
+        error(_("no pack files to index."));
+        result = 1;
+        goto cleanup;
+    }
+
+    if (!ctx.entries_nr)
+    {
+        if (flags & MIDX_WRITE_BITMAP)
+            warning(_("refusing to write multi-pack .bitmap without any objects"));
+        flags &= ~(MIDX_WRITE_REV_INDEX | MIDX_WRITE_BITMAP);
     }
 
     if (ctx.incremental)
@@ -1575,22 +1551,6 @@ static int write_midx_internal(const char         *object_dir,
         f = hashfd(get_lock_file_fd(&lk), get_lock_file_path(&lk));
     }
 
-    if (ctx.nr - dropped_packs == 0)
-    {
-        error(_("no pack files to index."));
-        result = 1;
-        goto cleanup;
-    }
-
-    if (!ctx.entries_nr)
-    {
-        if (flags & MIDX_WRITE_BITMAP)
-        {
-            warning(_("refusing to write multi-pack .bitmap without any objects"));
-        }
-        flags &= ~(MIDX_WRITE_REV_INDEX | MIDX_WRITE_BITMAP);
-    }
-
     cf = init_chunkfile(f);
 
     add_chunk(cf, MIDX_CHUNKID_PACKNAMES, pack_name_concat_len,
@@ -1605,12 +1565,10 @@ static int write_midx_internal(const char         *object_dir,
               write_midx_object_offsets);
 
     if (ctx.large_offsets_needed)
-    {
         add_chunk(cf, MIDX_CHUNKID_LARGEOFFSETS,
                   st_mult(ctx.num_large_offsets,
                           MIDX_CHUNK_LARGE_OFFSET_WIDTH),
                   write_midx_large_offsets);
-    }
 
     if (flags & (MIDX_WRITE_REV_INDEX | MIDX_WRITE_BITMAP))
     {
@@ -1631,9 +1589,7 @@ static int write_midx_internal(const char         *object_dir,
     free_chunkfile(cf);
 
     if (flags & MIDX_WRITE_REV_INDEX && git_env_bool("GIT_TEST_MIDX_WRITE_REV", 0))
-    {
         write_midx_reverse_index(midx_name.buf, midx_hash, &ctx);
-    }
 
     if (flags & MIDX_WRITE_BITMAP)
     {
@@ -1642,9 +1598,7 @@ static int write_midx_internal(const char         *object_dir,
         uint32_t            commits_nr;
 
         if (!ctx.entries_nr)
-        {
             BUG("cannot write a bitmap without any objects");
-        }
 
         prepare_midx_packing_data(&pdata, &ctx);
 
@@ -1694,9 +1648,7 @@ static int write_midx_internal(const char         *object_dir,
         }
 
         if (link_midx_to_chain(ctx.base_midx) < 0)
-        {
             return -1;
-        }
 
         get_split_midx_filename_ext(&final_midx_name, object_dir,
                                     midx_hash, MIDX_EXT_MIDX);
@@ -1706,6 +1658,8 @@ static int write_midx_internal(const char         *object_dir,
             error_errno(_("unable to rename new multi-pack-index layer"));
             return -1;
         }
+
+        strbuf_release(&final_midx_name);
 
         keep_hashes[ctx.num_multi_pack_indexes_before] =
             xstrdup(hash_to_hex(midx_hash));
@@ -1719,9 +1673,7 @@ static int write_midx_internal(const char         *object_dir,
         }
 
         for (i = 0; i < ctx.num_multi_pack_indexes_before + 1; i++)
-        {
             fprintf(get_lock_file_fp(&lk), "%s\n", keep_hashes[i]);
-        }
     }
     else
     {
@@ -1730,14 +1682,10 @@ static int write_midx_internal(const char         *object_dir,
     }
 
     if (ctx.m || ctx.base_midx)
-    {
         close_object_store(the_repository->objects);
-    }
 
     if (commit_lock_file(&lk) < 0)
-    {
         die_errno(_("could not write multi-pack-index"));
-    }
 
     clear_midx_files(object_dir, keep_hashes,
                      ctx.num_multi_pack_indexes_before + 1,

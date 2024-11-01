@@ -204,7 +204,18 @@ int  git_config_from_blob_oid(config_fn_t fn, const char *name,
 void git_config_push_parameter(const char *text);
 void git_config_push_env(const char *spec);
 int  git_config_from_parameters(config_fn_t fn, void *data);
-void read_early_config(config_fn_t cb, void *data);
+
+/*
+ * Read config when the Git directory has not yet been set up. In case
+ * `the_repository` has not yet been set up, try to discover the Git
+ * directory to read the configuration from.
+ */
+void read_early_config(struct repository *repo, config_fn_t cb, void *data);
+
+/*
+ * Read config but only enumerate system and global settings.
+ * Omit any repo-local, worktree-local, or command-line settings.
+ */
 void read_very_early_config(config_fn_t cb, void *data);
 
 /**
@@ -688,7 +699,7 @@ int repo_config_get_split_index(struct repository *r);
 int repo_config_get_max_percent_split_change(struct repository *r);
 
 /* This dies if the configured or default date is in the future */
-int repo_config_get_expiry(struct repository *r, const char *key, const char **output);
+int repo_config_get_expiry(struct repository *r, const char *key, char **output);
 
 /* parse either "this many days" integer, or "5.days.ago" approxidate */
 int repo_config_get_expiry_in_days(struct repository *r, const char *key,

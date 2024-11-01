@@ -195,6 +195,7 @@ static int promisor_remote_config(const char *var, const char *value,
             return 0;
         }
 
+        FREE_AND_NULL(r->partial_clone_filter);
         return git_config_string(&r->partial_clone_filter, var, value);
     }
 
@@ -239,7 +240,8 @@ void promisor_remote_clear(struct promisor_remote_config *config)
     while (config->promisors)
     {
         struct promisor_remote *r = config->promisors;
-        config->promisors         = config->promisors->next;
+        free(r->partial_clone_filter);
+        config->promisors = config->promisors->next;
         free(r);
     }
 

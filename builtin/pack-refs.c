@@ -1,16 +1,19 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
 #include "parse-options.h"
 #include "refs.h"
-#include "repository.h"
 #include "revision.h"
 
 static char const *const pack_refs_usage[] = {
     N_("git pack-refs [--all] [--no-prune] [--auto] [--include <pattern>] [--exclude <pattern>]"),
     NULL};
 
-int cmd_pack_refs(int argc, const char **argv, const char *prefix)
+int cmd_pack_refs(int                     argc,
+                  const char            **argv,
+                  const char             *prefix,
+                  struct repository *repo UNUSED)
 {
     struct ref_exclusions excludes       = REF_EXCLUSIONS_INIT;
     struct string_list    included_refs  = STRING_LIST_INIT_NODUP;

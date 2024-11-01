@@ -288,7 +288,7 @@ static void start_fetch_loose(struct transfer_request *request)
     {
         fprintf(stderr, "Unable to start GET request\n");
         repo->can_update_info_refs = 0;
-        release_http_object_request(obj_req);
+        release_http_object_request(&obj_req);
         release_request(request);
     }
 }
@@ -395,7 +395,7 @@ static void start_put(struct transfer_request *request)
     /* Set it up */
     git_deflate_init(&stream, zlib_compression_level);
     size = git_deflate_bound(&stream, len + hdrlen);
-    strbuf_init(&request->buffer.buf, size);
+    strbuf_grow(&request->buffer.buf, size);
     request->buffer.posn = 0;
 
     /* Compress it */
@@ -463,13 +463,15 @@ static void start_move(struct transfer_request *request)
 
     if (start_active_slot(slot))
     {
-        request->slot  = slot;
-        request->state = RUN_MOVE;
+        request->slot    = slot;
+        request->state   = RUN_MOVE;
+        request->headers = dav_headers;
     }
     else
     {
         request->state = ABORTED;
         FREE_AND_NULL(request->url);
+        curl_slist_free_all(dav_headers);
     }
 }
 
@@ -555,6 +557,8 @@ static void release_request(struct transfer_request *request)
     }
 
     free(request->url);
+    free(request->dest);
+    strbuf_release(&request->buffer.buf);
     free(request);
 }
 
@@ -645,48 +649,35 @@ static void finish_request(struct transfer_request *request)
             }
         }
 
+        release_http_object_request(&obj_req);
+
         /* Try fetching packed if necessary */
         if (request->obj->flags & LOCAL)
         {
-            release_http_object_request(obj_req);
             release_request(request);
         }
         else
-        {
             start_fetch_packed(request);
-        }
-    }
-    else if (request->state == RUN_FETCH_PACKED)
-    {
-        int fail = 1;
-        if (request->curl_result != CURLE_OK)
-        {
-            fprintf(stderr, "Unable to get pack file %s\n%s",
-                    request->url, curl_errorstr);
-        }
-        else
-        {
-            preq = (struct http_pack_request *)request->userData;
 
-            if (preq)
+        if (preq)
+        {
+            if (finish_http_pack_request(preq) == 0)
             {
-                if (finish_http_pack_request(preq) == 0)
-                {
-                    fail = 0;
-                }
-                release_http_pack_request(preq);
+                fail = 0;
             }
+            release_http_pack_request(preq);
         }
-        if (fail)
-        {
-            repo->can_update_info_refs = 0;
-        }
-        else
-        {
-            http_install_packfile(request->target, &repo->packs);
-        }
-        release_request(request);
     }
+    if (fail)
+    {
+        repo->can_update_info_refs = 0;
+    }
+    else
+    {
+        http_install_packfile(request->target, &repo->packs);
+    }
+    release_request(request);
+}
 }
 
 static int is_running_queue;
@@ -744,12 +735,10 @@ static void add_fetch_request(struct object *obj)
     }
 
     obj->flags |= FETCHING;
-    request            = xmalloc(sizeof(*request));
-    request->obj       = obj;
-    request->url       = NULL;
-    request->lock      = NULL;
-    request->headers   = NULL;
-    request->state     = NEED_FETCH;
+    CALLOC_ARRAY(request, 1);
+    request->obj   = obj;
+    request->state = NEED_FETCH;
+    strbuf_init(&request->buffer.buf, 0);
     request->next      = request_queue_head;
     request_queue_head = request;
 
@@ -785,12 +774,11 @@ static int add_send_request(struct object *obj, struct remote_lock *lock)
     }
 
     obj->flags |= PUSHING;
-    request            = xmalloc(sizeof(*request));
-    request->obj       = obj;
-    request->url       = NULL;
-    request->lock      = lock;
-    request->headers   = NULL;
-    request->state     = NEED_PUSH;
+    CALLOC_ARRAY(request, 1);
+    request->obj   = obj;
+    request->lock  = lock;
+    request->state = NEED_PUSH;
+    strbuf_init(&request->buffer.buf, 0);
     request->next      = request_queue_head;
     request_queue_head = request;
 
@@ -1051,6 +1039,7 @@ static struct remote_lock *lock_remote(const char *path, long timeout)
             result = XML_Parse(parser, in_buffer.buf,
                                in_buffer.len, 1);
             free(ctx.name);
+            free(ctx.cdata);
             if (result != XML_STATUS_OK)
             {
                 fprintf(stderr, "XML error: %s\n",
@@ -1362,6 +1351,7 @@ static void remote_ls(const char *path, int flags,
             result = XML_Parse(parser, in_buffer.buf,
                                in_buffer.len, 1);
             free(ctx.name);
+            free(ctx.cdata);
 
             if (result != XML_STATUS_OK)
             {
@@ -1378,6 +1368,7 @@ static void remote_ls(const char *path, int flags,
     }
 
     free(ls.path);
+    free(ls.dentry_name);
     free(url);
     strbuf_release(&out_buffer.buf);
     strbuf_release(&in_buffer);
@@ -1593,11 +1584,13 @@ static int get_delta(struct rev_info *revs, struct remote_lock *lock)
 
     while (objects)
     {
+        struct object_list *next = objects->next;
+
         if (!(objects->item->flags & UNINTERESTING))
-        {
             count += add_send_request(objects->item, lock);
-        }
-        objects = objects->next;
+
+        free(objects);
+        objects = next;
     }
 
     return count;
@@ -1624,6 +1617,7 @@ static int update_remote(const struct object_id *oid, struct remote_lock *lock)
     {
         run_active_slot(slot);
         strbuf_release(&out_buffer.buf);
+        curl_slist_free_all(dav_headers);
         if (results.curl_result != CURLE_OK)
         {
             fprintf(stderr,
@@ -1636,6 +1630,7 @@ static int update_remote(const struct object_id *oid, struct remote_lock *lock)
     else
     {
         strbuf_release(&out_buffer.buf);
+        curl_slist_free_all(dav_headers);
         fprintf(stderr, "Unable to start PUT request\n");
         return 0;
     }
@@ -1755,6 +1750,7 @@ static void update_remote_info_refs(struct remote_lock *lock)
                         results.curl_result, results.http_code);
             }
         }
+        curl_slist_free_all(dav_headers);
     }
     strbuf_release(&buffer.buf);
 }
@@ -1989,8 +1985,7 @@ int cmd_main(int argc, const char **argv)
     int                      rc = 0;
     int                      i;
     int                      new_refs;
-    struct ref              *ref;
-    struct ref              *local_refs;
+    struct ref              *ref, *local_refs = NULL;
 
     CALLOC_ARRAY(repo, 1);
 
@@ -2329,9 +2324,8 @@ int cmd_main(int argc, const char **argv)
 
 cleanup:
     if (info_ref_lock)
-    {
         unlock_remote(info_ref_lock);
-    }
+    free(repo->url);
     free(repo);
 
     http_cleanup();
@@ -2343,6 +2337,9 @@ cleanup:
         release_request(request);
         request = next_request;
     }
+
+    refspec_clear(&rs);
+    free_refs(local_refs);
 
     return rc;
 }

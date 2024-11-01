@@ -1,8 +1,8 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
-#include "repository.h"
 #include "config.h"
 #include "attr.h"
 #include "object.h"
@@ -1290,9 +1290,8 @@ static void write_reused_pack_one(struct packed_git *reuse_packfile,
         fixup = find_reused_offset(offset) - find_reused_offset(base_offset);
         if (fixup)
         {
-            unsigned char ofs_header[10];
-            unsigned      i;
-            unsigned      ofs_len;
+            unsigned char ofs_header[MAX_PACK_OBJECT_HEADER];
+            unsigned      i, ofs_len;
             off_t         ofs = offset - base_offset - fixup;
 
             len = encode_in_pack_object_header(header, sizeof(header),
@@ -1436,28 +1435,54 @@ static void write_reused_pack(struct bitmapped_pack *reuse_packfile,
 
         for (offset = 0; offset < BITS_IN_EWORD; ++offset)
         {
+            uint32_t pack_pos;
             if ((word >> offset) == 0)
-            {
                 break;
-            }
 
             offset += ewah_bit_ctz64(word >> offset);
             if (pos + offset < reuse_packfile->bitmap_pos)
-            {
                 continue;
-            }
             if (pos + offset >= reuse_packfile->bitmap_pos + reuse_packfile->bitmap_nr)
-            {
                 goto done;
+
+            if (reuse_packfile->bitmap_pos)
+            {
+                /*
+                 * When doing multi-pack reuse on a
+                 * non-preferred pack, translate bit positions
+                 * from the MIDX pseudo-pack order back to their
+                 * pack-relative positions before attempting
+                 * reuse.
+                 */
+                struct multi_pack_index *m = reuse_packfile->from_midx;
+                uint32_t                 midx_pos;
+                off_t                    pack_ofs;
+
+                if (!m)
+                    BUG("non-zero bitmap position without MIDX");
+
+                midx_pos = pack_pos_to_midx(m, pos + offset);
+                pack_ofs = nth_midxed_offset(m, midx_pos);
+
+                if (offset_to_pack_pos(reuse_packfile->p,
+                                       pack_ofs, &pack_pos)
+                    < 0)
+                    BUG("could not find expected object at offset %" PRIuMAX " in pack %s",
+                        (uintmax_t)pack_ofs,
+                        pack_basename(reuse_packfile->p));
             }
-            /*
-             * Can use bit positions directly, even for MIDX
-             * bitmaps. See comment in try_partial_reuse()
-             * for why.
-             */
-            write_reused_pack_one(reuse_packfile->p,
-                                  pos + offset - reuse_packfile->bitmap_pos,
-                                  f, pack_start, &w_curs);
+            else
+            {
+                /*
+                 * Can use bit positions directly, even for MIDX
+                 * bitmaps. See comment in try_partial_reuse()
+                 * for why.
+                 */
+                pack_pos = pos + offset;
+            }
+
+            write_reused_pack_one(reuse_packfile->p, pack_pos, f,
+                                  pack_start, &w_curs);
             display_progress(progress_state, ++written);
         }
     }
@@ -1627,10 +1652,10 @@ static void write_pack_file(void)
             if (write_bitmap_index)
             {
                 bitmap_writer_init(&bitmap_writer,
-                                   the_repository);
+                                   the_repository, &to_pack);
                 bitmap_writer_set_checksum(&bitmap_writer, hash);
                 bitmap_writer_build_type_index(&bitmap_writer,
-                                               &to_pack, written_list, nr_written);
+                                               written_list);
             }
 
             if (cruft)
@@ -1655,12 +1680,10 @@ static void write_pack_file(void)
                 bitmap_writer_select_commits(&bitmap_writer,
                                              indexed_commits,
                                              indexed_commits_nr);
-                if (bitmap_writer_build(&bitmap_writer, &to_pack) < 0)
-                {
+                if (bitmap_writer_build(&bitmap_writer) < 0)
                     die(_("failed to write bitmap index"));
-                }
                 bitmap_writer_finish(&bitmap_writer,
-                                     written_list, nr_written,
+                                     written_list,
                                      tmpname.buf, write_bitmap_options);
                 bitmap_writer_free(&bitmap_writer);
                 write_bitmap_index = 0;
@@ -4779,7 +4802,7 @@ static int add_loose_object(const struct object_id *oid, const char *path,
  */
 static void add_unreachable_loose_objects(void)
 {
-    for_each_loose_file_in_objdir(get_object_directory(),
+    for_each_loose_file_in_objdir(repo_get_object_directory(the_repository),
                                   add_loose_object,
                                   NULL, NULL, NULL);
 }
@@ -5212,7 +5235,10 @@ static int option_parse_cruft_expiration(const struct option *opt UNUSED,
     return 0;
 }
 
-int cmd_pack_objects(int argc, const char **argv, const char *prefix)
+int cmd_pack_objects(int                     argc,
+                     const char            **argv,
+                     const char             *prefix,
+                     struct repository *repo UNUSED)
 {
     int                                use_internal_rev_list = 0;
     int                                shallow               = 0;
@@ -5670,6 +5696,7 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
 cleanup:
     clear_packing_data(&to_pack);
     list_objects_filter_release(&filter_options);
+    string_list_clear(&keep_pack_list, 0);
     strvec_clear(&rp);
 
     return 0;

@@ -12,6 +12,9 @@
 #include "sigchain.h"
 #include "strbuf.h"
 #include "urlmatch.h"
+#include "git-compat-util.h"
+#include "trace2.h"
+#include "repository.h"
 
 void credential_init(struct credential *c)
 {
@@ -293,18 +296,38 @@ static char *credential_ask_one(const char *what, struct credential *c,
     return xstrdup(r);
 }
 
-static void credential_getpass(struct credential *c)
+static int credential_getpass(struct credential *c)
 {
-    if (!c->username)
+    int   interactive;
+    char *value;
+    if (!git_config_get_maybe_bool("credential.interactive", &interactive) && !interactive)
     {
+        trace2_data_intmax("credential", the_repository,
+                           "interactive/skipped", 1);
+        return -1;
+    }
+    if (!git_config_get_string("credential.interactive", &value))
+    {
+        int same = !strcmp(value, "never");
+        free(value);
+        if (same)
+        {
+            trace2_data_intmax("credential", the_repository,
+                               "interactive/skipped", 1);
+            return -1;
+        }
+    }
+
+    trace2_region_enter("credential", "interactive", the_repository);
+    if (!c->username)
         c->username = credential_ask_one("Username", c,
                                          PROMPT_ASKPASS | PROMPT_ECHO);
-    }
     if (!c->password)
-    {
         c->password = credential_ask_one("Password", c,
                                          PROMPT_ASKPASS);
-    }
+    trace2_region_leave("credential", "interactive", the_repository);
+
+    return 0;
 }
 
 int credential_has_capability(const struct credential_capability *capa,
@@ -635,11 +658,8 @@ void credential_fill(struct credential *c, int all_capabilities)
         }
     }
 
-    credential_getpass(c);
-    if (!c->username && !c->password && !c->credential)
-    {
+    if (credential_getpass(c) || (!c->username && !c->password && !c->credential))
         die("unable to get password from user");
-    }
 }
 
 void credential_approve(struct credential *c)

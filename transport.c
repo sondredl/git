@@ -225,13 +225,13 @@ static int fetch_refs_from_bundle(struct transport     *transport,
     }
 
     if (!data->get_refs_from_bundle_called)
-    {
         get_refs_from_bundle_inner(transport);
-    }
     ret                  = unbundle(the_repository, &data->header, data->fd,
                                     &extra_index_pack_args,
                    fetch_pack_fsck_objects() ? VERIFY_BUNDLE_FSCK : 0);
     transport->hash_algo = data->header.hash_algo;
+
+    strvec_clear(&extra_index_pack_args);
     return ret;
 }
 
@@ -415,17 +415,15 @@ static struct ref *handshake(struct transport *transport, int for_push,
     switch (data->version)
     {
         case protocol_v2:
+            if ((!transport->server_options || !transport->server_options->nr) && transport->remote->server_options.nr)
+                transport->server_options = &transport->remote->server_options;
             if (server_feature_v2("session-id", &server_sid))
-            {
                 trace2_data_string("transfer", NULL, "server-sid", server_sid);
-            }
             if (must_list_refs)
-            {
                 get_remote_refs(data->fd[1], &reader, &refs, for_push,
                                 options,
                                 transport->server_options,
                                 transport->stateless_rpc);
-            }
             break;
         case protocol_v1:
         case protocol_v0:
@@ -507,7 +505,7 @@ static int fetch_refs_via_pack(struct transport *transport,
     struct git_transport_data *data = transport->data;
     struct ref                *refs = NULL;
     struct fetch_pack_args     args;
-    struct ref                *refs_tmp = NULL;
+    struct ref                *refs_tmp = NULL, **to_fetch_dup = NULL;
 
     memset(&args, 0, sizeof(args));
     args.uploadpack      = data->options.uploadpack;
@@ -583,6 +581,14 @@ static int fetch_refs_via_pack(struct transport *transport,
         goto cleanup;
     }
 
+    /*
+     * Create a shallow copy of `sought` so that we can free all of its entries.
+     * This is because `fetch_pack()` will modify the array to evict some
+     * entries, but won't free those.
+     */
+    DUP_ARRAY(to_fetch_dup, to_fetch, nr_heads);
+    to_fetch = to_fetch_dup;
+
     refs = fetch_pack(&args, data->fd,
                       refs_tmp ? refs_tmp : transport->remote_refs,
                       to_fetch, nr_heads, &data->shallow,
@@ -614,6 +620,7 @@ cleanup:
     }
     data->conn = NULL;
 
+    free(to_fetch_dup);
     free_refs(refs_tmp);
     free_refs(refs);
     list_objects_filter_release(&args.filter_options);
@@ -1179,7 +1186,14 @@ static int disconnect_git(struct transport *transport)
         finish_connect(data->conn);
     }
 
+    if (data->options.negotiation_tips)
+    {
+        oid_array_clear(data->options.negotiation_tips);
+        free(data->options.negotiation_tips);
+    }
     list_objects_filter_release(&data->options.filter_options);
+    oid_array_clear(&data->extra_have);
+    oid_array_clear(&data->shallow);
     free(data);
     return 0;
 }
@@ -1345,6 +1359,18 @@ int is_transport_allowed(const char *type, int from_user)
     }
 
     BUG("invalid protocol_allow_config type");
+}
+
+int parse_transport_option(const char *var, const char *value,
+                           struct string_list *transport_options)
+{
+    if (!value)
+        return config_error_nonbool(var);
+    if (!*value)
+        string_list_clear(transport_options, 0);
+    else
+        string_list_append(transport_options, value);
+    return 0;
 }
 
 void transport_check_allowed(const char *type)

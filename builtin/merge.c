@@ -5,8 +5,9 @@
  *
  * Based on git-merge.sh by Junio C Hamano.
  */
-
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
+
 #include "abspath.h"
 #include "advice.h"
 #include "config.h"
@@ -17,6 +18,7 @@
 #include "object-name.h"
 #include "parse-options.h"
 #include "lockfile.h"
+#include "repository.h"
 #include "run-command.h"
 #include "hook.h"
 #include "diff.h"
@@ -840,10 +842,10 @@ static int read_tree_trivial(struct object_id *common, struct object_id *head,
 
 static void write_tree_trivial(struct object_id *oid)
 {
-    if (write_index_as_tree(oid, the_repository->index, get_index_file(), 0, NULL))
-    {
+    if (write_index_as_tree(oid, the_repository->index,
+                            repo_get_index_file(the_repository),
+                            0, NULL))
         die(_("git write-tree failed to write a tree"));
-    }
 }
 
 static int try_merge_strategy(const char *strategy, struct commit_list *common,
@@ -922,15 +924,15 @@ static int try_merge_strategy(const char *strategy, struct commit_list *common,
         }
         if (write_locked_index(the_repository->index, &lock,
                                COMMIT_LOCK | SKIP_IF_UNCHANGED))
-        {
-            die(_("unable to write %s"), get_index_file());
-        }
+            die(_("unable to write %s"), repo_get_index_file(the_repository));
         return clean ? 0 : 1;
     }
-
-    return try_merge_command(the_repository,
-                             strategy, xopts.nr, xopts.v,
-                             common, head_arg, remoteheads);
+    else
+    {
+        return try_merge_command(the_repository,
+                                 strategy, xopts.nr, xopts.v,
+                                 common, head_arg, remoteheads);
+    }
 }
 
 static void count_diff_files(struct diff_queue_struct *q,
@@ -1019,7 +1021,7 @@ static void write_merge_heads(struct commit_list * /*remoteheads*/);
 static void prepare_to_commit(struct commit_list *remoteheads)
 {
     struct strbuf msg        = STRBUF_INIT;
-    const char   *index_file = get_index_file();
+    const char   *index_file = repo_get_index_file(the_repository);
 
     if (!no_verify)
     {
@@ -1027,25 +1029,20 @@ static void prepare_to_commit(struct commit_list *remoteheads)
 
         if (run_commit_hook(0 < option_edit, index_file, &invoked_hook,
                             "pre-merge-commit", NULL))
-        {
             abort_commit(remoteheads, NULL);
-        }
         /*
          * Re-read the index as pre-merge-commit hook could have updated it,
          * and write it out as a tree.  We must do this before we invoke
          * the editor and after we invoke run_status above.
          */
         if (invoked_hook)
-        {
             discard_index(the_repository->index);
-        }
     }
-    read_index_from(the_repository->index, index_file, get_git_dir());
+    read_index_from(the_repository->index, index_file,
+                    repo_get_git_dir(the_repository));
     strbuf_addbuf(&msg, &merge_msg);
     if (squash)
-    {
         BUG("the control must not reach here under --squash");
-    }
     if (0 < option_edit)
     {
         strbuf_addch(&msg, '\n');
@@ -1057,40 +1054,28 @@ static void prepare_to_commit(struct commit_list *remoteheads)
         strbuf_commented_addf(&msg, comment_line_str,
                               _(merge_editor_comment));
         if (cleanup_mode == COMMIT_MSG_CLEANUP_SCISSORS)
-        {
             strbuf_commented_addf(&msg, comment_line_str,
                                   _(scissors_editor_comment));
-        }
         else
-        {
             strbuf_commented_addf(&msg, comment_line_str,
                                   _(no_scissors_editor_comment), comment_line_str);
-        }
     }
     if (signoff)
-    {
         append_signoff(&msg, ignored_log_message_bytes(msg.buf, msg.len), 0);
-    }
     write_merge_heads(remoteheads);
     write_file_buf(git_path_merge_msg(the_repository), msg.buf, msg.len);
-    if (run_commit_hook(0 < option_edit, get_index_file(), NULL,
-                        "prepare-commit-msg",
+    if (run_commit_hook(0 < option_edit, repo_get_index_file(the_repository),
+                        NULL, "prepare-commit-msg",
                         git_path_merge_msg(the_repository), "merge", NULL))
-    {
         abort_commit(remoteheads, NULL);
-    }
     if (0 < option_edit)
     {
         if (launch_editor(git_path_merge_msg(the_repository), NULL, NULL))
-        {
             abort_commit(remoteheads, NULL);
-        }
     }
 
-    if (!no_verify && run_commit_hook(0 < option_edit, get_index_file(), NULL, "commit-msg", git_path_merge_msg(the_repository), NULL))
-    {
+    if (!no_verify && run_commit_hook(0 < option_edit, repo_get_index_file(the_repository), NULL, "commit-msg", git_path_merge_msg(the_repository), NULL))
         abort_commit(remoteheads, NULL);
-    }
 
     read_merge_msg(&msg);
     cleanup_message(&msg, cleanup_mode, 0);
@@ -1553,7 +1538,10 @@ static int merging_a_throwaway_tag(struct commit *commit)
     return is_throwaway_tag;
 }
 
-int cmd_merge(int argc, const char **argv, const char *prefix)
+int cmd_merge(int                     argc,
+              const char            **argv,
+              const char             *prefix,
+              struct repository *repo UNUSED)
 {
     struct object_id    result_tree;
     struct object_id    stash;
@@ -1657,7 +1645,7 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
         }
 
         /* Invoke 'git reset --merge' */
-        ret = cmd_reset(nargc, nargv, prefix);
+        ret = cmd_reset(nargc, nargv, prefix, the_repository);
 
         if (!is_null_oid(&stash_oid))
         {
@@ -1698,7 +1686,7 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
         }
 
         /* Invoke 'git commit' */
-        ret = cmd_commit(nargc, nargv, prefix);
+        ret = cmd_commit(nargc, nargv, prefix, the_repository);
         goto done;
     }
 

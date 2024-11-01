@@ -1455,6 +1455,9 @@ void reset_parsed_attributes(void)
     {
         next = drv->next;
         free((void *)drv->name);
+        free((void *)drv->smudge);
+        free((void *)drv->clean);
+        free((void *)drv->process);
         free(drv);
     }
     user_convert      = NULL;

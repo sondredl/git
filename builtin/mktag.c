@@ -1,3 +1,4 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "gettext.h"
 #include "hex.h"
@@ -75,7 +76,10 @@ static int verify_object_in_tag(struct object_id *tagged_oid, const int *tagged_
     return ret;
 }
 
-int cmd_mktag(int argc, const char **argv, const char *prefix)
+int cmd_mktag(int                     argc,
+              const char            **argv,
+              const char             *prefix,
+              struct repository *repo UNUSED)
 {
     static struct option builtin_mktag_options[] = {
         OPT_BOOL(0, "strict", &option_strict,

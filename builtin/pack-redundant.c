@@ -5,11 +5,12 @@
  * This file is licensed under the GPL v2.
  *
  */
+#define USE_THE_REPOSITORY_VARIABLE
 
 #include "builtin.h"
 #include "gettext.h"
 #include "hex.h"
-#include "repository.h"
+
 #include "packfile.h"
 #include "object-store-ll.h"
 
@@ -74,6 +75,16 @@ static inline void llist_init(struct llist **list)
     *list          = xmalloc(sizeof(struct llist));
     (*list)->front = (*list)->back = NULL;
     (*list)->size                  = 0;
+}
+
+static void llist_free(struct llist *list)
+{
+    for (struct llist_item *i = list->front, *next; i; i = next)
+    {
+        next = i->next;
+        llist_item_put(i);
+    }
+    free(list);
 }
 
 static struct llist *llist_copy(struct llist *list)
@@ -243,6 +254,15 @@ static inline struct pack_list *pack_list_insert(struct pack_list **pl,
     p->next = *pl;
     *pl     = p;
     return p;
+}
+
+static void pack_list_free(struct pack_list *pl)
+{
+    for (struct pack_list *next; pl; pl = next)
+    {
+        next = pl->next;
+        free(pl);
+    }
 }
 
 static inline size_t pack_list_size(struct pack_list *pl)
@@ -511,7 +531,8 @@ static void minimize(struct pack_list **min)
     /* return if there are no objects missing from the unique set */
     if (missing->size == 0)
     {
-        free(missing);
+        llist_free(missing);
+        pack_list_free(non_unique);
         return;
     }
 
@@ -528,12 +549,12 @@ static void minimize(struct pack_list **min)
 
     while (non_unique)
     {
+        struct pack_list *next;
+
         /* sort the non_unique packs, greater size of remaining_objects first */
         sort_pack_list(&non_unique);
         if (non_unique->remaining_objects->size == 0)
-        {
             break;
-        }
 
         pack_list_insert(min, non_unique);
 
@@ -542,8 +563,14 @@ static void minimize(struct pack_list **min)
             llist_sorted_difference_inplace(pl->remaining_objects, non_unique->remaining_objects);
         }
 
-        non_unique = non_unique->next;
+        next = non_unique->next;
+        free(non_unique);
+        non_unique = next;
     }
+
+    pack_list_free(non_unique);
+    llist_free(unique_pack_objects);
+    llist_free(missing);
 }
 
 static void load_all_objects(void)
@@ -685,15 +712,12 @@ static void load_all(void)
     }
 }
 
-int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED)
+int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED, struct repository *repo UNUSED)
 {
     int               i;
     int               i_still_use_this = 0;
-    struct pack_list *min              = NULL;
-    struct pack_list *red;
-    struct pack_list *pl;
+    struct pack_list *min              = NULL, *red, *pl;
     struct llist     *ignore;
-    struct object_id *oid;
     char              buf[GIT_MAX_HEXSZ + 2]; /* hex hash + \n + \0 */
 
     if (argc == 2 && !strcmp(argv[1], "-h"))
@@ -778,14 +802,12 @@ int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED)
     llist_init(&ignore);
     if (!isatty(0))
     {
+        struct object_id oid;
         while (fgets(buf, sizeof(buf), stdin))
         {
-            oid = xmalloc(sizeof(*oid));
-            if (get_oid_hex(buf, oid))
-            {
+            if (get_oid_hex(buf, &oid))
                 die("Bad object ID on stdin: %s", buf);
-            }
-            llist_insert_sorted_unique(ignore, oid, NULL);
+            llist_insert_sorted_unique(ignore, &oid, NULL);
         }
     }
     llist_sorted_difference_inplace(all_objects, ignore);
@@ -834,5 +856,8 @@ int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED)
                 (unsigned long)pack_set_bytecount(red) / (1024 * 1024));
     }
 
+    pack_list_free(red);
+    pack_list_free(min);
+    llist_free(ignore);
     return 0;
 }

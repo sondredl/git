@@ -1,6 +1,7 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "abspath.h"
-#include "repository.h"
+
 #include "config.h"
 #include "environment.h"
 #include "gettext.h"
@@ -408,17 +409,29 @@ static void show_one_alternate_ref(const struct object_id *oid,
 
 static void write_head_info(void)
 {
-    static struct oidset seen = OIDSET_INIT;
+    static struct oidset seen            = OIDSET_INIT;
+    struct strvec        excludes_vector = STRVEC_INIT;
+    const char         **exclude_patterns;
+
+    /*
+     * We need access to the reference names both with and without their
+     * namespace and thus cannot use `refs_for_each_namespaced_ref()`. We
+     * thus have to adapt exclude patterns to carry the namespace prefix
+     * ourselves.
+     */
+    exclude_patterns = get_namespaced_exclude_patterns(
+        hidden_refs_to_excludes(&hidden_refs),
+        get_git_namespace(), &excludes_vector);
 
     refs_for_each_fullref_in(get_main_ref_store(the_repository), "",
-                             hidden_refs_to_excludes(&hidden_refs),
-                             show_ref_cb, &seen);
+                             exclude_patterns, show_ref_cb, &seen);
     for_each_alternate_ref(show_one_alternate_ref, &seen);
+
     oidset_clear(&seen);
+    strvec_clear(&excludes_vector);
+
     if (!sent_capabilities)
-    {
         show_ref("capabilities^{}", null_oid());
-    }
 
     advertise_shallow_grafts(1);
 
@@ -432,6 +445,7 @@ struct command
 {
     struct command         *next;
     const char             *error_string;
+    char                   *error_string_owned;
     struct ref_push_report *report;
     unsigned int            skip_update : 1,
         did_not_exist : 1,
@@ -1281,13 +1295,9 @@ static int read_proc_receive_report(struct packet_reader *reader,
 
         /* first try searching at our hint, falling back to all refs */
         if (hint)
-        {
             hint = find_command_by_refname(hint, refname);
-        }
         if (!hint)
-        {
             hint = find_command_by_refname(commands, refname);
-        }
         if (!hint)
         {
             strbuf_addf(errmsg, "proc-receive reported status on unknown ref: %s\n",
@@ -1306,13 +1316,9 @@ static int read_proc_receive_report(struct packet_reader *reader,
         if (!strcmp(head, "ng"))
         {
             if (p)
-            {
-                hint->error_string = xstrdup(p);
-            }
+                hint->error_string = hint->error_string_owned = xstrdup(p);
             else
-            {
                 hint->error_string = "failed";
-            }
             code = -1;
             continue;
         }
@@ -1624,7 +1630,7 @@ static int                     update_shallow_ref(struct command *cmd, struct sh
 }
 
 /*
- * NEEDSWORK: we should consolidate various implementions of "are we
+ * NEEDSWORK: we should consolidate various implementations of "are we
  * on an unborn branch?" test into one, and make the unified one more
  * robust. !get_sha1() based check used here and elsewhere would not
  * allow us to tell an unborn branch from corrupt ref, for example.
@@ -2488,6 +2494,8 @@ static void free_commands(struct command *commands)
     {
         struct command *next = commands->next;
 
+        ref_push_report_free(commands->report);
+        free(commands->error_string_owned);
         free(commands);
         commands = next;
     }
@@ -3066,7 +3074,10 @@ static int delete_only(struct command *commands)
     return 1;
 }
 
-int cmd_receive_pack(int argc, const char **argv, const char *prefix)
+int cmd_receive_pack(int                     argc,
+                     const char            **argv,
+                     const char             *prefix,
+                     struct repository *repo UNUSED)
 {
     int                  advertise_refs = 0;
     struct command      *commands;

@@ -388,7 +388,7 @@ static struct ref *parse_info_refs(struct discovery *heads)
     }
     else
     {
-        free(ref);
+        free_one_ref(ref);
     }
 
     return refs;

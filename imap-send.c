@@ -31,9 +31,6 @@
 #include "parse-options.h"
 #include "setup.h"
 #include "strbuf.h"
-#if defined(NO_OPENSSL) && !defined(HAVE_OPENSSL_CSPRNG)
-typedef void *SSL;
-#endif
 #ifdef USE_CURL_FOR_IMAP_SEND
     #include "http.h"
 #endif
@@ -83,8 +80,12 @@ struct imap_server_conf
 
 struct imap_socket
 {
-    int  fd[2];
+    int fd[2];
+#if defined(NO_OPENSSL) && !defined(HAVE_OPENSSL_CSPRNG)
+    void *ssl;
+#else
     SSL *ssl;
+#endif
 };
 
 struct imap_buffer
@@ -202,9 +203,9 @@ static void socket_perror(const char *func, struct imap_socket *sock, int ret)
 }
 
 #ifdef NO_OPENSSL
-static int ssl_socket_connect(struct imap_socket *sock       UNUSED,
-                              const struct imap_server_conf *cfg,
-                              int use_tls_only               UNUSED)
+static int ssl_socket_connect(struct imap_socket *sock           UNUSED,
+                              const struct imap_server_conf *cfg UNUSED,
+                              int use_tls_only                   UNUSED)
 {
     fprintf(stderr, "SSL requested but SSL support not compiled in\n");
     return -1;

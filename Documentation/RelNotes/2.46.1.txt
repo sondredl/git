@@ -34,4 +34,42 @@ Fixes since Git 2.46
 
  * Perforce tests have been updated.
 
+ * The credential helper to talk to OSX keychain sometimes sent
+   garbage bytes after the username, which has been corrected.
+
+ * A recent update broke "git ls-remote" used outside a repository,
+   which has been corrected.
+
+ * "git config --value=foo --fixed-value section.key newvalue" barfed
+   when the existing value in the configuration file used the
+   valueless true syntax, which has been corrected.
+
+ * "git reflog expire" failed to honor annotated tags when computing
+   reachable commits.
+
+ * A flakey test and incorrect calls to strtoX() functions have been
+   fixed.
+
+ * Follow-up on 2.45.1 regression fix.
+
+ * "git rev-list ... | git diff-tree -p --remerge-diff --stdin" should
+   behave more or less like "git log -p --remerge-diff" but instead it
+   crashed, forgetting to prepare a temporary object store needed.
+
+ * The patch parser in "git patch-id" has been tightened to avoid
+   getting confused by lines that look like a patch header in the log
+   message.
+
+ * "git bundle unbundle" outside a repository triggered a BUG()
+   unnecessarily, which has been corrected.
+
+ * The code forgot to discard unnecessary in-core commit buffer data
+   for commits that "git log --skip=<number>" traversed but omitted
+   from the output, which has been corrected.
+
+ * "git verify-pack" and "git index-pack" started dying outside a
+   repository, which has been corrected.
+
+ * A corner case bug in "git stash" was fixed.
+
 Also contains minor documentation updates and code clean-ups.

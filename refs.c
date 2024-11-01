@@ -24,7 +24,7 @@
 #include "submodule.h"
 #include "worktree.h"
 #include "strvec.h"
-#include "repository.h"
+#include "repo-settings.h"
 #include "setup.h"
 #include "sigchain.h"
 #include "date.h"
@@ -846,15 +846,11 @@ int expand_ref(struct repository *repo, const char *str, int len,
         if (r)
         {
             if (!refs_found++)
-            {
                 *ref = xstrdup(r);
-            }
-            if (!warn_ambiguous_refs)
-            {
+            if (!repo_settings_get_warn_ambiguous_refs(repo))
                 break;
-            }
         }
-        else if ((flag & REF_ISSYMREF) && strcmp(fullref.buf, "HEAD") != 0)
+        else if ((flag & REF_ISSYMREF) && strcmp(fullref.buf, "HEAD"))
         {
             warning(_("ignoring dangling symref %s"), fullref.buf);
         }
@@ -889,33 +885,21 @@ int repo_dwim_log(struct repository *r, const char *str, int len,
                                       RESOLVE_REF_READING,
                                       oid ? &hash : NULL, NULL);
         if (!ref)
-        {
             continue;
-        }
         if (refs_reflog_exists(refs, path.buf))
-        {
             it = path.buf;
-        }
-        else if (strcmp(ref, path.buf) != 0 && refs_reflog_exists(refs, ref))
-        {
+        else if (strcmp(ref, path.buf) && refs_reflog_exists(refs, ref))
             it = ref;
-        }
         else
-        {
             continue;
-        }
         if (!logs_found++)
         {
             *log = xstrdup(it);
             if (oid)
-            {
                 oidcpy(oid, &hash);
-            }
         }
-        if (!warn_ambiguous_refs)
-        {
+        if (!repo_settings_get_warn_ambiguous_refs(r))
             break;
-        }
     }
     strbuf_release(&path);
     free(last_branch);
@@ -1130,7 +1114,8 @@ static char *normalize_reflog_message(const char *msg)
     return strbuf_detach(&sb, NULL);
 }
 
-int should_autocreate_reflog(const char *refname)
+int should_autocreate_reflog(enum log_refs_config log_all_ref_updates,
+                             const char          *refname)
 {
     switch (log_all_ref_updates)
     {
@@ -1777,6 +1762,19 @@ const char **hidden_refs_to_excludes(const struct strvec *hide_refs)
     return hide_refs->v;
 }
 
+const char **get_namespaced_exclude_patterns(const char **exclude_patterns,
+                                             const char *namespace,
+                                             struct strvec *out)
+{
+    if (!namespace || !*namespace || !exclude_patterns || !*exclude_patterns)
+        return exclude_patterns;
+
+    for (size_t i = 0; exclude_patterns[i]; i++)
+        strvec_pushf(out, "%s%s", namespace, exclude_patterns[i]);
+
+    return out->v;
+}
+
 const char *find_descendant_ref(const char               *dirname,
                                 const struct string_list *extras,
                                 const struct string_list *skip)
@@ -1911,11 +1909,19 @@ int refs_for_each_namespaced_ref(struct ref_store *refs,
                                  const char      **exclude_patterns,
                                  each_ref_fn fn, void *cb_data)
 {
-    struct strbuf buf = STRBUF_INIT;
+    struct strvec namespaced_exclude_patterns = STRVEC_INIT;
+    struct strbuf prefix                      = STRBUF_INIT;
     int           ret;
-    strbuf_addf(&buf, "%srefs/", get_git_namespace());
-    ret = do_for_each_ref(refs, buf.buf, exclude_patterns, fn, 0, 0, cb_data);
-    strbuf_release(&buf);
+
+    exclude_patterns = get_namespaced_exclude_patterns(exclude_patterns,
+                                                       get_git_namespace(),
+                                                       &namespaced_exclude_patterns);
+
+    strbuf_addf(&prefix, "%srefs/", get_git_namespace());
+    ret = do_for_each_ref(refs, prefix.buf, exclude_patterns, fn, 0, 0, cb_data);
+
+    strvec_clear(&namespaced_exclude_patterns);
+    strbuf_release(&prefix);
     return ret;
 }
 
@@ -2002,11 +2008,11 @@ int refs_for_each_fullref_in_prefixes(struct ref_store *ref_store,
                                       const char **exclude_patterns,
                                       each_ref_fn fn, void *cb_data)
 {
-    struct string_list       prefixes = STRING_LIST_INIT_DUP;
+    struct strvec            namespaced_exclude_patterns = STRVEC_INIT;
+    struct string_list       prefixes                    = STRING_LIST_INIT_DUP;
     struct string_list_item *prefix;
     struct strbuf            buf = STRBUF_INIT;
-    int                      ret = 0;
-    int                      namespace_len;
+    int                      ret = 0, namespace_len;
 
     find_longest_prefixes(&prefixes, patterns);
 
@@ -2016,18 +2022,21 @@ int refs_for_each_fullref_in_prefixes(struct ref_store *ref_store,
     }
     namespace_len = buf.len;
 
+    exclude_patterns = get_namespaced_exclude_patterns(exclude_patterns,
+                                                       namespace,
+                                                       &namespaced_exclude_patterns);
+
     for_each_string_list_item(prefix, &prefixes)
     {
         strbuf_addstr(&buf, prefix->string);
         ret = refs_for_each_fullref_in(ref_store, buf.buf,
                                        exclude_patterns, fn, cb_data);
         if (ret)
-        {
             break;
-        }
         strbuf_setlen(&buf, namespace_len);
     }
 
+    strvec_clear(&namespaced_exclude_patterns);
     string_list_clear(&prefixes, 0);
     strbuf_release(&buf);
     return ret;
@@ -2789,9 +2798,10 @@ struct do_for_each_reflog_help
     void           *cb_data;
 };
 
-static int do_for_each_reflog_helper(const char *refname, const char *referent,
+static int do_for_each_reflog_helper(const char                 *refname,
+                                     const char *referent        UNUSED,
                                      const struct object_id *oid UNUSED,
-                                     int                         flags,
+                                     int flags                   UNUSED,
                                      void                       *cb_data)
 {
     struct do_for_each_reflog_help *hp = cb_data;

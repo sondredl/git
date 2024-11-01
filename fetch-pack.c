@@ -2083,9 +2083,7 @@ static void receive_packfile_uris(struct packet_reader *reader,
     while (packet_reader_read(reader) == PACKET_READ_NORMAL)
     {
         if (reader->pktlen < the_hash_algo->hexsz || reader->line[the_hash_algo->hexsz] != ' ')
-        {
-            die("expected '<hash> <uri>', got: %s\n", reader->line);
-        }
+            die("expected '<hash> <uri>', got: %s", reader->line);
 
         string_list_append(uris, reader->line);
     }
@@ -2356,7 +2354,7 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 
         string_list_append_nodup(pack_lockfiles,
                                  xstrfmt("%s/pack/pack-%s.keep",
-                                         get_object_directory(),
+                                         repo_get_object_directory(the_repository),
                                          packname));
     }
     string_list_clear(&packfile_uris, 0);
@@ -2808,28 +2806,20 @@ void negotiate_using_fetch(const struct oid_array   *negotiation_tips,
                 commit->object.flags |= COMMON;
                 generation = commit_graph_generation(commit);
                 if (generation < min_generation)
-                {
                     min_generation = generation;
-                }
             }
             in_vain  = 0;
             seen_ack = 1;
             oidset_insert(acked_commits, &common_oid);
         }
         if (received_ready)
-        {
             die(_("unexpected 'ready' from remote"));
-        }
         else
-        {
             do_check_stateless_delimiter(stateless_rpc, &reader);
-        }
         if (can_all_from_reach_with_flag(&nt_object_array, COMMON,
                                          REACH_SCRATCH, 0,
                                          min_generation))
-        {
             last_iteration = 1;
-        }
         trace2_region_leave_printf("negotiation", "round",
                                    the_repository, "%d",
                                    negotiation_round);
@@ -2837,7 +2827,10 @@ void negotiate_using_fetch(const struct oid_array   *negotiation_tips,
     trace2_region_leave("fetch-pack", "negotiate_using_fetch", the_repository);
     trace2_data_intmax("negotiate_using_fetch", the_repository,
                        "total_rounds", negotiation_round);
+
     clear_common_flag(acked_commits);
+    object_array_clear(&nt_object_array);
+    negotiator.release(&negotiator);
     strbuf_release(&req_buf);
 }
 

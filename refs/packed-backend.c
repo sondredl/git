@@ -1425,6 +1425,25 @@ int packed_refs_is_locked(struct ref_store *ref_store)
     return is_lock_file_locked(&refs->lock);
 }
 
+int packed_refs_size(struct ref_store *ref_store,
+                     size_t           *out)
+{
+    struct packed_ref_store *refs = packed_downcast(ref_store, REF_STORE_READ,
+                                                    "packed_refs_size");
+    struct stat              st;
+
+    if (stat(refs->path, &st) < 0)
+    {
+        if (errno != ENOENT)
+            return -1;
+        *out = 0;
+        return 0;
+    }
+
+    *out = st.st_size;
+    return 0;
+}
+
 /*
  * The packed-refs header line that we write out. Perhaps other traits
  * will be added later.
@@ -1981,8 +2000,8 @@ static struct ref_iterator *packed_reflog_iterator_begin(struct ref_store *ref_s
     return empty_ref_iterator_begin();
 }
 
-static int packed_fsck(struct ref_store    *ref_store,
-                       struct fsck_options *o)
+static int packed_fsck(struct ref_store *ref_store UNUSED,
+                       struct fsck_options *o      UNUSED)
 {
     return 0;
 }

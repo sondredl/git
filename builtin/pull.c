@@ -6,6 +6,7 @@
  * Fetch one or more remote refs and merge it/them into the current HEAD.
  */
 
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
@@ -93,7 +94,7 @@ static const char      *opt_squash;
 static const char      *opt_commit;
 static const char      *opt_edit;
 static const char      *cleanup_arg;
-static const char      *opt_ff;
+static char            *opt_ff;
 static const char      *opt_verify_signatures;
 static const char      *opt_verify;
 static int              opt_autostash = -1;
@@ -1195,7 +1196,10 @@ static void show_advice_pull_non_ff(void)
         "invocation.\n"));
 }
 
-int cmd_pull(int argc, const char **argv, const char *prefix)
+int cmd_pull(int                           argc,
+             const char                  **argv,
+             const char                   *prefix,
+             struct repository *repository UNUSED)
 {
     const char      *repo;
     const char     **refspecs;
@@ -1254,7 +1258,8 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
          */
         if (opt_rebase >= 0 && opt_ff && !strcmp(opt_ff, "--ff-only"))
         {
-            opt_ff = "--ff";
+            free(opt_ff);
+            opt_ff = xstrdup("--ff");
         }
     }
 
@@ -1408,7 +1413,8 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
         if (can_ff)
         {
             /* we can fast-forward this without invoking rebase */
-            opt_ff = "--ff-only";
+            free(opt_ff);
+            opt_ff = xstrdup("--ff-only");
             ret    = run_merge();
         }
         else

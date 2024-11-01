@@ -5,6 +5,7 @@
  *
  * Based on git-verify-tag.sh
  */
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
@@ -18,7 +19,10 @@ static const char *const verify_tag_usage[] = {
     N_("git verify-tag [-v | --verbose] [--format=<format>] [--raw] <tag>..."),
     NULL};
 
-int cmd_verify_tag(int argc, const char **argv, const char *prefix)
+int cmd_verify_tag(int                     argc,
+                   const char            **argv,
+                   const char             *prefix,
+                   struct repository *repo UNUSED)
 {
     int                 i                    = 1;
     int                 verbose              = 0;
@@ -73,9 +77,8 @@ int cmd_verify_tag(int argc, const char **argv, const char *prefix)
         }
 
         if (format.format)
-        {
             pretty_print_ref(name, &oid, &format);
-        }
     }
+    ref_format_clear(&format);
     return had_error;
 }

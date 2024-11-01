@@ -1,3 +1,5 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "../git-compat-util.h"
 #include "win32.h"
 #include <aclapi.h>
@@ -465,7 +467,8 @@ static enum hide_dotfiles_type hide_dotfiles                   = HIDE_DOTFILES_D
 static char                   *unset_environment_variables;
 
 int mingw_core_config(const char *var, const char *value,
-                      const struct config_context *ctx, void *cb)
+                      const struct config_context *ctx UNUSED,
+                      void *cb                         UNUSED)
 {
     if (!strcmp(var, "core.hidedotfiles"))
     {
@@ -684,7 +687,7 @@ static int set_hidden_flag(const wchar_t *path, int set)
     return -1;
 }
 
-int mingw_mkdir(const char *path, int mode)
+int mingw_mkdir(const char *path, int mode UNUSED)
 {
     int     ret;
     wchar_t wpath[MAX_PATH];
@@ -827,7 +830,7 @@ int mingw_open(const char *filename, int oflags, ...)
     return fd;
 }
 
-static BOOL WINAPI ctrl_ignore(DWORD type)
+static BOOL WINAPI ctrl_ignore(DWORD type UNUSED)
 {
     return TRUE;
 }
@@ -1018,7 +1021,7 @@ static inline void filetime_to_timespec(const FILETIME *ft, struct timespec *ts)
  */
 static int has_valid_directory_prefix(wchar_t *wfilename)
 {
-    int n = wcslen(wfilename);
+    size_t n = wcslen(wfilename);
 
     while (n > 0)
     {
@@ -1135,8 +1138,8 @@ static int do_lstat(int follow, const char *file_name, struct stat *buf)
  */
 static int do_stat_internal(int follow, const char *file_name, struct stat *buf)
 {
-    int  namelen;
-    char alt_name[PATH_MAX];
+    size_t namelen;
+    char   alt_name[PATH_MAX];
 
     if (!do_lstat(follow, file_name, buf))
         return 0;
@@ -1340,7 +1343,7 @@ int mkstemp(char *template)
     return git_mkstemp_mode(template, 0600);
 }
 
-int gettimeofday(struct timeval *tv, void *tz)
+int gettimeofday(struct timeval *tv, void *tz UNUSED)
 {
     FILETIME  ft;
     long long hnsec;
@@ -1540,7 +1543,8 @@ static const char *parse_interpreter(const char *cmd)
 {
     static char buf[100];
     char       *p, *opt;
-    int         n, fd;
+    ssize_t     n; /* read() can return negative values */
+    int         fd;
 
     /* don't even try a .exe */
     n = strlen(cmd);
@@ -1607,7 +1611,7 @@ static char *path_lookup(const char *cmd, int exe_only)
 {
     const char *path;
     char       *prog  = NULL;
-    int         len   = strlen(cmd);
+    size_t      len   = strlen(cmd);
     int         isexe = len >= 4 && !strcasecmp(cmd + len - 4, ".exe");
 
     if (strpbrk(cmd, "/\\"))
@@ -2247,7 +2251,7 @@ char *mingw_getenv(const char *name)
 #define GETENV_MAX_RETAIN 64
     static char *values[GETENV_MAX_RETAIN];
     static int   value_counter;
-    int          len_key, len_value;
+    size_t       len_key, len_value;
     wchar_t     *w_key;
     char        *value;
     wchar_t      w_value[32768];
@@ -2259,7 +2263,8 @@ char *mingw_getenv(const char *name)
     /* We cannot use xcalloc() here because that uses getenv() itself */
     w_key = calloc(len_key, sizeof(wchar_t));
     if (!w_key)
-        die("Out of memory, (tried to allocate %u wchar_t's)", len_key);
+        die("Out of memory, (tried to allocate %" PRIuMAX " wchar_t's)",
+            (uintmax_t)len_key);
     xutftowcs(w_key, name, len_key);
     /* GetEnvironmentVariableW() only sets the last error upon failure */
     SetLastError(ERROR_SUCCESS);
@@ -2275,7 +2280,8 @@ char *mingw_getenv(const char *name)
     /* We cannot use xcalloc() here because that uses getenv() itself */
     value = calloc(len_value, sizeof(char));
     if (!value)
-        die("Out of memory, (tried to allocate %u bytes)", len_value);
+        die("Out of memory, (tried to allocate %" PRIuMAX " bytes)",
+            (uintmax_t)len_value);
     xwcstoutf(value, w_value, len_value);
 
     /*
@@ -2293,7 +2299,7 @@ char *mingw_getenv(const char *name)
 
 int mingw_putenv(const char *namevalue)
 {
-    int      size;
+    size_t   size;
     wchar_t *wide, *equal;
     BOOL     result;
 
@@ -2303,7 +2309,8 @@ int mingw_putenv(const char *namevalue)
     size = strlen(namevalue) * 2 + 1;
     wide = calloc(size, sizeof(wchar_t));
     if (!wide)
-        die("Out of memory, (tried to allocate %u wchar_t's)", size);
+        die("Out of memory, (tried to allocate %" PRIuMAX " wchar_t's)",
+            (uintmax_t)size);
     xutftowcs(wide, namevalue, size);
     equal = wcschr(wide, L'=');
     if (!equal)
@@ -2554,7 +2561,7 @@ char *mingw_query_user_email(void)
     return get_extended_user_info(NameUserPrincipal);
 }
 
-struct passwd *getpwuid(int uid)
+struct passwd *getpwuid(int uid UNUSED)
 {
     static unsigned       initialized;
     static char           user_name[100];
@@ -2608,7 +2615,7 @@ static sig_handler_t timer_fn = SIG_DFL, sigint_fn = SIG_DFL;
  * length to call the signal handler.
  */
 
-static unsigned __stdcall ticktack(void *dummy)
+static unsigned __stdcall ticktack(void *dummy UNUSED)
 {
     while (WaitForSingleObject(timer_event, timer_interval) == WAIT_TIMEOUT)
     {
@@ -2660,7 +2667,7 @@ static inline int is_timeval_eq(const struct timeval *i1, const struct timeval *
     return i1->tv_sec == i2->tv_sec && i1->tv_usec == i2->tv_usec;
 }
 
-int setitimer(int type, struct itimerval *in, struct itimerval *out)
+int setitimer(int type UNUSED, struct itimerval *in, struct itimerval *out)
 {
     static const struct timeval zero;
     static int                  atexit_done;
@@ -3427,7 +3434,8 @@ static void maybe_redirect_std_handles(void)
  */
 int wmain(int argc, const wchar_t **wargv)
 {
-    int          i, maxlen, exit_status;
+    int          i, exit_status;
+    size_t       maxlen;
     char        *buffer, **save;
     const char **argv;
 

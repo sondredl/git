@@ -1,3 +1,4 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "entry.h"
@@ -129,7 +130,10 @@ static const char *const checkout_worker_usage[] = {
     N_("git checkout--worker [<options>]"),
     NULL};
 
-int cmd_checkout__worker(int argc, const char **argv, const char *prefix)
+int cmd_checkout__worker(int                     argc,
+                         const char            **argv,
+                         const char             *prefix,
+                         struct repository *repo UNUSED)
 {
     struct checkout state                     = CHECKOUT_INIT;
     struct option   checkout_worker_options[] = {

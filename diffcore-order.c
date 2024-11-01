@@ -12,12 +12,9 @@ static int    order_cnt;
 
 static void prepare_order(const char *orderfile)
 {
-    int           cnt;
-    int           pass;
+    int           cnt, pass;
     struct strbuf sb = STRBUF_INIT;
-    void         *map;
-    char         *cp;
-    char         *endp;
+    const char   *cp, *endp;
     ssize_t       sz;
 
     if (order)
@@ -27,49 +24,30 @@ static void prepare_order(const char *orderfile)
 
     sz = strbuf_read_file(&sb, orderfile, 0);
     if (sz < 0)
-    {
         die_errno(_("failed to read orderfile '%s'"), orderfile);
-    }
-    map  = strbuf_detach(&sb, NULL);
-    endp = (char *)map + sz;
+    endp = sb.buf + sz;
 
     for (pass = 0; pass < 2; pass++)
     {
         cnt = 0;
-        cp  = map;
+        cp  = sb.buf;
         while (cp < endp)
         {
-            char *ep;
+            const char *ep;
             for (ep = cp; ep < endp && *ep != '\n'; ep++)
-            {
                 ;
-            }
             /* cp to ep has one line */
             if (*cp == '\n' || *cp == '#')
-            {
                 ; /* comment */
-            }
             else if (pass == 0)
-            {
                 cnt++;
-            }
             else
             {
-                if (*ep == '\n')
-                {
-                    *ep        = 0;
-                    order[cnt] = cp;
-                }
-                else
-                {
-                    order[cnt] = xmemdupz(cp, ep - cp);
-                }
+                order[cnt] = xmemdupz(cp, ep - cp);
                 cnt++;
             }
             if (ep < endp)
-            {
                 ep++;
-            }
             cp = ep;
         }
         if (pass == 0)
@@ -78,6 +56,8 @@ static void prepare_order(const char *orderfile)
             ALLOC_ARRAY(order, cnt);
         }
     }
+
+    strbuf_release(&sb);
 }
 
 static int match_order(const char *path)

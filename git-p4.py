@@ -54,14 +54,14 @@ import time
 import zipfile
 import zlib
 
-# On python2.7 where raw_input() and input() are both availble,
+# On python2.7 where raw_input() and input() are both available,
 # we want raw_input's semantics, but aliased to input for python3
 # compatibility
 # support basestring in python3
 try:
     if raw_input and input:
         input = raw_input
-except:
+except BaseException:
     pass
 
 verbose = False
@@ -78,7 +78,8 @@ defaultFallbackMetadataEncoding = 'cp1252'
 p4_access_checked = False
 
 re_ko_keywords = re.compile(br'\$(Id|Header)(:[^$\n]+)?\$')
-re_k_keywords = re.compile(br'\$(Id|Header|Author|Date|DateTime|Change|File|Revision)(:[^$\n]+)?\$')
+re_k_keywords = re.compile(
+    br'\$(Id|Header|Author|Date|DateTime|Change|File|Revision)(:[^$\n]+)?\$')
 
 
 def format_size_human_readable(num):
@@ -146,7 +147,8 @@ def git_dir(path):
     """Return TRUE if the given path is a git directory (/path/to/dir/.git).
        This won't automatically add ".git" to a directory.
        """
-    d = read_pipe(["git", "--git-dir", path, "rev-parse", "--git-dir"], True).strip()
+    d = read_pipe(["git", "--git-dir", path, "rev-parse",
+                  "--git-dir"], True).strip()
     if not d or len(d) == 0:
         return None
     else:
@@ -178,7 +180,8 @@ def calcDiskFree():
     """Return free space in bytes on the disk of the given dirname."""
     if platform.system() == 'Windows':
         free_bytes = ctypes.c_ulonglong(0)
-        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(os.getcwd()), None, None, ctypes.pointer(free_bytes))
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(
+            os.getcwd()), None, None, ctypes.pointer(free_bytes))
         return free_bytes.value
     else:
         st = os.statvfs(os.getcwd())
@@ -250,9 +253,13 @@ defaulting to cp1252.""".format(self.input_string)
 
 encoding_fallback_warning_issued = False
 encoding_escape_warning_issued = False
+
+
 def metadata_stream_to_writable_bytes(s):
-    encodingStrategy = gitConfig('git-p4.metadataDecodingStrategy') or defaultMetadataDecodingStrategy
-    fallbackEncoding = gitConfig('git-p4.metadataFallbackEncoding') or defaultFallbackMetadataEncoding
+    encodingStrategy = gitConfig(
+        'git-p4.metadataDecodingStrategy') or defaultMetadataDecodingStrategy
+    fallbackEncoding = gitConfig(
+        'git-p4.metadataFallbackEncoding') or defaultFallbackMetadataEncoding
     if not isinstance(s, bytes):
         return s.encode('utf_8')
     if encodingStrategy == 'passthrough':
@@ -266,17 +273,22 @@ def metadata_stream_to_writable_bytes(s):
             global encoding_escape_warning_issued
             try:
                 if not encoding_fallback_warning_issued:
-                    print("\nCould not decode value as utf-8; using configured fallback encoding %s: %s" % (fallbackEncoding, s))
+                    print(
+                        "\nCould not decode value as utf-8; using configured fallback encoding %s: %s" %
+                        (fallbackEncoding, s))
                     print("\n(this warning is only displayed once during an import)")
                     encoding_fallback_warning_issued = True
                 return s.decode(fallbackEncoding).encode('utf_8')
             except Exception as exc:
                 if not encoding_escape_warning_issued:
-                    print("\nCould not decode value with configured fallback encoding %s; escaping bytes over 127: %s" % (fallbackEncoding, s))
+                    print(
+                        "\nCould not decode value with configured fallback encoding %s; escaping bytes over 127: %s" %
+                        (fallbackEncoding, s))
                     print("\n(this warning is only displayed once during an import)")
                     encoding_escape_warning_issued = True
                 escaped_bytes = b''
-                # bytes and strings work very differently in python2 vs python3...
+                # bytes and strings work very differently in python2 vs
+                # python3...
                 if str is bytes:
                     for byte in s:
                         byte_number = struct.unpack('>B', byte)[0]
@@ -289,7 +301,8 @@ def metadata_stream_to_writable_bytes(s):
                     for byte_number in s:
                         if byte_number > 127:
                             escaped_bytes += b'%'
-                            escaped_bytes += hex(byte_number).upper().encode()[2:]
+                            escaped_bytes += hex(
+                                byte_number).upper().encode()[2:]
                         else:
                             escaped_bytes += bytes([byte_number])
                 return escaped_bytes
@@ -304,14 +317,17 @@ def decode_path(path):
 
     encoding = gitConfig('git-p4.pathEncoding') or 'utf_8'
     if bytes is not str:
-        return path.decode(encoding, errors='replace') if isinstance(path, bytes) else path
+        return path.decode(
+            encoding, errors='replace') if isinstance(
+            path, bytes) else path
     else:
         try:
             path.decode('ascii')
-        except:
+        except BaseException:
             path = path.decode(encoding, errors='replace')
             if verbose:
-                print('Path with non-ASCII characters detected. Used {} to decode: {}'.format(encoding, path))
+                print(
+                    'Path with non-ASCII characters detected. Used {} to decode: {}'.format(encoding, path))
         return path
 
 
@@ -419,7 +435,7 @@ def p4_has_command(cmd):
        """
     real_cmd = p4_build_cmd(["help", cmd])
     p = subprocess.Popen(real_cmd, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE)
     p.communicate()
     return p.returncode == 0
 
@@ -475,8 +491,9 @@ def p4_check_access(min_expiration=1):
     results = p4CmdList(["login", "-s"])
 
     if len(results) == 0:
-        # should never get here: always get either some results, or a p4ExitCode
-        assert("could not parse response from perforce")
+        # should never get here: always get either some results, or a
+        # p4ExitCode
+        assert ("could not parse response from perforce")
 
     result = results[0]
 
@@ -497,7 +514,8 @@ def p4_check_access(min_expiration=1):
                 # ok to carry on
                 return
             else:
-                die_bad_access("perforce ticket expires in {0} seconds".format(expiry))
+                die_bad_access(
+                    "perforce ticket expires in {0} seconds".format(expiry))
 
         else:
             # account without a timeout - all ok
@@ -757,7 +775,8 @@ def parseDiffTreeEntry(entry):
 
     global _diff_tree_pattern
     if not _diff_tree_pattern:
-        _diff_tree_pattern = re.compile(r':(\d+) (\d+) (\w+) (\w+) ([A-Z])(\d+)?\t(.*?)((\t(.*))|$)')
+        _diff_tree_pattern = re.compile(
+            r':(\d+) (\d+) (\w+) (\w+) ([A-Z])(\d+)?\t(.*?)((\t(.*))|$)')
 
     match = _diff_tree_pattern.match(entry)
     if match:
@@ -859,7 +878,7 @@ def p4KeyWhichCanBeDirectlyDecoded(key):
 
 
 def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
-        errors_as_exceptions=False, *k, **kw):
+              errors_as_exceptions=False, *k, **kw):
 
     cmd = p4_build_cmd(["-G"] + cmd)
     if verbose:
@@ -889,15 +908,18 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
             entry = marshal.load(p4.stdout)
 
             if bytes is not str:
-                # Decode unmarshalled dict to use str keys and values. Special cases are handled below.
+                # Decode unmarshalled dict to use str keys and values. Special
+                # cases are handled below.
                 decoded_entry = {}
                 for key, value in entry.items():
                     key = key.decode()
-                    if isinstance(value, bytes) and p4KeyWhichCanBeDirectlyDecoded(key):
+                    if isinstance(
+                            value, bytes) and p4KeyWhichCanBeDirectlyDecoded(key):
                         value = value.decode()
                     decoded_entry[key] = value
                 # Parse out data if it's an error response
-                if decoded_entry.get('code') == 'error' and 'data' in decoded_entry:
+                if decoded_entry.get(
+                        'code') == 'error' and 'data' in decoded_entry:
                     decoded_entry['data'] = decoded_entry['data'].decode()
                 entry = decoded_entry
             if skip_info:
@@ -918,9 +940,11 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
             if len(result) > 0:
                 data = result[0].get('data')
                 if data:
-                    m = re.search(r'Too many rows scanned \(over (\d+)\)', data)
+                    m = re.search(
+                        r'Too many rows scanned \(over (\d+)\)', data)
                     if not m:
-                        m = re.search(r'Request too large \(over (\d+)\)', data)
+                        m = re.search(
+                            r'Request too large \(over (\d+)\)', data)
 
                     if m:
                         limit = int(m.group(1))
@@ -996,7 +1020,7 @@ def parseRevision(ref):
 
 def branchExists(ref):
     rev = read_pipe(["git", "rev-parse", "-q", "--verify", ref],
-                     ignore_error=True)
+                    ignore_error=True)
     return len(rev) > 0
 
 
@@ -1100,6 +1124,7 @@ def gitConfigList(key):
             _gitConfig[key] = []
     return _gitConfig[key]
 
+
 def fullP4Ref(incomingRef, importIntoRemotes=True):
     """Standardize a given provided p4 ref value to a full git ref:
          refs/foo/bar/branch -> use it exactly
@@ -1115,6 +1140,7 @@ def fullP4Ref(incomingRef, importIntoRemotes=True):
         prepend += "p4/"
     return prepend + incomingRef
 
+
 def shortP4Ref(incomingRef, importIntoRemotes=True):
     """Standardize to a "short ref" if possible:
          refs/foo/bar/branch -> ignore
@@ -1129,6 +1155,7 @@ def shortP4Ref(incomingRef, importIntoRemotes=True):
     if incomingRef.startswith("p4/"):
         return incomingRef[3:]
     return incomingRef
+
 
 def p4BranchesInGit(branchesAreInRemotes=True):
     """Find all the branches whose names start with "p4/", looking
@@ -1213,14 +1240,17 @@ def findUpstreamBranchPoint(head="HEAD"):
     return ["", settings]
 
 
-def createOrUpdateBranchesFromOrigin(localRefPrefix="refs/remotes/p4/", silent=True):
+def createOrUpdateBranchesFromOrigin(
+        localRefPrefix="refs/remotes/p4/",
+        silent=True):
     if not silent:
         print("Creating/updating branch(es) in %s based on origin branch(es)"
-               % localRefPrefix)
+              % localRefPrefix)
 
     originPrefix = "origin/p4/"
 
-    for line in read_pipe_lines(["git", "rev-parse", "--symbolic", "--remotes"]):
+    for line in read_pipe_lines(
+            ["git", "rev-parse", "--symbolic", "--remotes"]):
         line = line.strip()
         if (not line.startswith(originPrefix)) or line.endswith("HEAD"):
             continue
@@ -1229,7 +1259,8 @@ def createOrUpdateBranchesFromOrigin(localRefPrefix="refs/remotes/p4/", silent=T
         remoteHead = localRefPrefix + headName
         originHead = line
 
-        original = extractSettingsGitLog(extractLogMessageFromGitCommit(originHead))
+        original = extractSettingsGitLog(
+            extractLogMessageFromGitCommit(originHead))
         if 'depot-paths' not in original or 'change' not in original:
             continue
 
@@ -1239,21 +1270,22 @@ def createOrUpdateBranchesFromOrigin(localRefPrefix="refs/remotes/p4/", silent=T
                 print("creating %s" % remoteHead)
             update = True
         else:
-            settings = extractSettingsGitLog(extractLogMessageFromGitCommit(remoteHead))
+            settings = extractSettingsGitLog(
+                extractLogMessageFromGitCommit(remoteHead))
             if 'change' in settings:
                 if settings['depot-paths'] == original['depot-paths']:
                     originP4Change = int(original['change'])
                     p4Change = int(settings['change'])
                     if originP4Change > p4Change:
                         print("%s (%s) is newer than %s (%s). "
-                               "Updating p4 branch from origin."
-                               % (originHead, originP4Change,
+                              "Updating p4 branch from origin."
+                              % (originHead, originP4Change,
                                   remoteHead, p4Change))
                         update = True
                 else:
                     print("Ignoring: %s was imported from %s while "
-                           "%s was imported from %s"
-                           % (originHead, ','.join(original['depot-paths']),
+                          "%s was imported from %s"
+                          % (originHead, ','.join(original['depot-paths']),
                               remoteHead, ','.join(settings['depot-paths'])))
 
         if update:
@@ -1261,7 +1293,8 @@ def createOrUpdateBranchesFromOrigin(localRefPrefix="refs/remotes/p4/", silent=T
 
 
 def originP4BranchesExist():
-    return gitBranchExists("origin") or gitBranchExists("origin/p4") or gitBranchExists("origin/p4/master")
+    return gitBranchExists("origin") or gitBranchExists(
+        "origin/p4") or gitBranchExists("origin/p4/master")
 
 
 def p4ParseNumericChangeRange(parts):
@@ -1337,10 +1370,12 @@ def p4ChangesForPaths(depotPaths, changeRange, requestedBlockSize):
                 block_size = max(2, block_size // 2)
 
             if verbose:
-                print("block size error, retrying with block size {0}".format(block_size))
+                print(
+                    "block size error, retrying with block size {0}".format(block_size))
             continue
         except P4Exception as e:
-            die('Error retrieving changes description ({0})'.format(e.p4ExitCode))
+            die('Error retrieving changes description ({0})'.format(
+                e.p4ExitCode))
 
         # Insert changes in chronological order
         for entry in reversed(result):
@@ -1476,14 +1511,12 @@ class LargeFileSystem(object):
         assert False, "Method 'pushFile' required in " + self.__class__.__name__
 
     def hasLargeFileExtension(self, relPath):
-        return functools.reduce(
-            lambda a, b: a or b,
-            [relPath.endswith('.' + e) for e in gitConfigList('git-p4.largeFileExtensions')],
-            False
-        )
+        return functools.reduce(lambda a, b: a or b, [relPath.endswith(
+            '.' + e) for e in gitConfigList('git-p4.largeFileExtensions')], False)
 
     def generateTempFile(self, contents):
-        contentFile = tempfile.NamedTemporaryFile(prefix='git-p4-large-file', delete=False)
+        contentFile = tempfile.NamedTemporaryFile(
+            prefix='git-p4-large-file', delete=False)
         for d in contents:
             contentFile.write(d)
         contentFile.close()
@@ -1496,15 +1529,18 @@ class LargeFileSystem(object):
                 return True
         if gitConfigInt('git-p4.largeFileCompressedThreshold'):
             contentsSize = sum(len(d) for d in contents)
-            if contentsSize <= gitConfigInt('git-p4.largeFileCompressedThreshold'):
+            if contentsSize <= gitConfigInt(
+                    'git-p4.largeFileCompressedThreshold'):
                 return False
             contentTempFile = self.generateTempFile(contents)
-            compressedContentFile = tempfile.NamedTemporaryFile(prefix='git-p4-large-file', delete=True)
+            compressedContentFile = tempfile.NamedTemporaryFile(
+                prefix='git-p4-large-file', delete=True)
             with zipfile.ZipFile(compressedContentFile, mode='w') as zf:
                 zf.write(contentTempFile, compress_type=zipfile.ZIP_DEFLATED)
                 compressedContentsSize = zf.infolist()[0].compress_size
             os.remove(contentTempFile)
-            if compressedContentsSize > gitConfigInt('git-p4.largeFileCompressedThreshold'):
+            if compressedContentsSize > gitConfigInt(
+                    'git-p4.largeFileCompressedThreshold'):
                 return True
         return False
 
@@ -1526,9 +1562,11 @@ class LargeFileSystem(object):
         if git_mode == "120000":
             return (git_mode, contents)
 
-        if self.exceedsLargeFileThreshold(relPath, contents) or self.hasLargeFileExtension(relPath):
+        if self.exceedsLargeFileThreshold(
+                relPath, contents) or self.hasLargeFileExtension(relPath):
             contentTempFile = self.generateTempFile(contents)
-            pointer_git_mode, contents, localLargeFile = self.generatePointer(contentTempFile)
+            pointer_git_mode, contents, localLargeFile = self.generatePointer(
+                contentTempFile)
             if pointer_git_mode:
                 git_mode = pointer_git_mode
             if localLargeFile:
@@ -1541,7 +1579,9 @@ class LargeFileSystem(object):
                 if gitConfigBool('git-p4.largeFilePush'):
                     self.pushFile(localLargeFile)
                 if verbose:
-                    sys.stderr.write("%s moved to large file system (%s)\n" % (relPath, localLargeFile))
+                    sys.stderr.write(
+                        "%s moved to large file system (%s)\n" %
+                        (relPath, localLargeFile))
         return (git_mode, contents)
 
 
@@ -1557,17 +1597,23 @@ class MockLFS(LargeFileSystem):
             content = next(f)
             gitMode = '100644'
             pointerContents = 'pointer-' + content
-            localLargeFile = os.path.join(os.getcwd(), '.git', 'mock-storage', 'local', content[:-1])
+            localLargeFile = os.path.join(
+                os.getcwd(), '.git', 'mock-storage', 'local', content[:-1])
             return (gitMode, pointerContents, localLargeFile)
 
     def pushFile(self, localLargeFile):
         """The remote filename of the large file storage is the same as the
            local one but in a different directory.
            """
-        remotePath = os.path.join(os.path.dirname(localLargeFile), '..', 'remote')
+        remotePath = os.path.join(
+            os.path.dirname(localLargeFile), '..', 'remote')
         if not os.path.exists(remotePath):
             os.makedirs(remotePath)
-        shutil.copyfile(localLargeFile, os.path.join(remotePath, os.path.basename(localLargeFile)))
+        shutil.copyfile(
+            localLargeFile,
+            os.path.join(
+                remotePath,
+                os.path.basename(localLargeFile)))
 
 
 class GitLFS(LargeFileSystem):
@@ -1600,7 +1646,8 @@ class GitLFS(LargeFileSystem):
         # Git LFS removed the preamble in the output of the 'pointer' command
         # starting from version 1.2.0. Check for the preamble here to support
         # earlier versions.
-        # c.f. https://github.com/github/git-lfs/commit/da2935d9a739592bc775c98d8ef4df9c72ea3b43
+        # c.f.
+        # https://github.com/github/git-lfs/commit/da2935d9a739592bc775c98d8ef4df9c72ea3b43
         if pointerFile.startswith('Git LFS pointer for'):
             pointerFile = re.sub(r'Git LFS pointer for.*\n\n', '', pointerFile)
 
@@ -1616,7 +1663,8 @@ class GitLFS(LargeFileSystem):
             'objects', oid[:2], oid[2:4],
             oid,
         )
-        # LFS Spec states that pointer files should not have the executable bit set.
+        # LFS Spec states that pointer files should not have the executable bit
+        # set.
         gitMode = '100644'
         return (gitMode, pointerFile, localLargeFile)
 
@@ -1638,26 +1686,33 @@ class GitLFS(LargeFileSystem):
             ] +
             ['*.' + f.replace(' ', '[[:space:]]') + ' filter=lfs diff=lfs merge=lfs -text\n'
                 for f in sorted(gitConfigList('git-p4.largeFileExtensions'))
-            ] +
+             ] +
             ['/' + f.replace(' ', '[[:space:]]') + ' filter=lfs diff=lfs merge=lfs -text\n'
                 for f in sorted(self.largeFiles) if not self.hasLargeFileExtension(f)
-            ]
+             ]
         )
 
     def addLargeFile(self, relPath):
         LargeFileSystem.addLargeFile(self, relPath)
-        self.writeToGitStream('100644', '.gitattributes', self.generateGitAttributes())
+        self.writeToGitStream(
+            '100644',
+            '.gitattributes',
+            self.generateGitAttributes())
 
     def removeLargeFile(self, relPath):
         LargeFileSystem.removeLargeFile(self, relPath)
-        self.writeToGitStream('100644', '.gitattributes', self.generateGitAttributes())
+        self.writeToGitStream(
+            '100644',
+            '.gitattributes',
+            self.generateGitAttributes())
 
     def processContent(self, git_mode, relPath, contents):
         if relPath == '.gitattributes':
             self.baseGitAttributes = contents
             return (git_mode, self.generateGitAttributes())
         else:
-            return LargeFileSystem.processContent(self, git_mode, relPath, contents)
+            return LargeFileSystem.processContent(
+                self, git_mode, relPath, contents)
 
 
 class Command:
@@ -1719,10 +1774,12 @@ class P4UserMap:
             # git-p4.metadataDecodingStrategy=fallback, self.users dict values
             # are always bytes, ready to be written to git.
             emailbytes = metadata_stream_to_writable_bytes(output["Email"])
-            self.users[output["User"]] = output["FullName"] + b" <" + emailbytes + b">"
+            self.users[output["User"]] = output["FullName"] + \
+                b" <" + emailbytes + b">"
             self.emails[output["Email"]] = output["User"]
 
-        mapUserConfigRegex = re.compile(r"^\s*(\S+)\s*=\s*(.+)\s*<(\S+)>\s*$", re.VERBOSE)
+        mapUserConfigRegex = re.compile(
+            r"^\s*(\S+)\s*=\s*(.+)\s*<(\S+)>\s*$", re.VERBOSE)
         for mapUserConfig in gitConfigList("git-p4.mapUser"):
             mapUser = mapUserConfigRegex.findall(mapUserConfig)
             if mapUser and len(mapUser[0]) == 3:
@@ -1763,32 +1820,48 @@ class P4Submit(Command, P4UserMap):
         Command.__init__(self)
         P4UserMap.__init__(self)
         self.options = [
-                optparse.make_option("--origin", dest="origin"),
-                optparse.make_option("-M", dest="detectRenames", action="store_true"),
-                # preserve the user, requires relevant p4 permissions
-                optparse.make_option("--preserve-user", dest="preserveUser", action="store_true"),
-                optparse.make_option("--export-labels", dest="exportLabels", action="store_true"),
-                optparse.make_option("--dry-run", "-n", dest="dry_run", action="store_true"),
-                optparse.make_option("--prepare-p4-only", dest="prepare_p4_only", action="store_true"),
-                optparse.make_option("--conflict", dest="conflict_behavior",
-                                     choices=self.conflict_behavior_choices),
-                optparse.make_option("--branch", dest="branch"),
-                optparse.make_option("--shelve", dest="shelve", action="store_true",
-                                     help="Shelve instead of submit. Shelved files are reverted, "
-                                     "restoring the workspace to the state before the shelve"),
-                optparse.make_option("--update-shelve", dest="update_shelve", action="append", type="int",
-                                     metavar="CHANGELIST",
-                                     help="update an existing shelved changelist, implies --shelve, "
-                                           "repeat in-order for multiple shelved changelists"),
-                optparse.make_option("--commit", dest="commit", metavar="COMMIT",
-                                     help="submit only the specified commit(s), one commit or xxx..xxx"),
-                optparse.make_option("--disable-rebase", dest="disable_rebase", action="store_true",
-                                     help="Disable rebase after submit is completed. Can be useful if you "
-                                     "work from a local git branch that is not master"),
-                optparse.make_option("--disable-p4sync", dest="disable_p4sync", action="store_true",
-                                     help="Skip Perforce sync of p4/master after submit or shelve"),
-                optparse.make_option("--no-verify", dest="no_verify", action="store_true",
-                                     help="Bypass p4-pre-submit and p4-changelist hooks"),
+            optparse.make_option("--origin", dest="origin"),
+            optparse.make_option(
+                "-M",
+                dest="detectRenames",
+                action="store_true"),
+            # preserve the user, requires relevant p4 permissions
+            optparse.make_option(
+                "--preserve-user",
+                dest="preserveUser",
+                action="store_true"),
+            optparse.make_option(
+                "--export-labels",
+                dest="exportLabels",
+                action="store_true"),
+            optparse.make_option(
+                "--dry-run",
+                "-n",
+                dest="dry_run",
+                action="store_true"),
+            optparse.make_option(
+                "--prepare-p4-only",
+                dest="prepare_p4_only",
+                action="store_true"),
+            optparse.make_option("--conflict", dest="conflict_behavior",
+                                 choices=self.conflict_behavior_choices),
+            optparse.make_option("--branch", dest="branch"),
+            optparse.make_option("--shelve", dest="shelve", action="store_true",
+                                 help="Shelve instead of submit. Shelved files are reverted, "
+                                 "restoring the workspace to the state before the shelve"),
+            optparse.make_option("--update-shelve", dest="update_shelve", action="append", type="int",
+                                 metavar="CHANGELIST",
+                                 help="update an existing shelved changelist, implies --shelve, "
+                                 "repeat in-order for multiple shelved changelists"),
+            optparse.make_option("--commit", dest="commit", metavar="COMMIT",
+                                 help="submit only the specified commit(s), one commit or xxx..xxx"),
+            optparse.make_option("--disable-rebase", dest="disable_rebase", action="store_true",
+                                 help="Disable rebase after submit is completed. Can be useful if you "
+                                 "work from a local git branch that is not master"),
+            optparse.make_option("--disable-p4sync", dest="disable_p4sync", action="store_true",
+                                 help="Skip Perforce sync of p4/master after submit or shelve"),
+            optparse.make_option("--no-verify", dest="no_verify", action="store_true",
+                                 help="Bypass p4-pre-submit and p4-changelist hooks"),
         ]
         self.description = """Submit changes from git to the perforce depot.\n
     The `p4-pre-submit` hook is executed if it exists and is executable. It
@@ -1804,7 +1877,7 @@ class P4Submit(Command, P4UserMap):
     status from the script will abort the process.
 
     The purpose of the hook is to edit the message file in place, and it is not
-    supressed by the `--no-verify` option. This hook is called even if
+    suppressed by the `--no-verify` option. This hook is called even if
     `--prepare-p4-only` is set.
 
     The `p4-changelist` hook is executed after the changelist message has been
@@ -1915,7 +1988,7 @@ class P4Submit(Command, P4UserMap):
             # Forcibly overwrite the original file
             os.unlink(file)
             shutil.move(outFileName, file)
-        except:
+        except BaseException:
             # cleanup our temporary file
             os.unlink(outFileName)
             print("Failed to strip RCS keywords in %s" % file)
@@ -1941,7 +2014,8 @@ class P4Submit(Command, P4UserMap):
         for id in commits:
             user, email = self.p4UserForCommit(id)
             if not user:
-                msg = "Cannot find p4 user for email %s in commit %s." % (email, id)
+                msg = "Cannot find p4 user for email %s in commit %s." % (
+                    email, id)
                 if gitConfigBool("git-p4.allowMissingP4Users"):
                     print("%s" % msg)
                 else:
@@ -1987,11 +2061,15 @@ class P4Submit(Command, P4UserMap):
         for r in result:
             if 'code' in r:
                 if r['code'] == 'error':
-                    die("Could not modify user field of changelist %s to %s:%s" % (changelist, newUser, r['data']))
+                    die("Could not modify user field of changelist %s to %s:%s" %
+                        (changelist, newUser, r['data']))
             if 'data' in r:
-                print("Updated user field for changelist %s to %s" % (changelist, newUser))
+                print(
+                    "Updated user field for changelist %s to %s" %
+                    (changelist, newUser))
                 return
-        die("Could not modify user field of changelist %s to %s" % (changelist, newUser))
+        die("Could not modify user field of changelist %s to %s" %
+            (changelist, newUser))
 
     def canChangeChangelists(self):
         """Check to see if we have p4 admin or super-user permissions, either
@@ -2060,7 +2138,13 @@ class P4Submit(Command, P4UserMap):
                 files_list.append(value)
                 continue
         # Output in the order expected by prepareLogMessage
-        for key in ['Change', 'Client', 'User', 'Status', 'Description', 'Jobs']:
+        for key in [
+            'Change',
+            'Client',
+            'User',
+            'Status',
+            'Description',
+                'Jobs']:
             if key not in change_entry:
                 continue
             template += '\n'
@@ -2068,12 +2152,12 @@ class P4Submit(Command, P4UserMap):
             if key == 'Description':
                 template += '\n'
             for field_line in change_entry[key].splitlines():
-                template += '\t'+field_line+'\n'
+                template += '\t' + field_line + '\n'
         if len(files_list) > 0:
             template += '\n'
             template += 'Files:\n'
         for path in files_list:
-            template += '\t'+path+'\n'
+            template += '\t' + path + '\n'
         return template
 
     def edit_template(self, template_file):
@@ -2106,7 +2190,8 @@ class P4Submit(Command, P4UserMap):
         if os.stat(template_file).st_mtime > mtime:
             return True
 
-        response = prompt("Submit template unchanged. Submit anyway? [y]es, [n]o (skip this patch) ")
+        response = prompt(
+            "Submit template unchanged. Submit anyway? [y]es, [n]o (skip this patch) ")
         if response == 'y':
             return True
         if response == 'n':
@@ -2115,7 +2200,7 @@ class P4Submit(Command, P4UserMap):
     def get_diff_description(self, editedFiles, filesToAdd, symlinks):
         # diff
         if "P4DIFF" in os.environ:
-            del(os.environ["P4DIFF"])
+            del (os.environ["P4DIFF"])
         diff = ""
         for editedFile in editedFiles:
             diff += p4_read_pipe(['diff', '-du',
@@ -2263,7 +2348,9 @@ class P4Submit(Command, P4UserMap):
                                 raw=True):
                             if regexp.search(line):
                                 if verbose:
-                                    print("got keyword match on %s in %s in %s" % (regexp.pattern, line, file))
+                                    print(
+                                        "got keyword match on %s in %s in %s" %
+                                        (regexp.pattern, line, file))
                                 kwfiles[file] = regexp
                                 break
 
@@ -2333,7 +2420,8 @@ class P4Submit(Command, P4UserMap):
         separatorLine = "######## everything below this line is just the diff #######\n"
         if not self.prepare_p4_only:
             submitTemplate += separatorLine
-            submitTemplate += self.get_diff_description(editedFiles, filesToAdd, symlinks)
+            submitTemplate += self.get_diff_description(
+                editedFiles, filesToAdd, symlinks)
 
         handle, fileName = tempfile.mkstemp()
         tmpFile = os.fdopen(handle, "w+b")
@@ -2364,9 +2452,12 @@ class P4Submit(Command, P4UserMap):
                 print("To submit, use \"p4 submit\" to write a new description,")
                 print("or \"p4 submit -i <%s\" to use the one prepared by"
                       " \"git p4\"." % fileName)
-                print("You can delete the file \"%s\" when finished." % fileName)
+                print(
+                    "You can delete the file \"%s\" when finished." %
+                    fileName)
 
-                if self.preserveUser and p4User and not self.p4UserIsMe(p4User):
+                if self.preserveUser and p4User and not self.p4UserIsMe(
+                        p4User):
                     print("To preserve change ownership by user %s, you must\n"
                           "do \"p4 change -f <change>\" after submitting and\n"
                           "edit the User field.")
@@ -2464,7 +2555,9 @@ class P4Submit(Command, P4UserMap):
 
             if not m.match(name):
                 if verbose:
-                    print("tag %s does not match regexp %s" % (name, validLabelRegexp))
+                    print(
+                        "tag %s does not match regexp %s" %
+                        (name, validLabelRegexp))
                 continue
 
             # Get the p4 commit this corresponds to
@@ -2497,7 +2590,8 @@ class P4Submit(Command, P4UserMap):
             if not isAnnotated:
                 body = ["lightweight tag imported by git p4\n"]
 
-            # Create the label - use the same view as the client spec we are using
+            # Create the label - use the same view as the client spec we are
+            # using
             clientSpec = getClientSpec()
 
             labelTemplate = "Label: %s\n" % name
@@ -2517,8 +2611,8 @@ class P4Submit(Command, P4UserMap):
                 p4_write_pipe(["label", "-i"], labelTemplate)
 
                 # Use the label
-                p4_system(["tag", "-l", name] +
-                          ["%s@%s" % (depot_side, changelist) for depot_side in clientSpec.mappings])
+                p4_system(["tag", "-l", name] + ["%s@%s" % (depot_side, changelist)
+                          for depot_side in clientSpec.mappings])
 
                 if verbose:
                     print("created p4 label for tag %s" % name)
@@ -2539,7 +2633,7 @@ class P4Submit(Command, P4UserMap):
 
         if self.master:
             allowSubmit = gitConfig("git-p4.allowSubmit")
-            if len(allowSubmit) > 0 and not self.master in allowSubmit.split(","):
+            if len(allowSubmit) > 0 and self.master not in allowSubmit.split(","):
                 die("%s is not in git-p4.allowSubmit" % self.master)
 
         upstream, settings = findUpstreamBranchPoint()
@@ -2568,7 +2662,8 @@ class P4Submit(Command, P4UserMap):
             print("Origin branch is " + self.origin)
 
         if len(self.depotPath) == 0:
-            print("Internal error: cannot locate perforce depot path from existing branches")
+            print(
+                "Internal error: cannot locate perforce depot path from existing branches")
             sys.exit(128)
 
         self.useClientSpec = False
@@ -2587,9 +2682,12 @@ class P4Submit(Command, P4UserMap):
             self.clientPath = p4Where(self.depotPath)
 
         if self.clientPath == "":
-            die("Error: Cannot locate perforce checkout of %s in client view" % self.depotPath)
+            die("Error: Cannot locate perforce checkout of %s in client view" %
+                self.depotPath)
 
-        print("Perforce checkout for depot path %s located at %s" % (self.depotPath, self.clientPath))
+        print(
+            "Perforce checkout for depot path %s located at %s" %
+            (self.depotPath, self.clientPath))
         self.oldWorkingDirectory = os.getcwd()
 
         # ensure the clientPath exists
@@ -2619,13 +2717,15 @@ class P4Submit(Command, P4UserMap):
         if self.commit != "":
             if self.commit.find("..") != -1:
                 limits_ish = self.commit.split("..")
-                for line in read_pipe_lines(["git", "rev-list", "--no-merges", "%s..%s" % (limits_ish[0], limits_ish[1])]):
+                for line in read_pipe_lines(
+                        ["git", "rev-list", "--no-merges", "%s..%s" % (limits_ish[0], limits_ish[1])]):
                     commits.append(line.strip())
                 commits.reverse()
             else:
                 commits.append(self.commit)
         else:
-            for line in read_pipe_lines(["git", "rev-list", "--no-merges", "%s..%s" % (self.origin, committish)]):
+            for line in read_pipe_lines(
+                    ["git", "rev-list", "--no-merges", "%s..%s" % (self.origin, committish)]):
                 commits.append(line.strip())
             commits.reverse()
 
@@ -2670,19 +2770,23 @@ class P4Submit(Command, P4UserMap):
 
         num_shelves = len(self.update_shelve)
         if num_shelves > 0 and num_shelves != len(commits):
-            sys.exit("number of commits (%d) must match number of shelved changelist (%d)" %
-                     (len(commits), num_shelves))
+            sys.exit(
+                "number of commits (%d) must match number of shelved changelist (%d)" %
+                (len(commits), num_shelves))
 
         if not self.no_verify:
             try:
                 if not run_git_hook("p4-pre-submit"):
-                    print("\nThe p4-pre-submit hook failed, aborting the submit.\n\nYou can skip "
+                    print(
+                        "\nThe p4-pre-submit hook failed, aborting the submit.\n\nYou can skip "
                         "this pre-submission check by adding\nthe command line option '--no-verify', "
                         "however,\nthis will also skip the p4-changelist hook as well.")
                     sys.exit(1)
             except Exception as e:
-                print("\nThe p4-pre-submit hook failed, aborting the submit.\n\nThe hook failed "
-                    "with the error '{0}'".format(e.message))
+                print(
+                    "\nThe p4-pre-submit hook failed, aborting the submit.\n\nThe hook failed "
+                    "with the error '{0}'".format(
+                        e.message))
                 sys.exit(1)
 
         #
@@ -2705,14 +2809,15 @@ class P4Submit(Command, P4UserMap):
                 if self.prepare_p4_only:
                     if i < last:
                         print("Processing only the first commit due to option"
-                                " --prepare-p4-only")
+                              " --prepare-p4-only")
                     break
             else:
                 if i < last:
                     # prompt for what to do, or use the option/variable
                     if self.conflict_behavior == "ask":
                         print("What do you want to do?")
-                        response = prompt("[s]kip this commit but apply the rest, or [q]uit? ")
+                        response = prompt(
+                            "[s]kip this commit but apply the rest, or [q]uit? ")
                     elif self.conflict_behavior == "skip":
                         response = "s"
                     elif self.conflict_behavior == "quit":
@@ -2752,14 +2857,15 @@ class P4Submit(Command, P4UserMap):
             if len(applied) == 0:
                 print("No commits {0}.".format(shelved_applied))
             else:
-                print("{0} only the commits marked with '*':".format(shelved_applied.capitalize()))
+                print(
+                    "{0} only the commits marked with '*':".format(shelved_applied.capitalize()))
                 for c in commits:
                     if c in applied:
                         star = "*"
                     else:
                         star = " "
                     print(star, read_pipe(["git", "show", "-s",
-                                           "--format=format:%h %s",  c]))
+                                           "--format=format:%h %s", c]))
                 print("You will have to do 'git p4 sync' and rebase.")
 
         if gitConfigBool("git-p4.exportLabels"):
@@ -2846,7 +2952,8 @@ class View(object):
         """Caching file paths by "p4 where" batch query."""
 
         # List depot file paths exclude that already cached
-        fileArgs = [f['path'] for f in files if decode_path(f['path']) not in self.client_spec_path_cache]
+        fileArgs = [f['path'] for f in files if decode_path(
+            f['path']) not in self.client_spec_path_cache]
 
         if len(fileArgs) == 0:
             return  # All files in cache
@@ -2864,7 +2971,8 @@ class View(object):
             depot_path = decode_path(res['depotFile'])
             if gitConfigBool("core.ignorecase"):
                 depot_path = depot_path.lower()
-            self.client_spec_path_cache[depot_path] = self.convert_client_path(res["clientFile"])
+            self.client_spec_path_cache[depot_path] = self.convert_client_path(
+                res["clientFile"])
 
         # not found files or unmap files set to ""
         for depotFile in fileArgs:
@@ -2903,25 +3011,25 @@ class P4Sync(Command, P4UserMap):
         Command.__init__(self)
         P4UserMap.__init__(self)
         self.options = [
-                optparse.make_option("--branch", dest="branch"),
-                optparse.make_option("--detect-branches", dest="detectBranches", action="store_true"),
-                optparse.make_option("--changesfile", dest="changesFile"),
-                optparse.make_option("--silent", dest="silent", action="store_true"),
-                optparse.make_option("--detect-labels", dest="detectLabels", action="store_true"),
-                optparse.make_option("--import-labels", dest="importLabels", action="store_true"),
-                optparse.make_option("--import-local", dest="importIntoRemotes", action="store_false",
-                                     help="Import into refs/heads/ , not refs/remotes"),
-                optparse.make_option("--max-changes", dest="maxChanges",
-                                     help="Maximum number of changes to import"),
-                optparse.make_option("--changes-block-size", dest="changes_block_size", type="int",
-                                     help="Internal block size to use when iteratively calling p4 changes"),
-                optparse.make_option("--keep-path", dest="keepRepoPath", action='store_true',
-                                     help="Keep entire BRANCH/DIR/SUBDIR prefix during import"),
-                optparse.make_option("--use-client-spec", dest="useClientSpec", action='store_true',
-                                     help="Only sync files that are included in the Perforce Client Spec"),
-                optparse.make_option("-/", dest="cloneExclude",
-                                     action="callback", callback=cloneExcludeCallback, type="string",
-                                     help="exclude depot path"),
+            optparse.make_option("--branch", dest="branch"),
+            optparse.make_option("--detect-branches", dest="detectBranches", action="store_true"),
+            optparse.make_option("--changesfile", dest="changesFile"),
+            optparse.make_option("--silent", dest="silent", action="store_true"),
+            optparse.make_option("--detect-labels", dest="detectLabels", action="store_true"),
+            optparse.make_option("--import-labels", dest="importLabels", action="store_true"),
+            optparse.make_option("--import-local", dest="importIntoRemotes", action="store_false",
+                                 help="Import into refs/heads/ , not refs/remotes"),
+            optparse.make_option("--max-changes", dest="maxChanges",
+                                 help="Maximum number of changes to import"),
+            optparse.make_option("--changes-block-size", dest="changes_block_size", type="int",
+                                 help="Internal block size to use when iteratively calling p4 changes"),
+            optparse.make_option("--keep-path", dest="keepRepoPath", action='store_true',
+                                 help="Keep entire BRANCH/DIR/SUBDIR prefix during import"),
+            optparse.make_option("--use-client-spec", dest="useClientSpec", action='store_true',
+                                 help="Only sync files that are included in the Perforce Client Spec"),
+            optparse.make_option("-/", dest="cloneExclude",
+                                 action="callback", callback=cloneExcludeCallback, type="string",
+                                 help="exclude depot path"),
         ]
         self.description = """Imports from Perforce into a git repository.\n
     example:
@@ -2957,10 +3065,11 @@ class P4Sync(Command, P4UserMap):
         self.suppress_meta_comment = False
 
         if gitConfig('git-p4.largeFileSystem'):
-            largeFileSystemConstructor = globals()[gitConfig('git-p4.largeFileSystem')]
+            largeFileSystemConstructor = globals()[
+                gitConfig('git-p4.largeFileSystem')]
             self.largeFileSystem = largeFileSystemConstructor(
-                lambda git_mode, relPath, contents: self.writeToGitStream(git_mode, relPath, contents)
-            )
+                lambda git_mode, relPath, contents: self.writeToGitStream(
+                    git_mode, relPath, contents))
 
         if gitConfig("git-p4.syncFromOrigin") == "false":
             self.syncWithOrigin = False
@@ -2974,7 +3083,8 @@ class P4Sync(Command, P4UserMap):
         self.knownBranches = {}
         self.initialParents = {}
 
-        self.tz = "%+03d%02d" % (- time.timezone / 3600, ((- time.timezone % 3600) / 60))
+        self.tz = "%+03d%02d" % (- time.timezone / 3600,
+                                 ((- time.timezone % 3600) / 60))
         self.labels = {}
 
     def checkpoint(self):
@@ -3042,7 +3152,7 @@ class P4Sync(Command, P4UserMap):
             if self.detectBranches:
                 for b in self.knownBranches:
                     if p4PathStartsWith(path, b + "/"):
-                        path = path[len(b)+1:]
+                        path = path[len(b) + 1:]
 
         elif self.keepRepoPath:
             # Preserve everything in relative path name except leading
@@ -3106,7 +3216,10 @@ class P4Sync(Command, P4UserMap):
         return branches
 
     def writeToGitStream(self, gitMode, relPath, contents):
-        self.gitStream.write(encode_text_stream(u'M {} inline {}\n'.format(gitMode, relPath)))
+        self.gitStream.write(
+            encode_text_stream(
+                u'M {} inline {}\n'.format(
+                    gitMode, relPath)))
         self.gitStream.write('data %d\n' % sum(len(d) for d in contents))
         for d in contents:
             self.gitStream.write(d)
@@ -3115,13 +3228,15 @@ class P4Sync(Command, P4UserMap):
     def encodeWithUTF8(self, path):
         try:
             path.decode('ascii')
-        except:
+        except BaseException:
             encoding = 'utf8'
             if gitConfig('git-p4.pathEncoding'):
                 encoding = gitConfig('git-p4.pathEncoding')
             path = path.decode(encoding, 'replace').encode('utf8', 'replace')
             if self.verbose:
-                print('Path with non-ASCII characters detected. Used %s to encode: %s ' % (encoding, path))
+                print(
+                    'Path with non-ASCII characters detected. Used %s to encode: %s ' %
+                    (encoding, path))
         return path
 
     def streamOneP4File(self, file, contents):
@@ -3131,7 +3246,8 @@ class P4Sync(Command, P4UserMap):
            """
 
         file_path = file['depotFile']
-        relPath = self.stripRepoPath(decode_path(file_path), self.branchPrefixes)
+        relPath = self.stripRepoPath(
+            decode_path(file_path), self.branchPrefixes)
 
         if verbose:
             if 'fileSize' in self.stream_file:
@@ -3177,7 +3293,13 @@ class P4Sync(Command, P4UserMap):
             # just the native "NT" type.
             #
             try:
-                text = p4_read_pipe(['print', '-q', '-o', '-', '%s@%s' % (decode_path(file['depotFile']), file['change'])], raw=True)
+                text = p4_read_pipe(['print',
+                                     '-q',
+                                     '-o',
+                                     '-',
+                                     '%s@%s' % (decode_path(file['depotFile']),
+                                                file['change'])],
+                                    raw=True)
             except Exception as e:
                 if 'Translation of file content failed' in str(e):
                     type_base = 'binary'
@@ -3218,12 +3340,16 @@ class P4Sync(Command, P4UserMap):
             contents = [regexp.sub(br'$\1$', c) for c in contents]
 
         if self.largeFileSystem:
-            git_mode, contents = self.largeFileSystem.processContent(git_mode, relPath, contents)
+            git_mode, contents = self.largeFileSystem.processContent(
+                git_mode, relPath, contents)
 
         self.writeToGitStream(git_mode, relPath, contents)
 
     def streamOneP4Deletion(self, file):
-        relPath = self.stripRepoPath(decode_path(file['path']), self.branchPrefixes)
+        relPath = self.stripRepoPath(
+            decode_path(
+                file['path']),
+            self.branchPrefixes)
         if verbose:
             sys.stdout.write("delete %s\n" % relPath)
             sys.stdout.flush()
@@ -3243,7 +3369,8 @@ class P4Sync(Command, P4UserMap):
                     err = marshalled["data"].rstrip()
 
         if not err and 'fileSize' in self.stream_file:
-            required_bytes = int((4 * int(self.stream_file["fileSize"])) - calcDiskFree())
+            required_bytes = int(
+                (4 * int(self.stream_file["fileSize"])) - calcDiskFree())
             if required_bytes > 0:
                 err = 'Not enough space left on %s! Free at least %s.' % (
                     os.getcwd(), format_size_human_readable(required_bytes))
@@ -3280,7 +3407,8 @@ class P4Sync(Command, P4UserMap):
             if k == 'data':
                 if 'streamContentSize' not in self.stream_file:
                     self.stream_file['streamContentSize'] = 0
-                self.stream_file['streamContentSize'] += len(marshalled['data'])
+                self.stream_file['streamContentSize'] += len(
+                    marshalled['data'])
                 self.stream_contents.append(marshalled['data'])
             else:
                 self.stream_file[k] = marshalled[k]
@@ -3291,7 +3419,7 @@ class P4Sync(Command, P4UserMap):
                 'depotFile' in self.stream_file):
             size = int(self.stream_file["fileSize"])
             if size > 0:
-                progress = 100*self.stream_file['streamContentSize']/size
+                progress = 100 * self.stream_file['streamContentSize'] / size
                 sys.stdout.write('\r%s %d%% (%s)' % (
                     self.stream_file['depotFile'], progress,
                     format_size_human_readable(size)))
@@ -3331,9 +3459,11 @@ class P4Sync(Command, P4UserMap):
                 if 'shelved_cl' in f:
                     # Handle shelved CLs using the "p4 print file@=N" syntax to print
                     # the contents
-                    fileArg = f['path'] + encode_text_stream('@={}'.format(f['shelved_cl']))
+                    fileArg = f['path'] + \
+                        encode_text_stream('@={}'.format(f['shelved_cl']))
                 else:
-                    fileArg = f['path'] + encode_text_stream('#{}'.format(f['rev']))
+                    fileArg = f['path'] + \
+                        encode_text_stream('#{}'.format(f['rev']))
 
                 fileArgs.append(fileArg)
 
@@ -3401,7 +3531,7 @@ class P4Sync(Command, P4UserMap):
         if not self.branchPrefixes:
             return True
         hasPrefix = [p for p in self.branchPrefixes
-                        if p4PathStartsWith(path, p)]
+                     if p4PathStartsWith(path, p)]
         if not hasPrefix and self.verbose:
             print('Ignoring file outside of prefix: {0}'.format(path))
         return hasPrefix
@@ -3430,10 +3560,14 @@ class P4Sync(Command, P4UserMap):
                     break
                 to_check.add(path)
         to_check = ['%s@%s' % (wildcard_encode(p), change) for p in to_check
-            if self.hasBranchPrefix(p)]
+                    if self.hasBranchPrefix(p)]
         if to_check:
-            stat_result = p4CmdList(["-x", "-", "fstat", "-T",
-                "depotFile,headAction,headRev,headType"], stdin=to_check)
+            stat_result = p4CmdList(["-x",
+                                     "-",
+                                     "fstat",
+                                     "-T",
+                                     "depotFile,headAction,headRev,headType"],
+                                    stdin=to_check)
             for record in stat_result:
                 if record['code'] != 'stat':
                     continue
@@ -3454,7 +3588,7 @@ class P4Sync(Command, P4UserMap):
             print('commit into {0}'.format(branch))
 
         files = [f for f in files
-            if self.hasBranchPrefix(decode_path(f['path']))]
+                 if self.hasBranchPrefix(decode_path(f['path']))]
         self.findShadowedFiles(files, details['change'])
 
         if self.clientSpecDirs:
@@ -3467,7 +3601,7 @@ class P4Sync(Command, P4UserMap):
 
         if not files and not allow_empty:
             print('Ignoring revision {0} as it would produce an empty commit.'
-                .format(details['change']))
+                  .format(details['change']))
             return
 
         self.gitStream.write("commit %s\n" % branch)
@@ -3486,8 +3620,11 @@ class P4Sync(Command, P4UserMap):
             self.gitStream.write("\nJobs: %s" % (' '.join(jobs)))
 
         if not self.suppress_meta_comment:
-            self.gitStream.write("\n[git-p4: depot-paths = \"%s\": change = %s" %
-                                (','.join(self.branchPrefixes), details["change"]))
+            self.gitStream.write(
+                "\n[git-p4: depot-paths = \"%s\": change = %s" %
+                (','.join(
+                    self.branchPrefixes),
+                    details["change"]))
             if len(details['options']) > 0:
                 self.gitStream.write(": options = %s" % details['options'])
             self.gitStream.write("]\n")
@@ -3512,7 +3649,7 @@ class P4Sync(Command, P4UserMap):
                 print("Change %s is labelled %s" % (change, labelDetails))
 
             files = p4CmdList(["files"] + ["%s...@%s" % (p, change)
-                                                for p in self.branchPrefixes])
+                                           for p in self.branchPrefixes])
 
             if len(files) == len(labelRevisions):
 
@@ -3523,17 +3660,25 @@ class P4Sync(Command, P4UserMap):
                     cleanedFiles[info["depotFile"]] = info["rev"]
 
                 if cleanedFiles == labelRevisions:
-                    self.streamTag(self.gitStream, 'tag_%s' % labelDetails['label'], labelDetails, branch, epoch)
+                    self.streamTag(
+                        self.gitStream,
+                        'tag_%s' %
+                        labelDetails['label'],
+                        labelDetails,
+                        branch,
+                        epoch)
 
                 else:
                     if not self.silent:
-                        print("Tag %s does not match with change %s: files do not match."
-                               % (labelDetails["label"], change))
+                        print(
+                            "Tag %s does not match with change %s: files do not match." %
+                            (labelDetails["label"], change))
 
             else:
                 if not self.silent:
-                    print("Tag %s does not match with change %s: file count is different."
-                           % (labelDetails["label"], change))
+                    print(
+                        "Tag %s does not match with change %s: file count is different." %
+                        (labelDetails["label"], change))
 
     def getLabels(self):
         """Build a dictionary of changelists and labels, for "detect-labels"
@@ -3553,8 +3698,8 @@ class P4Sync(Command, P4UserMap):
             if self.verbose:
                 print("Querying files for label %s" % label)
             for file in p4CmdList(["files"] +
-                                      ["%s...@%s" % (p, label)
-                                          for p in self.depotPaths]):
+                                  ["%s...@%s" % (p, label)
+                                   for p in self.depotPaths]):
                 revisions[file["depotFile"]] = file["rev"]
                 change = int(file["change"])
                 if change > newestChange:
@@ -3585,7 +3730,9 @@ class P4Sync(Command, P4UserMap):
 
             if not m.match(name):
                 if verbose:
-                    print("label %s does not match regexp %s" % (name, validLabelRegexp))
+                    print(
+                        "label %s does not match regexp %s" %
+                        (name, validLabelRegexp))
                 continue
 
             if name in ignoredP4Labels:
@@ -3595,7 +3742,7 @@ class P4Sync(Command, P4UserMap):
 
             # get the most recent changelist for each file in this label
             change = p4Cmd(["changes", "-m", "1"] + ["%s...@%s" % (p, name)
-                                for p in self.depotPaths])
+                                                     for p in self.depotPaths])
 
             if 'change' in change:
                 # find the corresponding git commit; take the oldest commit
@@ -3604,10 +3751,16 @@ class P4Sync(Command, P4UserMap):
                     gitCommit = ":%d" % changelist       # use a fast-import mark
                     commitFound = True
                 else:
-                    gitCommit = read_pipe(["git", "rev-list", "--max-count=1",
-                        "--reverse", r":/\[git-p4:.*change = %d\]" % changelist], ignore_error=True)
+                    gitCommit = read_pipe(["git",
+                                           "rev-list",
+                                           "--max-count=1",
+                                           "--reverse",
+                                           r":/\[git-p4:.*change = %d\]" % changelist],
+                                          ignore_error=True)
                     if len(gitCommit) == 0:
-                        print("importing label %s: could not find git commit for changelist %d" % (name, changelist))
+                        print(
+                            "importing label %s: could not find git commit for changelist %d" %
+                            (name, changelist))
                     else:
                         commitFound = True
                         gitCommit = gitCommit.strip()
@@ -3615,18 +3768,25 @@ class P4Sync(Command, P4UserMap):
                 if commitFound:
                     # Convert from p4 time format
                     try:
-                        tmwhen = time.strptime(labelDetails['Update'], "%Y/%m/%d %H:%M:%S")
+                        tmwhen = time.strptime(
+                            labelDetails['Update'], "%Y/%m/%d %H:%M:%S")
                     except ValueError:
-                        print("Could not convert label time %s" % labelDetails['Update'])
+                        print(
+                            "Could not convert label time %s" %
+                            labelDetails['Update'])
                         tmwhen = 1
 
                     when = int(time.mktime(tmwhen))
                     self.streamTag(stream, name, labelDetails, gitCommit, when)
                     if verbose:
-                        print("p4 label %s mapped to git commit %s" % (name, gitCommit))
+                        print(
+                            "p4 label %s mapped to git commit %s" %
+                            (name, gitCommit))
             else:
                 if verbose:
-                    print("Label %s has no changelists - possibly deleted?" % name)
+                    print(
+                        "Label %s has no changelists - possibly deleted?" %
+                        name)
 
             if not commitFound:
                 # We can't import this label; don't try again as it will get very
@@ -3650,26 +3810,33 @@ class P4Sync(Command, P4UserMap):
         user = gitConfig("git-p4.branchUser")
 
         for info in p4CmdList(
-            ["branches"] + (["-u", user] if len(user) > 0 else [])):
+                ["branches"] + (["-u", user] if len(user) > 0 else [])):
             details = p4Cmd(["branch", "-o", info["branch"]])
             viewIdx = 0
             while "View%s" % viewIdx in details:
                 paths = details["View%s" % viewIdx].split(" ")
                 viewIdx = viewIdx + 1
                 # require standard //depot/foo/... //depot/bar/... mapping
-                if len(paths) != 2 or not paths[0].endswith("/...") or not paths[1].endswith("/..."):
+                if len(paths) != 2 or not paths[0].endswith(
+                        "/...") or not paths[1].endswith("/..."):
                     continue
                 source = paths[0]
                 destination = paths[1]
                 # HACK
-                if p4PathStartsWith(source, self.depotPaths[0]) and p4PathStartsWith(destination, self.depotPaths[0]):
+                if p4PathStartsWith(
+                        source, self.depotPaths[0]) and p4PathStartsWith(
+                        destination, self.depotPaths[0]):
                     source = source[len(self.depotPaths[0]):-4]
                     destination = destination[len(self.depotPaths[0]):-4]
 
                     if destination in self.knownBranches:
                         if not self.silent:
-                            print("p4 branch %s defines a mapping from %s to %s" % (info["branch"], source, destination))
-                            print("but there exists another mapping from %s to %s already!" % (self.knownBranches[destination], destination))
+                            print(
+                                "p4 branch %s defines a mapping from %s to %s" %
+                                (info["branch"], source, destination))
+                            print(
+                                "but there exists another mapping from %s to %s already!" %
+                                (self.knownBranches[destination], destination))
                         continue
 
                     self.knownBranches[destination] = source
@@ -3732,16 +3899,22 @@ class P4Sync(Command, P4UserMap):
 
     def gitCommitByP4Change(self, ref, change):
         if self.verbose:
-            print("looking in ref " + ref + " for change %s using bisect..." % change)
+            print(
+                "looking in ref " +
+                ref +
+                " for change %s using bisect..." %
+                change)
 
         earliestCommit = ""
         latestCommit = parseRevision(ref)
 
         while True:
             if self.verbose:
-                print("trying: earliest %s latest %s" % (earliestCommit, latestCommit))
+                print(
+                    "trying: earliest %s latest %s" %
+                    (earliestCommit, latestCommit))
             next = read_pipe(["git", "rev-list", "--bisect",
-                latestCommit, earliestCommit]).strip()
+                              latestCommit, earliestCommit]).strip()
             if len(next) == 0:
                 if self.verbose:
                     print("argh")
@@ -3761,19 +3934,22 @@ class P4Sync(Command, P4UserMap):
                 earliestCommit = "^%s" % next
             else:
                 if next == latestCommit:
-                    die("Infinite loop while looking in ref %s for change %s. Check your branch mappings" % (ref, change))
+                    die("Infinite loop while looking in ref %s for change %s. Check your branch mappings" % (
+                        ref, change))
                 latestCommit = "%s^@" % next
 
         return ""
 
     def importNewBranch(self, branch, maxChange):
         # make fast-import flush all changes to disk and update the refs using the checkpoint
-        # command so that we can try to find the branch parent in the git history
+        # command so that we can try to find the branch parent in the git
+        # history
         self.gitStream.write("checkpoint\n\n")
         self.gitStream.flush()
         branchPrefix = self.depotPaths[0] + branch + "/"
         range = "@1,%s" % maxChange
-        changes = p4ChangesForPaths([branchPrefix], range, self.changes_block_size)
+        changes = p4ChangesForPaths(
+            [branchPrefix], range, self.changes_block_size)
         if len(changes) <= 0:
             return False
         firstChange = changes[0]
@@ -3781,7 +3957,8 @@ class P4Sync(Command, P4UserMap):
         sourceDepotPath = self.depotPaths[0] + sourceBranch
         sourceRef = self.gitRefForBranch(sourceBranch)
 
-        branchParentChange = int(p4Cmd(["changes", "-m", "1", "%s...@1,%s" % (sourceDepotPath, firstChange)])["change"])
+        branchParentChange = int(p4Cmd(
+            ["changes", "-m", "1", "%s...@1,%s" % (sourceDepotPath, firstChange)])["change"])
         gitParent = self.gitCommitByP4Change(sourceRef, branchParentChange)
         if len(gitParent) > 0:
             self.initialParents[self.gitRefForBranch(branch)] = gitParent
@@ -3841,21 +4018,28 @@ class P4Sync(Command, P4UserMap):
                                 fullBranch = self.projectName + branch
                                 if fullBranch not in self.p4BranchesInGit:
                                     if not self.silent:
-                                        print("\n    Importing new branch %s" % fullBranch)
-                                    if self.importNewBranch(branch, change - 1):
+                                        print(
+                                            "\n    Importing new branch %s" % fullBranch)
+                                    if self.importNewBranch(
+                                            branch, change - 1):
                                         parent = ""
                                         self.p4BranchesInGit.append(fullBranch)
                                     if not self.silent:
-                                        print("\n    Resuming with change %s" % change)
+                                        print(
+                                            "\n    Resuming with change %s" % change)
 
                                 if self.verbose:
-                                    print("parent determined through known branches: %s" % parent)
+                                    print(
+                                        "parent determined through known branches: %s" %
+                                        parent)
 
                         branch = self.gitRefForBranch(branch)
                         parent = self.gitRefForBranch(parent)
 
                         if self.verbose:
-                            print("looking for initial parent for %s; current parent is %s" % (branch, parent))
+                            print(
+                                "looking for initial parent for %s; current parent is %s" %
+                                (branch, parent))
 
                         if len(parent) == 0 and branch in self.initialParents:
                             parent = self.initialParents[branch]
@@ -3863,19 +4047,27 @@ class P4Sync(Command, P4UserMap):
 
                         blob = None
                         if len(parent) > 0:
-                            tempBranch = "%s/%d" % (self.tempBranchLocation, change)
+                            tempBranch = "%s/%d" % (
+                                self.tempBranchLocation, change)
                             if self.verbose:
-                                print("Creating temporary branch: " + tempBranch)
-                            self.commit(description, filesForCommit, tempBranch)
+                                print(
+                                    "Creating temporary branch: " + tempBranch)
+                            self.commit(
+                                description, filesForCommit, tempBranch)
                             self.tempBranches.append(tempBranch)
                             self.checkpoint()
-                            blob = self.searchParent(parent, branch, tempBranch)
+                            blob = self.searchParent(
+                                parent, branch, tempBranch)
                         if blob:
-                            self.commit(description, filesForCommit, branch, blob)
+                            self.commit(
+                                description, filesForCommit, branch, blob)
                         else:
                             if self.verbose:
-                                print("Parent of %s not found. Committing into head of %s" % (branch, parent))
-                            self.commit(description, filesForCommit, branch, parent)
+                                print(
+                                    "Parent of %s not found. Committing into head of %s" %
+                                    (branch, parent))
+                            self.commit(
+                                description, filesForCommit, branch, parent)
                 else:
                     files = self.extractFilesFromCommit(description)
                     self.commit(description, files, self.branch,
@@ -3895,12 +4087,16 @@ class P4Sync(Command, P4UserMap):
                 system(["git", "fetch", "origin"])
 
     def importHeadRevision(self, revision):
-        print("Doing initial import of %s from revision %s into %s" % (' '.join(self.depotPaths), revision, self.branch))
+        print("Doing initial import of %s from revision %s into %s" %
+              (' '.join(self.depotPaths), revision, self.branch))
 
         details = {}
         details["user"] = "git perforce import user"
-        details["desc"] = ("Initial import of %s from the state at revision %s\n"
-                           % (' '.join(self.depotPaths), revision))
+        details["desc"] = (
+            "Initial import of %s from the state at revision %s\n" %
+            (' '.join(
+                self.depotPaths),
+                revision))
         details["change"] = revision
         newestRevision = 0
 
@@ -3913,9 +4109,14 @@ class P4Sync(Command, P4UserMap):
                 sys.stderr.write("p4 returned an error: %s\n"
                                  % info['data'])
                 if info['data'].find("must refer to client") >= 0:
-                    sys.stderr.write("This particular p4 error is misleading.\n")
-                    sys.stderr.write("Perhaps the depot path was misspelled.\n")
-                    sys.stderr.write("Depot path:  %s\n" % " ".join(self.depotPaths))
+                    sys.stderr.write(
+                        "This particular p4 error is misleading.\n")
+                    sys.stderr.write(
+                        "Perhaps the depot path was misspelled.\n")
+                    sys.stderr.write(
+                        "Depot path:  %s\n" %
+                        " ".join(
+                            self.depotPaths))
                 sys.exit(1)
             if 'p4ExitCode' in info:
                 sys.stderr.write("p4 exitcode: %s\n" % info['p4ExitCode'])
@@ -3942,7 +4143,10 @@ class P4Sync(Command, P4UserMap):
 
         self.updateOptionDict(details)
         try:
-            self.commit(details, self.extractFilesFromCommit(details), self.branch)
+            self.commit(
+                details,
+                self.extractFilesFromCommit(details),
+                self.branch)
         except IOError as err:
             print("IO error with git fast-import. Is your git version recent enough?")
             print("IO error details: {}".format(err))
@@ -3967,7 +4171,8 @@ class P4Sync(Command, P4UserMap):
             # does not have any existing p4 branches
             if len(args) == 0:
                 if not self.p4BranchesInGit:
-                    raise P4CommandException("No remote p4 branches.  Perhaps you never did \"git p4 clone\" in here.")
+                    raise P4CommandException(
+                        "No remote p4 branches.  Perhaps you never did \"git p4 clone\" in here.")
 
                 # The default branch is master, unless --branch is used to
                 # specify something else.  Make sure it exists, or complain
@@ -3975,15 +4180,20 @@ class P4Sync(Command, P4UserMap):
                 if not self.detectBranches:
                     if not branch_exists(self.branch):
                         if branch_arg_given:
-                            raise P4CommandException("Error: branch %s does not exist." % self.branch)
+                            raise P4CommandException(
+                                "Error: branch %s does not exist." % self.branch)
                         else:
-                            raise P4CommandException("Error: no branch %s; perhaps specify one with --branch." %
+                            raise P4CommandException(
+                                "Error: no branch %s; perhaps specify one with --branch." %
                                 self.branch)
 
             if self.verbose:
-                print("Getting p4 changes for %s...%s" % (', '.join(self.depotPaths),
-                                                          self.changeRange))
-            changes = p4ChangesForPaths(self.depotPaths, self.changeRange, self.changes_block_size)
+                print("Getting p4 changes for %s...%s" %
+                      (', '.join(self.depotPaths), self.changeRange))
+            changes = p4ChangesForPaths(
+                self.depotPaths,
+                self.changeRange,
+                self.changes_block_size)
 
             if len(self.maxChanges) > 0:
                 changes = changes[:min(int(self.maxChanges), len(changes))]
@@ -4025,7 +4235,8 @@ class P4Sync(Command, P4UserMap):
         self.gitError = self.importProcess.stderr
 
         if bytes is not str:
-            # Wrap gitStream.write() so that it can be called using `str` arguments
+            # Wrap gitStream.write() so that it can be called using `str`
+            # arguments
             def make_encoded_write(write):
                 def encoded_write(s):
                     return write(s.encode() if isinstance(s, str) else s)
@@ -4102,8 +4313,8 @@ class P4Sync(Command, P4UserMap):
 
             p4Change = 0
             for branch in self.p4BranchesInGit:
-                logMsg = extractLogMessageFromGitCommit(fullP4Ref(branch,
-                                                        self.importIntoRemotes))
+                logMsg = extractLogMessageFromGitCommit(
+                    fullP4Ref(branch, self.importIntoRemotes))
 
                 settings = extractSettingsGitLog(logMsg)
 
@@ -4117,10 +4328,15 @@ class P4Sync(Command, P4UserMap):
                         self.previousDepotPaths = depotPaths
                     else:
                         paths = []
-                        for (prev, cur) in zip(self.previousDepotPaths, depotPaths):
+                        for (
+                                prev,
+                                cur) in zip(
+                                self.previousDepotPaths,
+                                depotPaths):
                             prev_list = prev.split("/")
                             cur_list = cur.split("/")
-                            for i in range(0, min(len(cur_list), len(prev_list))):
+                            for i in range(
+                                    0, min(len(cur_list), len(prev_list))):
                                 if cur_list[i] != prev_list[i]:
                                     i = i - 1
                                     break
@@ -4133,7 +4349,9 @@ class P4Sync(Command, P4UserMap):
                 self.depotPaths = sorted(self.previousDepotPaths)
                 self.changeRange = "@%s,#head" % p4Change
                 if not self.silent and not self.detectBranches:
-                    print("Performing incremental import into %s git branch" % self.branch)
+                    print(
+                        "Performing incremental import into %s git branch" %
+                        self.branch)
 
         self.branch = fullP4Ref(self.branch, self.importIntoRemotes)
 
@@ -4142,9 +4360,12 @@ class P4Sync(Command, P4UserMap):
                 print("Depot paths: %s" % ' '.join(self.depotPaths))
         else:
             if self.depotPaths and self.depotPaths != args:
-                print("previous import used depot path %s and now %s was specified. "
-                       "This doesn't work!" % (' '.join(self.depotPaths),
-                                               ' '.join(args)))
+                print(
+                    "previous import used depot path %s and now %s was specified. "
+                    "This doesn't work!" %
+                    (' '.join(
+                        self.depotPaths),
+                        ' '.join(args)))
                 sys.exit(1)
 
             self.depotPaths = sorted(args)
@@ -4253,8 +4474,9 @@ class P4Sync(Command, P4UserMap):
         if self.tempBranches != []:
             for branch in self.tempBranches:
                 read_pipe(["git", "update-ref", "-d", branch])
-            if len(read_pipe(["git", "for-each-ref", self.tempBranchLocation])) > 0:
-                   die("There are unexpected temporary branches")
+            if len(read_pipe(["git", "for-each-ref",
+                   self.tempBranchLocation])) > 0:
+                die("There are unexpected temporary branches")
 
         # Create a symbolic ref p4/HEAD pointing to p4/<branch> to allow
         # a convenient shortcut refname "p4".
@@ -4270,7 +4492,10 @@ class P4Rebase(Command):
     def __init__(self):
         Command.__init__(self)
         self.options = [
-                optparse.make_option("--import-labels", dest="importLabels", action="store_true"),
+            optparse.make_option(
+                "--import-labels",
+                dest="importLabels",
+                action="store_true"),
         ]
         self.importLabels = False
         self.description = ("Fetches the latest revision from perforce and "
@@ -4300,7 +4525,7 @@ class P4Rebase(Command):
         oldHead = read_pipe(["git", "rev-parse", "HEAD"]).strip()
         system(["git", "rebase", upstream])
         system(["git", "diff-tree", "--stat", "--summary", "-M", oldHead,
-            "HEAD", "--"])
+                "HEAD", "--"])
         return True
 
 
@@ -4351,7 +4576,8 @@ class P4Clone(P4Sync):
         if not self.cloneDestination:
             self.cloneDestination = self.defaultDestination(args)
 
-        print("Importing from %s into %s" % (', '.join(depotPaths), self.cloneDestination))
+        print("Importing from %s into %s" %
+              (', '.join(depotPaths), self.cloneDestination))
 
         if not os.path.exists(self.cloneDestination):
             os.makedirs(self.cloneDestination)
@@ -4380,13 +4606,17 @@ class P4Clone(P4Sync):
         if self.useClientSpec_from_options:
             system(["git", "config", "--bool", "git-p4.useclientspec", "true"])
 
-        # persist any git-p4 encoding-handling config options passed in for clone:
+        # persist any git-p4 encoding-handling config options passed in for
+        # clone:
         if gitConfig('git-p4.metadataDecodingStrategy'):
-            system(["git", "config", "git-p4.metadataDecodingStrategy", gitConfig('git-p4.metadataDecodingStrategy')])
+            system(["git", "config", "git-p4.metadataDecodingStrategy",
+                   gitConfig('git-p4.metadataDecodingStrategy')])
         if gitConfig('git-p4.metadataFallbackEncoding'):
-            system(["git", "config", "git-p4.metadataFallbackEncoding", gitConfig('git-p4.metadataFallbackEncoding')])
+            system(["git", "config", "git-p4.metadataFallbackEncoding",
+                   gitConfig('git-p4.metadataFallbackEncoding')])
         if gitConfig('git-p4.pathEncoding'):
-            system(["git", "config", "git-p4.pathEncoding", gitConfig('git-p4.pathEncoding')])
+            system(["git", "config", "git-p4.pathEncoding",
+                   gitConfig('git-p4.pathEncoding')])
 
         return True
 
@@ -4399,8 +4629,11 @@ class P4Unshelve(Command):
         self.description = "Unshelve a P4 changelist into a git commit"
         self.usage = "usage: %prog [options] changelist"
         self.options += [
-                optparse.make_option("--origin", dest="origin",
-                    help="Use this base revision instead of the default (%s)" % self.origin),
+            optparse.make_option(
+                "--origin",
+                dest="origin",
+                help="Use this base revision instead of the default (%s)" %
+                self.origin),
         ]
         self.verbose = False
         self.noCommit = False
@@ -4415,10 +4648,12 @@ class P4Unshelve(Command):
                 # Copy ref to backup
                 gitUpdateRef(backup_branch_name, branch_name)
                 gitDeleteRef(branch_name)
-                print("renamed old unshelve branch to {0}".format(backup_branch_name))
+                print(
+                    "renamed old unshelve branch to {0}".format(backup_branch_name))
                 break
         else:
-            sys.exit("gave up trying to rename existing branch {0}".format(branch_name))
+            sys.exit(
+                "gave up trying to rename existing branch {0}".format(branch_name))
 
     def findLastP4Revision(self, starting_point):
         """Look back from starting_point for the first commit created by git-p4
@@ -4426,7 +4661,8 @@ class P4Unshelve(Command):
            """
 
         for parent in (range(65535)):
-            log = extractLogMessageFromGitCommit("{0}~{1}".format(starting_point, parent))
+            log = extractLogMessageFromGitCommit(
+                "{0}~{1}".format(starting_point, parent))
             settings = extractSettingsGitLog(log)
             if 'change' in settings:
                 return settings
@@ -4438,12 +4674,15 @@ class P4Unshelve(Command):
            'change'.
            """
         parent_description = p4_describe(change, shelved=True)
-        parent_description['desc'] = 'parent for shelved changelist {}\n'.format(change)
-        files = sync.extractFilesFromCommit(parent_description, shelved=False, shelved_cl=change)
+        parent_description['desc'] = 'parent for shelved changelist {}\n'.format(
+            change)
+        files = sync.extractFilesFromCommit(
+            parent_description, shelved=False, shelved_cl=change)
 
         parent_files = []
         for f in files:
-            # if it was added in the shelved changelist, it won't exist in the parent
+            # if it was added in the shelved changelist, it won't exist in the
+            # parent
             if f['action'] in self.add_actions:
                 continue
 
@@ -4456,7 +4695,7 @@ class P4Unshelve(Command):
             parent_files.append(f)
 
         sync.commit(parent_description, parent_files, branch_name,
-                parent=origin, allow_empty=True)
+                    parent=origin, allow_empty=True)
         print("created parent commit for {0} based on {1} in {2}".format(
             change, self.origin, branch_name))
 
@@ -4509,15 +4748,17 @@ class P4Branches(Command):
     def __init__(self):
         Command.__init__(self)
         self.options = []
-        self.description = ("Shows the git branches that hold imports and their "
-                            + "corresponding perforce depot paths")
+        self.description = (
+            "Shows the git branches that hold imports and their " +
+            "corresponding perforce depot paths")
         self.verbose = False
 
     def run(self, args):
         if originP4BranchesExist():
             createOrUpdateBranchesFromOrigin()
 
-        for line in read_pipe_lines(["git", "rev-parse", "--symbolic", "--remotes"]):
+        for line in read_pipe_lines(
+                ["git", "rev-parse", "--symbolic", "--remotes"]):
             line = line.strip()
 
             if not line.startswith('p4/') or line == "p4/HEAD":
@@ -4527,7 +4768,12 @@ class P4Branches(Command):
             log = extractLogMessageFromGitCommit("refs/remotes/%s" % branch)
             settings = extractSettingsGitLog(log)
 
-            print("%s <= %s (%s)" % (branch, ",".join(settings["depot-paths"]), settings["change"]))
+            print(
+                "%s <= %s (%s)" %
+                (branch,
+                 ",".join(
+                     settings["depot-paths"]),
+                    settings["change"]))
         return True
 
 
@@ -4582,18 +4828,26 @@ def main():
 
     args = sys.argv[2:]
 
-    options.append(optparse.make_option("--verbose", "-v", dest="verbose", action="store_true"))
+    options.append(
+        optparse.make_option(
+            "--verbose",
+            "-v",
+            dest="verbose",
+            action="store_true"))
     if cmd.needsGit:
         options.append(optparse.make_option("--git-dir", dest="gitdir"))
 
-    parser = optparse.OptionParser(cmd.usage.replace("%prog", "%prog " + cmdName),
-                                   options,
-                                   description=cmd.description,
-                                   formatter=HelpFormatter())
+    parser = optparse.OptionParser(
+        cmd.usage.replace(
+            "%prog",
+            "%prog " + cmdName),
+        options,
+        description=cmd.description,
+        formatter=HelpFormatter())
 
     try:
         cmd, args = parser.parse_args(sys.argv[2:], cmd)
-    except:
+    except BaseException:
         parser.print_help()
         raise
 
@@ -4604,9 +4858,11 @@ def main():
             cmd.gitdir = os.path.abspath(".git")
             if not isValidGitDir(cmd.gitdir):
                 # "rev-parse --git-dir" without arguments will try $PWD/.git
-                cmd.gitdir = read_pipe(["git", "rev-parse", "--git-dir"]).strip()
+                cmd.gitdir = read_pipe(
+                    ["git", "rev-parse", "--git-dir"]).strip()
                 if os.path.exists(cmd.gitdir):
-                    cdup = read_pipe(["git", "rev-parse", "--show-cdup"]).strip()
+                    cdup = read_pipe(
+                        ["git", "rev-parse", "--show-cdup"]).strip()
                     if len(cdup) > 0:
                         chdir(cdup)
 

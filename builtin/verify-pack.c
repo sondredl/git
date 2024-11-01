@@ -1,3 +1,4 @@
+#define USE_THE_REPOSITORY_VARIABLE
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
@@ -75,7 +76,10 @@ static const char *const verify_pack_usage[] = {
     N_("git verify-pack [-v | --verbose] [-s | --stat-only] [--] <pack>.idx..."),
     NULL};
 
-int cmd_verify_pack(int argc, const char **argv, const char *prefix)
+int cmd_verify_pack(int                     argc,
+                    const char            **argv,
+                    const char             *prefix,
+                    struct repository *repo UNUSED)
 {
     int                 err           = 0;
     unsigned int        flags         = 0;

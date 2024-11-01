@@ -16,6 +16,7 @@
 #include "revision.h"
 #include "diffcore.h"
 #include "quote.h"
+#include "repository.h"
 #include "run-command.h"
 #include "strvec.h"
 #include "remote.h"
@@ -176,7 +177,7 @@ void wt_status_prepare(struct repository *r, struct wt_status *s)
                                                       "HEAD", 0, NULL, NULL);
     s->reference                = "HEAD";
     s->fp                       = stdout;
-    s->index_file               = get_index_file();
+    s->index_file               = repo_get_index_file(the_repository);
     s->change.strdup_strings    = 1;
     s->untracked.strdup_strings = 1;
     s->ignored.strdup_strings   = 1;
@@ -853,6 +854,7 @@ static int add_file_to_list(const struct object_id *oid,
 static void wt_status_collect_changes_initial(struct wt_status *s)
 {
     struct index_state *istate = s->repo->index;
+    struct strbuf       base   = STRBUF_INIT;
     int                 i;
 
     for (i = 0; i < istate->cache_nr; i++)
@@ -862,13 +864,9 @@ static void wt_status_collect_changes_initial(struct wt_status *s)
         const struct cache_entry     *ce = istate->cache[i];
 
         if (!ce_path_match(istate, ce, &s->pathspec, NULL))
-        {
             continue;
-        }
         if (ce_intent_to_add(ce))
-        {
             continue;
-        }
         if (S_ISSPARSEDIR(ce->ce_mode))
         {
             /*
@@ -877,7 +875,6 @@ static void wt_status_collect_changes_initial(struct wt_status *s)
              * expanding the trees to find the elements that are new in this
              * tree and marking them with DIFF_STATUS_ADDED.
              */
-            struct strbuf   base = STRBUF_INIT;
             struct pathspec ps   = {0};
             struct tree    *tree = lookup_tree(istate->repo, &ce->oid);
 
@@ -885,9 +882,11 @@ static void wt_status_collect_changes_initial(struct wt_status *s)
             ps.has_wildcard = 1;
             ps.max_depth    = -1;
 
+            strbuf_reset(&base);
             strbuf_add(&base, ce->name, ce->ce_namelen);
             read_tree_at(istate->repo, tree, &base, 0, &ps,
                          add_file_to_list, s);
+
             continue;
         }
 
@@ -918,6 +917,8 @@ static void wt_status_collect_changes_initial(struct wt_status *s)
             s->committable = 1;
         }
     }
+
+    strbuf_release(&base);
 }
 
 static void wt_status_collect_untracked(struct wt_status *s)
@@ -3234,7 +3235,7 @@ int has_unstaged_changes(struct repository *r, int ignore_submodules)
     rev_info.diffopt.flags.quick = 1;
     diff_setup_done(&rev_info.diffopt);
     run_diff_files(&rev_info, 0);
-    result = diff_result_code(&rev_info.diffopt);
+    result = diff_result_code(&rev_info);
     release_revisions(&rev_info);
     return result;
 }
@@ -3273,7 +3274,7 @@ int has_uncommitted_changes(struct repository *r,
 
     diff_setup_done(&rev_info.diffopt);
     run_diff_index(&rev_info, DIFF_INDEX_CACHED);
-    result = diff_result_code(&rev_info.diffopt);
+    result = diff_result_code(&rev_info);
     release_revisions(&rev_info);
     return result;
 }

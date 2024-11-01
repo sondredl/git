@@ -646,20 +646,20 @@ test_expect_success !MINGW 'register and unregister with regex metacharacters' '
 		maintenance.repo "$(pwd)/$META"
 '
 
-test_expect_success !MINGW,!DARWIN 'start without GIT_TEST_MAINT_SCHEDULER' '
-	test_when_finished "rm -rf crontab.log script repo" &&
+test_expect_success 'start without GIT_TEST_MAINT_SCHEDULER' '
+	test_when_finished "rm -rf systemctl.log script repo" &&
 	mkdir script &&
-	write_script script/crontab <<-EOF &&
-	echo "\$*" >>"$(pwd)"/crontab.log
+	write_script script/systemctl <<-\EOF &&
+	echo "$*" >>../systemctl.log
 	EOF
 	git init repo &&
 	(
 		cd repo &&
 		sane_unset GIT_TEST_MAINT_SCHEDULER &&
-		PATH="$(pwd)/../script:$PATH" git maintenance start --scheduler=crontab
+		PATH="$PWD/../script:$PATH" git maintenance start --scheduler=systemd
 	) &&
-	test_grep -- -l crontab.log &&
-	test_grep -- git_cron_edit_tmp crontab.log
+	test_grep -- "--user list-timers" systemctl.log &&
+	test_grep -- "enable --now git-maintenance@" systemctl.log
 '
 
 test_expect_success 'start --scheduler=<scheduler>' '

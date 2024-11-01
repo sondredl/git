@@ -1153,7 +1153,38 @@ int mingw_lstat(const char *file_name, struct stat *buf)
 	return -1;
 }
 
-int (*lstat)(const char *file_name, struct stat *buf) = mingw_lstat;
+/* We provide our own lstat/fstat functions, since the provided
+ * lstat/fstat functions are so slow. These stat functions are
+ * tailored for Git's usage (read: fast), and are not meant to be
+ * complete. Note that Git stat()s are redirected to mingw_lstat()
+ * too, since Windows doesn't really handle symlinks that well.
+ */
+static int do_stat_internal(int follow, const char *file_name, struct stat *buf)
+{
+	size_t namelen;
+	char alt_name[PATH_MAX];
+
+	if (!do_lstat(follow, file_name, buf))
+		return 0;
+
+	/* if file_name ended in a '/', Windows returned ENOENT;
+	 * try again without trailing slashes
+	 */
+	if (errno != ENOENT)
+		return -1;
+
+	namelen = strlen(file_name);
+	if (namelen && file_name[namelen-1] != '/')
+		return -1;
+	while (namelen && file_name[namelen-1] == '/')
+		--namelen;
+	if (!namelen || namelen >= PATH_MAX)
+		return -1;
+
+	memcpy(alt_name, file_name, namelen);
+	alt_name[namelen] = 0;
+	return do_lstat(follow, alt_name, buf);
+}
 
 static int get_file_info_by_handle(HANDLE hnd, struct stat *buf)
 {

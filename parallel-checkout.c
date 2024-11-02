@@ -54,25 +54,35 @@ void get_parallel_checkout_configs(int *num_workers, int *threshold)
                 "GIT_TEST_CHECKOUT_WORKERS", env_workers);
         }
         if (*num_workers < 1)
+        {
             *num_workers = online_cpus();
+        }
 
         *threshold = 0;
         return;
     }
 
     if (git_config_get_int("checkout.workers", num_workers))
+    {
         *num_workers = DEFAULT_NUM_WORKERS;
+    }
     else if (*num_workers < 1)
+    {
         *num_workers = online_cpus();
+    }
 
     if (git_config_get_int("checkout.thresholdForParallelism", threshold))
+    {
         *threshold = DEFAULT_THRESHOLD_FOR_PARALLELISM;
+    }
 }
 
 void init_parallel_checkout(void)
 {
     if (parallel_checkout.status != PC_UNINITIALIZED)
+    {
         BUG("parallel checkout already initialized");
+    }
 
     parallel_checkout.status = PC_ACCEPTING_ENTRIES;
 }
@@ -80,7 +90,9 @@ void init_parallel_checkout(void)
 static void finish_parallel_checkout(void)
 {
     if (parallel_checkout.status == PC_UNINITIALIZED)
+    {
         BUG("cannot finish parallel checkout: not initialized yet");
+    }
 
     free(parallel_checkout.items);
     memset(&parallel_checkout, 0, sizeof(parallel_checkout));
@@ -99,7 +111,9 @@ static int is_eligible_for_parallel_checkout(const struct cache_entry *ce,
      * processes, which have their own parallel checkout queues.
      */
     if (!S_ISREG(ce->ce_mode))
+    {
         return 0;
+    }
 
     packed_item_size = sizeof(struct pc_item_fixed_portion) + ce->ce_namelen + (ca->working_tree_encoding ? strlen(ca->working_tree_encoding) : 0);
 
@@ -110,7 +124,9 @@ static int is_eligible_for_parallel_checkout(const struct cache_entry *ce,
      * that does happen, we let the sequential code handle the item.
      */
     if (packed_item_size > LARGE_PACKET_DATA_MAX)
+    {
         return 0;
+    }
 
     c = classify_conv_attrs(ca);
     switch (c)
@@ -160,7 +176,9 @@ int enqueue_checkout(struct cache_entry *ce, struct conv_attrs *ca,
     struct parallel_checkout_item *pc_item;
 
     if (parallel_checkout.status != PC_ACCEPTING_ENTRIES || !is_eligible_for_parallel_checkout(ce, ca))
+    {
         return -1;
+    }
 
     ALLOC_GROW(parallel_checkout.items, parallel_checkout.nr + 1,
                parallel_checkout.alloc);
@@ -206,7 +224,9 @@ static int handle_results(struct checkout *state)
     {
         struct parallel_checkout_item *pc_item = &parallel_checkout.items[i];
         if (pc_item->status == PC_ITEM_WRITTEN)
+        {
             update_ce_after_write(state, pc_item->ce, &pc_item->st);
+        }
     }
 
     for (i = 0; i < parallel_checkout.nr; i++)
@@ -217,7 +237,9 @@ static int handle_results(struct checkout *state)
         {
             case PC_ITEM_WRITTEN:
                 if (pc_item->checkout_counter)
+                {
                     (*pc_item->checkout_counter)++;
+                }
                 break;
             case PC_ITEM_COLLIDED:
                 /*
@@ -258,7 +280,9 @@ static int handle_results(struct checkout *state)
     }
 
     if (have_pending)
+    {
         error("parallel checkout finished with pending entries");
+    }
 
     return ret;
 }
@@ -266,9 +290,13 @@ static int handle_results(struct checkout *state)
 static int reset_fd(int fd, const char *path)
 {
     if (lseek(fd, 0, SEEK_SET) != 0)
+    {
         return error_errno("failed to rewind descriptor of '%s'", path);
+    }
     if (ftruncate(fd, 0))
+    {
         return error_errno("failed to truncate file '%s'", path);
+    }
     return 0;
 }
 
@@ -292,7 +320,9 @@ static int write_pc_item_to_fd(struct parallel_checkout_item *pc_item, int fd,
         {
             /* On error, reset fd to try writing without streaming */
             if (reset_fd(fd, path))
+            {
                 return -1;
+            }
         }
         else
         {
@@ -302,8 +332,10 @@ static int write_pc_item_to_fd(struct parallel_checkout_item *pc_item, int fd,
 
     blob = read_blob_entry(pc_item->ce, &size);
     if (!blob)
+    {
         return error("cannot read object %s '%s'",
                      oid_to_hex(&pc_item->ce->oid), pc_item->ce->name);
+    }
 
     /*
      * checkout metadata is used to give context for external process
@@ -325,7 +357,9 @@ static int write_pc_item_to_fd(struct parallel_checkout_item *pc_item, int fd,
     wrote = write_in_full(fd, blob, size);
     free(blob);
     if (wrote < 0)
+    {
         return error("unable to write file '%s'", path);
+    }
 
     return 0;
 }
@@ -346,9 +380,10 @@ static int close_and_clear(int *fd)
 void write_pc_item(struct parallel_checkout_item *pc_item,
                    struct checkout               *state)
 {
-    unsigned int  mode = (pc_item->ce->ce_mode & 0100) ? 0777 : 0666;
-    int           fd = -1, fstat_done = 0;
-    struct strbuf path = STRBUF_INIT;
+    unsigned int  mode       = (pc_item->ce->ce_mode & 0100) ? 0777 : 0666;
+    int           fd         = -1;
+    int           fstat_done = 0;
+    struct strbuf path       = STRBUF_INIT;
     const char   *dir_sep;
 
     strbuf_add(&path, state->base_dir, state->base_dir_len);
@@ -369,7 +404,7 @@ void write_pc_item(struct parallel_checkout_item *pc_item,
         goto out;
     }
 
-    fd = open(path.buf, O_WRONLY | O_CREAT | O_EXCL, mode);
+    fd = open(path.buf, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, mode);
 
     if (fd < 0)
     {
@@ -428,7 +463,8 @@ out:
 static void send_one_item(int fd, struct parallel_checkout_item *pc_item)
 {
     size_t                        len_data;
-    char                         *data, *variant;
+    char                         *data;
+    char                         *variant;
     struct pc_item_fixed_portion *fixed_portion;
     const char                   *working_tree_encoding     = pc_item->ca.working_tree_encoding;
     size_t                        name_len                  = pc_item->ce->ce_namelen;
@@ -454,7 +490,7 @@ static void send_one_item(int fd, struct parallel_checkout_item *pc_item)
     variant = data + sizeof(*fixed_portion);
     if (working_tree_encoding_len)
     {
-        memcpy(variant, working_tree_encoding, working_tree_encoding_len);
+        strcpy(variant, working_tree_encoding);
         variant += working_tree_encoding_len;
     }
     memcpy(variant, pc_item->ce->name, name_len);
@@ -469,7 +505,9 @@ static void send_batch(int fd, size_t start, size_t nr)
     size_t i;
     sigchain_push(SIGPIPE, SIG_IGN);
     for (i = 0; i < nr; i++)
+    {
         send_one_item(fd, &parallel_checkout.items[start + i]);
+    }
     packet_flush(fd);
     sigchain_pop(SIGPIPE);
 }
@@ -477,8 +515,10 @@ static void send_batch(int fd, size_t start, size_t nr)
 static struct pc_worker *setup_workers(struct checkout *state, int num_workers)
 {
     struct pc_worker *workers;
-    int               i, workers_with_one_extra_item;
-    size_t            base_batch_size, batch_beginning = 0;
+    int               i;
+    int               workers_with_one_extra_item;
+    size_t            base_batch_size;
+    size_t            batch_beginning = 0;
 
     ALLOC_ARRAY(workers, num_workers);
 
@@ -493,9 +533,13 @@ static struct pc_worker *setup_workers(struct checkout *state, int num_workers)
         cp->clean_on_exit = 1;
         strvec_push(&cp->args, "checkout--worker");
         if (state->base_dir_len)
+        {
             strvec_pushf(&cp->args, "--prefix=%s", state->base_dir);
+        }
         if (start_command(cp))
+        {
             die("failed to spawn checkout worker");
+        }
     }
 
     base_batch_size             = parallel_checkout.nr / num_workers;
@@ -508,7 +552,9 @@ static struct pc_worker *setup_workers(struct checkout *state, int num_workers)
 
         /* distribute the extra work evenly */
         if (i < workers_with_one_extra_item)
+        {
             batch_size++;
+        }
 
         send_batch(worker->cp.in, batch_beginning, batch_size);
         worker->next_item_to_complete = batch_beginning;
@@ -532,9 +578,13 @@ static void finish_workers(struct pc_worker *workers, int num_workers)
     {
         struct child_process *cp = &workers[i].cp;
         if (cp->in >= 0)
+        {
             close(cp->in);
+        }
         if (cp->out >= 0)
+        {
             close(cp->out);
+        }
     }
 
     for (i = 0; i < num_workers; i++)
@@ -557,8 +607,10 @@ static void finish_workers(struct pc_worker *workers, int num_workers)
 static inline void assert_pc_item_result_size(int got, int exp)
 {
     if (got != exp)
+    {
         BUG("wrong result size from checkout worker (got %dB, exp %dB)",
             got, exp);
+    }
 }
 
 static void parse_and_save_result(const char *buffer, int len,
@@ -569,8 +621,10 @@ static void parse_and_save_result(const char *buffer, int len,
     struct stat                   *st = NULL;
 
     if (len < PC_ITEM_RESULT_BASE_SIZE)
+    {
         BUG("too short result from checkout worker (got %dB, exp >=%dB)",
             len, (int)PC_ITEM_RESULT_BASE_SIZE);
+    }
 
     res = (struct pc_item_result *)buffer;
 
@@ -589,10 +643,14 @@ static void parse_and_save_result(const char *buffer, int len,
     }
 
     if (!worker->nr_items_to_complete)
+    {
         BUG("received result from supposedly finished checkout worker");
+    }
     if (res->id != worker->next_item_to_complete)
+    {
         BUG("unexpected item id from checkout worker (got %" PRIuMAX ", exp %" PRIuMAX ")",
             (uintmax_t)res->id, (uintmax_t)worker->next_item_to_complete);
+    }
 
     worker->next_item_to_complete++;
     worker->nr_items_to_complete--;
@@ -600,16 +658,21 @@ static void parse_and_save_result(const char *buffer, int len,
     pc_item         = &parallel_checkout.items[res->id];
     pc_item->status = res->status;
     if (st)
+    {
         pc_item->st = *st;
+    }
 
     if (res->status != PC_ITEM_COLLIDED)
+    {
         advance_progress_meter();
+    }
 }
 
 static void gather_results_from_workers(struct pc_worker *workers,
                                         int               num_workers)
 {
-    int            i, active_workers = num_workers;
+    int            i;
+    int            active_workers = num_workers;
     struct pollfd *pfds;
 
     CALLOC_ARRAY(pfds, num_workers);
@@ -626,7 +689,9 @@ static void gather_results_from_workers(struct pc_worker *workers,
         if (nr < 0)
         {
             if (errno == EINTR)
+            {
                 continue;
+            }
             die_errno("failed to poll checkout workers");
         }
 
@@ -636,7 +701,9 @@ static void gather_results_from_workers(struct pc_worker *workers,
             struct pollfd    *pfd    = &pfds[i];
 
             if (!pfd->revents)
+            {
                 continue;
+            }
 
             if (pfd->revents & POLLIN)
             {
@@ -684,7 +751,9 @@ static void write_items_sequentially(struct checkout *state)
         struct parallel_checkout_item *pc_item = &parallel_checkout.items[i];
         write_pc_item(pc_item, state);
         if (pc_item->status != PC_ITEM_COLLIDED)
+        {
             advance_progress_meter();
+        }
     }
 }
 
@@ -694,14 +763,18 @@ int run_parallel_checkout(struct checkout *state, int num_workers, int threshold
     int ret;
 
     if (parallel_checkout.status != PC_ACCEPTING_ENTRIES)
+    {
         BUG("cannot run parallel checkout: uninitialized or already running");
+    }
 
     parallel_checkout.status       = PC_RUNNING;
     parallel_checkout.progress     = progress;
     parallel_checkout.progress_cnt = progress_cnt;
 
     if (parallel_checkout.nr < num_workers)
+    {
         num_workers = parallel_checkout.nr;
+    }
 
     if (num_workers <= 1 || parallel_checkout.nr < threshold)
     {

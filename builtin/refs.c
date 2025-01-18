@@ -5,6 +5,7 @@
 #include "parse-options.h"
 #include "refs.h"
 #include "strbuf.h"
+#include "worktree.h"
 
 #define REFS_MIGRATE_USAGE \
     N_("git refs migrate --ref-format=<format> [--dry-run]")
@@ -12,7 +13,8 @@
 #define REFS_VERIFY_USAGE \
     N_("git refs verify [--strict] [--verbose]")
 
-static int cmd_refs_migrate(int argc, const char **argv, const char *prefix)
+static int cmd_refs_migrate(int argc, const char **argv, const char *prefix,
+			    struct repository *repo UNUSED)
 {
     const char *const migrate_usage[] = {
         REFS_MIGRATE_USAGE,
@@ -70,19 +72,21 @@ out:
     return err;
 }
 
-static int cmd_refs_verify(int argc, const char **argv, const char *prefix)
+static int cmd_refs_verify(int argc, const char **argv, const char *prefix,
+			   struct repository *repo UNUSED)
 {
-    struct fsck_options fsck_refs_options = FSCK_REFS_OPTIONS_DEFAULT;
-    const char *const   verify_usage[]    = {
-             REFS_VERIFY_USAGE,
-             NULL,
-    };
-    struct option options[] = {
-        OPT_BOOL(0, "verbose", &fsck_refs_options.verbose, N_("be verbose")),
-        OPT_BOOL(0, "strict", &fsck_refs_options.strict, N_("enable strict checking")),
-        OPT_END(),
-    };
-    int ret;
+	struct fsck_options fsck_refs_options = FSCK_REFS_OPTIONS_DEFAULT;
+	struct worktree **worktrees;
+	const char * const verify_usage[] = {
+		REFS_VERIFY_USAGE,
+		NULL,
+	};
+	struct option options[] = {
+		OPT_BOOL(0, "verbose", &fsck_refs_options.verbose, N_("be verbose")),
+		OPT_BOOL(0, "strict", &fsck_refs_options.strict, N_("enable strict checking")),
+		OPT_END(),
+	};
+	int ret = 0;
 
     argc = parse_options(argc, argv, prefix, options, verify_usage, 0);
     if (argc)
@@ -93,16 +97,20 @@ static int cmd_refs_verify(int argc, const char **argv, const char *prefix)
     git_config(git_fsck_config, &fsck_refs_options);
     prepare_repo_settings(the_repository);
 
-    ret = refs_fsck(get_main_ref_store(the_repository), &fsck_refs_options);
+	worktrees = get_worktrees();
+	for (size_t i = 0; worktrees[i]; i++)
+		ret |= refs_fsck(get_worktree_ref_store(worktrees[i]),
+				 &fsck_refs_options, worktrees[i]);
 
-    fsck_options_clear(&fsck_refs_options);
-    return ret;
+	fsck_options_clear(&fsck_refs_options);
+	free_worktrees(worktrees);
+	return ret;
 }
 
-int cmd_refs(int                     argc,
-             const char            **argv,
-             const char             *prefix,
-             struct repository *repo UNUSED)
+int cmd_refs(int argc,
+	     const char **argv,
+	     const char *prefix,
+	     struct repository *repo)
 {
     const char *const refs_usage[] = {
         REFS_MIGRATE_USAGE,
@@ -116,6 +124,6 @@ int cmd_refs(int                     argc,
                    OPT_END(),
     };
 
-    argc = parse_options(argc, argv, prefix, opts, refs_usage, 0);
-    return fn(argc, argv, prefix);
+	argc = parse_options(argc, argv, prefix, opts, refs_usage, 0);
+	return fn(argc, argv, prefix, repo);
 }

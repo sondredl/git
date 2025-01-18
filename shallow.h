@@ -59,20 +59,19 @@ void prune_shallow(unsigned options);
  * Initialize with prepare_shallow_info() or zero-initialize (equivalent to
  * prepare_shallow_info with a NULL oid_array).
  */
-struct shallow_info
-{
-    struct oid_array *shallow;
-    int              *ours, nr_ours;
-    int              *theirs, nr_theirs;
-    struct oid_array *ref;
+struct shallow_info {
+	struct oid_array *shallow;
+	size_t *ours, nr_ours;
+	size_t *theirs, nr_theirs;
+	struct oid_array *ref;
 
-    /* for receive-pack */
-    uint32_t      **used_shallow;
-    int            *need_reachability_test;
-    int            *reachable;
-    int            *shallow_ref;
-    struct commit **commits;
-    int             nr_commits;
+	/* for receive-pack */
+	uint32_t **used_shallow;
+	int *need_reachability_test;
+	int *reachable;
+	int *shallow_ref;
+	struct commit **commits;
+	size_t nr_commits;
 };
 
 void prepare_shallow_info(struct shallow_info *, struct oid_array *);

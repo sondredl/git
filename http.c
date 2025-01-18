@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "git-curl-compat.h"
@@ -19,6 +20,7 @@
 #include "string-list.h"
 #include "object-file.h"
 #include "object-store-ll.h"
+#include "tempfile.h"
 
 static struct trace_key trace_curl         = TRACE_KEY_INIT(CURL);
 static int              trace_curl_data    = 1;
@@ -50,25 +52,19 @@ static struct
     const char *name;
     long        ssl_version;
 } sslversions[] = {
-    {"sslv2", CURL_SSLVERSION_SSLv2},
-    {"sslv3", CURL_SSLVERSION_SSLv3},
-    {"tlsv1", CURL_SSLVERSION_TLSv1},
-#ifdef GIT_CURL_HAVE_CURL_SSLVERSION_TLSv1_0
-    {"tlsv1.0", CURL_SSLVERSION_TLSv1_0},
-    {"tlsv1.1", CURL_SSLVERSION_TLSv1_1},
-    {"tlsv1.2", CURL_SSLVERSION_TLSv1_2},
-#endif
-#ifdef GIT_CURL_HAVE_CURL_SSLVERSION_TLSv1_3
-    {"tlsv1.3", CURL_SSLVERSION_TLSv1_3},
-#endif
+	{ "sslv2", CURL_SSLVERSION_SSLv2 },
+	{ "sslv3", CURL_SSLVERSION_SSLv3 },
+	{ "tlsv1", CURL_SSLVERSION_TLSv1 },
+	{ "tlsv1.0", CURL_SSLVERSION_TLSv1_0 },
+	{ "tlsv1.1", CURL_SSLVERSION_TLSv1_1 },
+	{ "tlsv1.2", CURL_SSLVERSION_TLSv1_2 },
+	{ "tlsv1.3", CURL_SSLVERSION_TLSv1_3 },
 };
 static char *ssl_key;
 static char *ssl_key_type;
 static char *ssl_capath;
 static char *curl_no_proxy;
-#ifdef GIT_CURL_HAVE_CURLOPT_PINNEDPUBLICKEY
 static char *ssl_pinnedkey;
-#endif
 static char *ssl_cainfo;
 static long  curl_low_speed_limit = -1;
 static long  curl_low_speed_time  = -1;
@@ -595,15 +591,9 @@ static int http_options(const char *var, const char *value,
 #endif
     }
 
-    if (!strcmp("http.pinnedpubkey", var))
-    {
-#ifdef GIT_CURL_HAVE_CURLOPT_PINNEDPUBLICKEY
-        return git_config_pathname(&ssl_pinnedkey, var, value);
-#else
-        warning(_("Public key pinning not supported with cURL < 7.39.0"));
-        return 0;
-#endif
-    }
+	if (!strcmp("http.pinnedpubkey", var)) {
+		return git_config_pathname(&ssl_pinnedkey, var, value);
+	}
 
     if (!strcmp("http.extraheader", var))
     {
@@ -843,7 +833,6 @@ static int has_cert_password(void)
     return 1;
 }
 
-#ifdef GIT_CURL_HAVE_CURLOPT_PROXY_KEYPASSWD
 static int has_proxy_cert_password(void)
 {
     if (http_proxy_ssl_cert == NULL || proxy_ssl_cert_password_required != 1)
@@ -860,36 +849,11 @@ static int has_proxy_cert_password(void)
     }
     return 1;
 }
-#endif
 
-#ifdef GITCURL_HAVE_CURLOPT_TCP_KEEPALIVE
 static void set_curl_keepalive(CURL *c)
 {
     curl_easy_setopt(c, CURLOPT_TCP_KEEPALIVE, 1);
 }
-
-#else
-static int sockopt_callback(void *client, curl_socket_t fd, curlsocktype type)
-{
-    int ka = 1;
-    int rc;
-    socklen_t len = (socklen_t)sizeof(ka);
-
-    if (type != CURLSOCKTYPE_IPCXN)
-        return 0;
-
-    rc = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&ka, len);
-    if (rc < 0)
-        warning_errno("unable to set SO_KEEPALIVE on socket");
-
-    return CURL_SOCKOPT_OK;
-}
-
-static void set_curl_keepalive(CURL *c)
-{
-    curl_easy_setopt(c, CURLOPT_SOCKOPTFUNCTION, sockopt_callback);
-}
-#endif
 
 /* Return 1 if redactions have been made, 0 otherwise. */
 static int redact_sensitive_header(struct strbuf *header, size_t offset)
@@ -1205,7 +1169,6 @@ static long get_curl_allowed_protocols(int from_user, struct strbuf *list)
     return bits;
 }
 
-#ifdef GIT_CURL_HAVE_CURL_HTTP_VERSION_2
 static int get_curl_http_version_opt(const char *version_string, long *opt)
 {
     int i;
@@ -1230,8 +1193,6 @@ static int get_curl_http_version_opt(const char *version_string, long *opt)
     return -1; /* not found */
 }
 
-#endif
-
 static CURL *get_curl_handle(void)
 {
     CURL *result = curl_easy_init();
@@ -1254,17 +1215,13 @@ static CURL *get_curl_handle(void)
         curl_easy_setopt(result, CURLOPT_SSL_VERIFYHOST, 2);
     }
 
-#ifdef GIT_CURL_HAVE_CURL_HTTP_VERSION_2
-    if (curl_http_version)
-    {
-        long opt;
-        if (!get_curl_http_version_opt(curl_http_version, &opt))
-        {
-            /* Set request use http version */
-            curl_easy_setopt(result, CURLOPT_HTTP_VERSION, opt);
-        }
+    if (curl_http_version) {
+		long opt;
+		if (!get_curl_http_version_opt(curl_http_version, &opt)) {
+			/* Set request use http version */
+			curl_easy_setopt(result, CURLOPT_HTTP_VERSION, opt);
+		}
     }
-#endif
 
     curl_easy_setopt(result, CURLOPT_NETRC, CURL_NETRC_OPTIONAL);
     curl_easy_setopt(result, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
@@ -1290,14 +1247,10 @@ static CURL *get_curl_handle(void)
     }
 #endif
 
-    if (http_ssl_backend && !strcmp("schannel", http_ssl_backend) && !http_schannel_check_revoke)
-    {
-#ifdef GIT_CURL_HAVE_CURLSSLOPT_NO_REVOKE
-        curl_easy_setopt(result, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
-#else
-        warning(_("CURLSSLOPT_NO_REVOKE not supported with cURL < 7.44.0"));
-#endif
-    }
+	if (http_ssl_backend && !strcmp("schannel", http_ssl_backend) &&
+	    !http_schannel_check_revoke) {
+		curl_easy_setopt(result, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NO_REVOKE);
+	}
 
     if (http_proactive_auth != PROACTIVE_AUTH_NONE)
     {
@@ -1337,56 +1290,30 @@ static CURL *get_curl_handle(void)
                          ssl_cipherlist);
     }
 
-    if (ssl_cert)
-    {
-        curl_easy_setopt(result, CURLOPT_SSLCERT, ssl_cert);
-    }
-    if (ssl_cert_type)
-    {
-        curl_easy_setopt(result, CURLOPT_SSLCERTTYPE, ssl_cert_type);
-    }
-    if (has_cert_password())
-    {
-        curl_easy_setopt(result, CURLOPT_KEYPASSWD, cert_auth.password);
-    }
-    if (ssl_key)
-    {
-        curl_easy_setopt(result, CURLOPT_SSLKEY, ssl_key);
-    }
-    if (ssl_key_type)
-    {
-        curl_easy_setopt(result, CURLOPT_SSLKEYTYPE, ssl_key_type);
-    }
-    if (ssl_capath)
-    {
-        curl_easy_setopt(result, CURLOPT_CAPATH, ssl_capath);
-    }
-#ifdef GIT_CURL_HAVE_CURLOPT_PINNEDPUBLICKEY
-    if (ssl_pinnedkey)
-    {
-        curl_easy_setopt(result, CURLOPT_PINNEDPUBLICKEY, ssl_pinnedkey);
-    }
-#endif
-    if (http_ssl_backend && !strcmp("schannel", http_ssl_backend) && !http_schannel_use_ssl_cainfo)
-    {
-        curl_easy_setopt(result, CURLOPT_CAINFO, NULL);
-#ifdef GIT_CURL_HAVE_CURLOPT_PROXY_CAINFO
-        curl_easy_setopt(result, CURLOPT_PROXY_CAINFO, NULL);
-#endif
-    }
-    else if (ssl_cainfo != NULL || http_proxy_ssl_ca_info != NULL)
-    {
-        if (ssl_cainfo)
-        {
-            curl_easy_setopt(result, CURLOPT_CAINFO, ssl_cainfo);
-        }
-#ifdef GIT_CURL_HAVE_CURLOPT_PROXY_CAINFO
-        if (http_proxy_ssl_ca_info)
-        {
-            curl_easy_setopt(result, CURLOPT_PROXY_CAINFO, http_proxy_ssl_ca_info);
-        }
-#endif
-    }
+	if (ssl_cert)
+		curl_easy_setopt(result, CURLOPT_SSLCERT, ssl_cert);
+	if (ssl_cert_type)
+		curl_easy_setopt(result, CURLOPT_SSLCERTTYPE, ssl_cert_type);
+	if (has_cert_password())
+		curl_easy_setopt(result, CURLOPT_KEYPASSWD, cert_auth.password);
+	if (ssl_key)
+		curl_easy_setopt(result, CURLOPT_SSLKEY, ssl_key);
+	if (ssl_key_type)
+		curl_easy_setopt(result, CURLOPT_SSLKEYTYPE, ssl_key_type);
+	if (ssl_capath)
+		curl_easy_setopt(result, CURLOPT_CAPATH, ssl_capath);
+	if (ssl_pinnedkey)
+		curl_easy_setopt(result, CURLOPT_PINNEDPUBLICKEY, ssl_pinnedkey);
+	if (http_ssl_backend && !strcmp("schannel", http_ssl_backend) &&
+	    !http_schannel_use_ssl_cainfo) {
+		curl_easy_setopt(result, CURLOPT_CAINFO, NULL);
+		curl_easy_setopt(result, CURLOPT_PROXY_CAINFO, NULL);
+	} else if (ssl_cainfo != NULL || http_proxy_ssl_ca_info != NULL) {
+		if (ssl_cainfo)
+			curl_easy_setopt(result, CURLOPT_CAINFO, ssl_cainfo);
+		if (http_proxy_ssl_ca_info)
+			curl_easy_setopt(result, CURLOPT_PROXY_CAINFO, http_proxy_ssl_ca_info);
+	}
 
     if (curl_low_speed_limit > 0 && curl_low_speed_time > 0)
     {
@@ -1488,30 +1415,20 @@ static CURL *get_curl_handle(void)
     {
         struct strbuf proxy = STRBUF_INIT;
 
-        if (starts_with(curl_http_proxy, "socks5h"))
-        {
-            curl_easy_setopt(result,
-                             CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
-        }
-        else if (starts_with(curl_http_proxy, "socks5"))
-        {
-            curl_easy_setopt(result,
-                             CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
-        }
-        else if (starts_with(curl_http_proxy, "socks4a"))
-        {
-            curl_easy_setopt(result,
-                             CURLOPT_PROXYTYPE, CURLPROXY_SOCKS4A);
-        }
-        else if (starts_with(curl_http_proxy, "socks"))
-        {
-            curl_easy_setopt(result,
-                             CURLOPT_PROXYTYPE, CURLPROXY_SOCKS4);
-#ifdef GIT_CURL_HAVE_CURLOPT_PROXY_KEYPASSWD
-        }
-        else if (starts_with(curl_http_proxy, "https"))
-        {
-            curl_easy_setopt(result, CURLOPT_PROXYTYPE, CURLPROXY_HTTPS);
+		if (starts_with(curl_http_proxy, "socks5h"))
+			curl_easy_setopt(result,
+				CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
+		else if (starts_with(curl_http_proxy, "socks5"))
+			curl_easy_setopt(result,
+				CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+		else if (starts_with(curl_http_proxy, "socks4a"))
+			curl_easy_setopt(result,
+				CURLOPT_PROXYTYPE, CURLPROXY_SOCKS4A);
+		else if (starts_with(curl_http_proxy, "socks"))
+			curl_easy_setopt(result,
+				CURLOPT_PROXYTYPE, CURLPROXY_SOCKS4);
+		else if (starts_with(curl_http_proxy, "https")) {
+			curl_easy_setopt(result, CURLOPT_PROXYTYPE, CURLPROXY_HTTPS);
 
             if (http_proxy_ssl_cert)
             {
@@ -1523,23 +1440,17 @@ static CURL *get_curl_handle(void)
                 curl_easy_setopt(result, CURLOPT_PROXY_SSLKEY, http_proxy_ssl_key);
             }
 
-            if (has_proxy_cert_password())
-            {
-                curl_easy_setopt(result, CURLOPT_PROXY_KEYPASSWD, proxy_cert_auth.password);
-            }
-        }
-#endif
-        if (strstr(curl_http_proxy, "://"))
-        {
-            credential_from_url(&proxy_auth, curl_http_proxy);
-        }
-        else
-        {
-            struct strbuf url = STRBUF_INIT;
-            strbuf_addf(&url, "http://%s", curl_http_proxy);
-            credential_from_url(&proxy_auth, url.buf);
-            strbuf_release(&url);
-        }
+			if (has_proxy_cert_password())
+				curl_easy_setopt(result, CURLOPT_PROXY_KEYPASSWD, proxy_cert_auth.password);
+		}
+		if (strstr(curl_http_proxy, "://"))
+			credential_from_url(&proxy_auth, curl_http_proxy);
+		else {
+			struct strbuf url = STRBUF_INIT;
+			strbuf_addf(&url, "http://%s", curl_http_proxy);
+			credential_from_url(&proxy_auth, url.buf);
+			strbuf_release(&url);
+		}
 
         if (!proxy_auth.host)
         {
@@ -1615,36 +1526,30 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
     free(normalized_url);
     string_list_clear(&config.vars, 1);
 
-#ifdef GIT_CURL_HAVE_CURLSSLSET_NO_BACKENDS
-    if (http_ssl_backend)
-    {
-        const curl_ssl_backend **backends;
-        struct strbuf            buf = STRBUF_INIT;
-        int                      i;
+	if (http_ssl_backend) {
+		const curl_ssl_backend **backends;
+		struct strbuf buf = STRBUF_INIT;
+		int i;
 
-        switch (curl_global_sslset(-1, http_ssl_backend, &backends))
-        {
-            case CURLSSLSET_UNKNOWN_BACKEND:
-                strbuf_addf(&buf, _("Unsupported SSL backend '%s'. "
-                                    "Supported SSL backends:"),
-                            http_ssl_backend);
-                for (i = 0; backends[i]; i++)
-                {
-                    strbuf_addf(&buf, "\n\t%s", backends[i]->name);
-                }
-                die("%s", buf.buf);
-            case CURLSSLSET_NO_BACKENDS:
-                die(_("Could not set SSL backend to '%s': "
-                      "cURL was built without SSL backends"),
-                    http_ssl_backend);
-            case CURLSSLSET_TOO_LATE:
-                die(_("Could not set SSL backend to '%s': already set"),
-                    http_ssl_backend);
-            case CURLSSLSET_OK:
-                break; /* Okay! */
-        }
-    }
-#endif
+		switch (curl_global_sslset(-1, http_ssl_backend, &backends)) {
+		case CURLSSLSET_UNKNOWN_BACKEND:
+			strbuf_addf(&buf, _("Unsupported SSL backend '%s'. "
+					    "Supported SSL backends:"),
+					    http_ssl_backend);
+			for (i = 0; backends[i]; i++)
+				strbuf_addf(&buf, "\n\t%s", backends[i]->name);
+			die("%s", buf.buf);
+		case CURLSSLSET_NO_BACKENDS:
+			die(_("Could not set SSL backend to '%s': "
+			      "cURL was built without SSL backends"),
+			    http_ssl_backend);
+		case CURLSSLSET_TOO_LATE:
+			die(_("Could not set SSL backend to '%s': already set"),
+			    http_ssl_backend);
+		case CURLSSLSET_OK:
+			break; /* Okay! */
+		}
+	}
 
     if (curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK)
     {
@@ -2220,73 +2125,52 @@ static int handle_curl_result(struct slot_results *results)
     normalize_curl_result(&results->curl_result, results->http_code,
                           curl_errorstr, sizeof(curl_errorstr));
 
-    if (results->curl_result == CURLE_OK)
-    {
-        credential_approve(&http_auth);
-        credential_approve(&proxy_auth);
-        credential_approve(&cert_auth);
-        return HTTP_OK;
-    }
-    if (results->curl_result == CURLE_SSL_CERTPROBLEM)
-    {
-        /*
-         * We can't tell from here whether it's a bad path, bad
-         * certificate, bad password, or something else wrong
-         * with the certificate.  So we reject the credential to
-         * avoid caching or saving a bad password.
-         */
-        credential_reject(&cert_auth);
-        return HTTP_NOAUTH;
-#ifdef GIT_CURL_HAVE_CURLE_SSL_PINNEDPUBKEYNOTMATCH
-    }
-    if (results->curl_result == CURLE_SSL_PINNEDPUBKEYNOTMATCH)
-    {
-        return HTTP_NOMATCHPUBLICKEY;
-#endif
-    }
-    else if (missing_target(results))
-    {
-        return HTTP_MISSING_TARGET;
-    }
-    else if (results->http_code == 401)
-    {
-        if ((http_auth.username && http_auth.password) || (http_auth.authtype && http_auth.credential))
-        {
-            if (http_auth.multistage)
-            {
-                credential_clear_secrets(&http_auth);
-                return HTTP_REAUTH;
-            }
-            credential_reject(&http_auth);
-            if (always_auth_proactively())
-            {
-                http_proactive_auth = PROACTIVE_AUTH_NONE;
-            }
-            return HTTP_NOAUTH;
-        }
-
-        http_auth_methods &= ~CURLAUTH_GSSNEGOTIATE;
-        if (results->auth_avail)
-        {
-            http_auth_methods &= results->auth_avail;
-            http_auth_methods_restricted = 1;
-        }
-        return HTTP_REAUTH;
-    }
-    else
-    {
-        if (results->http_connectcode == 407)
-        {
-            credential_reject(&proxy_auth);
-        }
-        if (!curl_errorstr[0])
-        {
-            strlcpy(curl_errorstr,
-                    curl_easy_strerror(results->curl_result),
-                    sizeof(curl_errorstr));
-        }
-        return HTTP_ERROR;
-    }
+	if (results->curl_result == CURLE_OK) {
+		credential_approve(&http_auth);
+		credential_approve(&proxy_auth);
+		credential_approve(&cert_auth);
+		return HTTP_OK;
+	} else if (results->curl_result == CURLE_SSL_CERTPROBLEM) {
+		/*
+		 * We can't tell from here whether it's a bad path, bad
+		 * certificate, bad password, or something else wrong
+		 * with the certificate.  So we reject the credential to
+		 * avoid caching or saving a bad password.
+		 */
+		credential_reject(&cert_auth);
+		return HTTP_NOAUTH;
+	} else if (results->curl_result == CURLE_SSL_PINNEDPUBKEYNOTMATCH) {
+		return HTTP_NOMATCHPUBLICKEY;
+	} else if (missing_target(results))
+		return HTTP_MISSING_TARGET;
+	else if (results->http_code == 401) {
+		if ((http_auth.username && http_auth.password) ||\
+		    (http_auth.authtype && http_auth.credential)) {
+			if (http_auth.multistage) {
+				credential_clear_secrets(&http_auth);
+				return HTTP_REAUTH;
+			}
+			credential_reject(&http_auth);
+			if (always_auth_proactively())
+				http_proactive_auth = PROACTIVE_AUTH_NONE;
+			return HTTP_NOAUTH;
+		} else {
+			http_auth_methods &= ~CURLAUTH_GSSNEGOTIATE;
+			if (results->auth_avail) {
+				http_auth_methods &= results->auth_avail;
+				http_auth_methods_restricted = 1;
+			}
+			return HTTP_REAUTH;
+		}
+	} else {
+		if (results->http_connectcode == 407)
+			credential_reject(&proxy_auth);
+		if (!curl_errorstr[0])
+			strlcpy(curl_errorstr,
+				curl_easy_strerror(results->curl_result),
+				sizeof(curl_errorstr));
+		return HTTP_ERROR;
+	}
 }
 
 int run_one_slot(struct active_request_slot *slot,
@@ -2763,33 +2647,31 @@ static int http_request_reauth(const char *url,
         }
     }
 
-    while (ret == HTTP_REAUTH && --i)
-    {
-        /*
-         * The previous request may have put cruft into our output stream; we
-         * should clear it out before making our next request.
-         */
-        switch (target)
-        {
-            case HTTP_REQUEST_STRBUF:
-                strbuf_reset(result);
-                break;
-            case HTTP_REQUEST_FILE:
-                if (fflush(result))
-                {
-                    error_errno("unable to flush a file");
-                    return HTTP_START_FAILED;
-                }
-                rewind(result);
-                if (ftruncate(fileno(result), 0) < 0)
-                {
-                    error_errno("unable to truncate a file");
-                    return HTTP_START_FAILED;
-                }
-                break;
-            default:
-                BUG("Unknown http_request target");
-        }
+	while (ret == HTTP_REAUTH && --i) {
+		/*
+		 * The previous request may have put cruft into our output stream; we
+		 * should clear it out before making our next request.
+		 */
+		switch (target) {
+		case HTTP_REQUEST_STRBUF:
+			strbuf_reset(result);
+			break;
+		case HTTP_REQUEST_FILE: {
+			FILE *f = result;
+			if (fflush(f)) {
+				error_errno("unable to flush a file");
+				return HTTP_START_FAILED;
+			}
+			rewind(f);
+			if (ftruncate(fileno(f), 0) < 0) {
+				error_errno("unable to truncate a file");
+				return HTTP_START_FAILED;
+			}
+			break;
+		}
+		default:
+			BUG("Unknown http_request target");
+		}
 
         credential_fill(&http_auth, 1);
 
@@ -2884,8 +2766,24 @@ static char *fetch_pack_index(unsigned char *hash, const char *base_url)
     strbuf_addf(&buf, "objects/pack/pack-%s.idx", hash_to_hex(hash));
     url = strbuf_detach(&buf, NULL);
 
-    strbuf_addf(&buf, "%s.temp", sha1_pack_index_name(hash));
-    tmp = strbuf_detach(&buf, NULL);
+	/*
+	 * Don't put this into packs/, since it's just temporary and we don't
+	 * want to confuse it with our local .idx files.  We'll generate our
+	 * own index if we choose to download the matching packfile.
+	 *
+	 * It's tempting to use xmks_tempfile() here, but it's important that
+	 * the file not exist, otherwise http_get_file() complains. So we
+	 * create a filename that should be unique, and then just register it
+	 * as a tempfile so that it will get cleaned up on exit.
+	 *
+	 * In theory we could hold on to the tempfile and delete these as soon
+	 * as we download the matching pack, but it would take a bit of
+	 * refactoring. Leaving them until the process ends is probably OK.
+	 */
+	tmp = xstrfmt("%s/tmp_pack_%s.idx",
+		      repo_get_object_directory(the_repository),
+		      hash_to_hex(hash));
+	register_tempfile(tmp);
 
     if (http_get_file(url, tmp, NULL) != HTTP_OK)
     {
@@ -2900,19 +2798,18 @@ static char *fetch_pack_index(unsigned char *hash, const char *base_url)
 static int fetch_and_setup_pack_index(struct packed_git **packs_head,
                                       unsigned char *sha1, const char *base_url)
 {
-    struct packed_git *new_pack;
-    char              *tmp_idx = NULL;
-    int                ret;
+	struct packed_git *new_pack, *p;
+	char *tmp_idx = NULL;
+	int ret;
 
-    if (has_pack_index(sha1))
-    {
-        new_pack = parse_pack_index(sha1, sha1_pack_index_name(sha1));
-        if (!new_pack)
-        {
-            return -1; /* parse_pack_index() already issued error message */
-        }
-        goto add_pack;
-    }
+	/*
+	 * If we already have the pack locally, no need to fetch its index or
+	 * even add it to list; we already have all of its objects.
+	 */
+	for (p = get_all_packs(the_repository); p; p = p->next) {
+		if (hasheq(p->hash, sha1, the_repository->hash_algo))
+			return 0;
+	}
 
     tmp_idx = fetch_pack_index(sha1, base_url);
     if (!tmp_idx)
@@ -2920,31 +2817,24 @@ static int fetch_and_setup_pack_index(struct packed_git **packs_head,
         return -1;
     }
 
-    new_pack = parse_pack_index(sha1, tmp_idx);
-    if (!new_pack)
-    {
-        unlink(tmp_idx);
-        free(tmp_idx);
+	new_pack = parse_pack_index(the_repository, sha1, tmp_idx);
+	if (!new_pack) {
+		unlink(tmp_idx);
+		free(tmp_idx);
 
         return -1; /* parse_pack_index() already issued error message */
     }
 
-    ret = verify_pack_index(new_pack);
-    if (!ret)
-    {
-        close_pack_index(new_pack);
-        ret = finalize_object_file(tmp_idx, sha1_pack_index_name(sha1));
-    }
-    free(tmp_idx);
-    if (ret)
-    {
-        return -1;
-    }
+	ret = verify_pack_index(new_pack);
+	if (!ret)
+		close_pack_index(new_pack);
+	free(tmp_idx);
+	if (ret)
+		return -1;
 
-add_pack:
-    new_pack->next = *packs_head;
-    *packs_head    = new_pack;
-    return 0;
+	new_pack->next = *packs_head;
+	*packs_head = new_pack;
+	return 0;
 }
 
 int http_get_info_packs(const char *base_url, struct packed_git **packs_head)
@@ -3081,14 +2971,14 @@ struct http_pack_request *new_direct_http_pack_request(
 
     preq->url = url;
 
-    strbuf_addf(&preq->tmpfile, "%s.temp", sha1_pack_name(packed_git_hash));
-    preq->packfile = fopen(preq->tmpfile.buf, "a");
-    if (!preq->packfile)
-    {
-        error("Unable to open local file %s for pack",
-              preq->tmpfile.buf);
-        goto abort;
-    }
+	odb_pack_name(the_repository, &preq->tmpfile, packed_git_hash, "pack");
+	strbuf_addstr(&preq->tmpfile, ".temp");
+	preq->packfile = fopen(preq->tmpfile.buf, "a");
+	if (!preq->packfile) {
+		error("Unable to open local file %s for pack",
+		      preq->tmpfile.buf);
+		goto abort;
+	}
 
     preq->slot    = get_active_slot();
     preq->headers = object_request_headers();

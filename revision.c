@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -51,8 +52,8 @@
 
 volatile show_early_output_fn_t show_early_output;
 
-static const char *term_bad;
-static const char *term_good;
+static char *term_bad;
+static char *term_good;
 
 implement_shared_commit_slab(revision_sources, char *);
 
@@ -450,25 +451,20 @@ static struct object *get_reference(struct rev_info *revs, const char *name,
     object = parse_object_with_flags(revs->repo, oid,
                                      revs->verify_objects ? 0 : PARSE_OBJECT_SKIP_HASH_CHECK | PARSE_OBJECT_DISCARD_TREE);
 
-    if (!object)
-    {
-        if (revs->ignore_missing)
-        {
-            return NULL;
-        }
-        if (revs->exclude_promisor_objects && is_promisor_object(oid))
-        {
-            return NULL;
-        }
-        if (revs->do_not_die_on_missing_objects)
-        {
-            oidset_insert(&revs->missing_commits, oid);
-            return NULL;
-        }
-        die("bad object %s", name);
-    }
-    object->flags |= flags;
-    return object;
+	if (!object) {
+		if (revs->ignore_missing)
+			return NULL;
+		if (revs->exclude_promisor_objects &&
+		    is_promisor_object(revs->repo, oid))
+			return NULL;
+		if (revs->do_not_die_on_missing_objects) {
+			oidset_insert(&revs->missing_commits, oid);
+			return NULL;
+		}
+		die("bad object %s", name);
+	}
+	object->flags |= flags;
+	return object;
 }
 
 void add_pending_oid(struct rev_info *revs, const char *name,
@@ -487,45 +483,37 @@ static struct commit *handle_commit(struct rev_info           *revs,
     unsigned int   mode   = entry->mode;
     unsigned long  flags  = object->flags;
 
-    /*
-     * Tag object? Look what it points to..
-     */
-    while (object->type == OBJ_TAG)
-    {
-        struct tag       *tag = (struct tag *)object;
-        struct object_id *oid;
-        if (revs->tag_objects && !(flags & UNINTERESTING))
-        {
-            add_pending_object(revs, object, tag->tag);
-        }
-        oid    = get_tagged_oid(tag);
-        object = parse_object(revs->repo, oid);
-        if (!object)
-        {
-            if (revs->ignore_missing_links || (flags & UNINTERESTING))
-            {
-                return NULL;
-            }
-            if (revs->exclude_promisor_objects && is_promisor_object(&tag->tagged->oid))
-            {
-                return NULL;
-            }
-            if (revs->do_not_die_on_missing_objects && oid)
-            {
-                oidset_insert(&revs->missing_commits, oid);
-                return NULL;
-            }
-            die("bad object %s", oid_to_hex(&tag->tagged->oid));
-        }
-        object->flags |= flags;
-        /*
-         * We'll handle the tagged object by looping or dropping
-         * through to the non-tag handlers below. Do not
-         * propagate path data from the tag's pending entry.
-         */
-        path = NULL;
-        mode = 0;
-    }
+	/*
+	 * Tag object? Look what it points to..
+	 */
+	while (object->type == OBJ_TAG) {
+		struct tag *tag = (struct tag *) object;
+		struct object_id *oid;
+		if (revs->tag_objects && !(flags & UNINTERESTING))
+			add_pending_object(revs, object, tag->tag);
+		oid = get_tagged_oid(tag);
+		object = parse_object(revs->repo, oid);
+		if (!object) {
+			if (revs->ignore_missing_links || (flags & UNINTERESTING))
+				return NULL;
+			if (revs->exclude_promisor_objects &&
+			    is_promisor_object(revs->repo, &tag->tagged->oid))
+				return NULL;
+			if (revs->do_not_die_on_missing_objects && oid) {
+				oidset_insert(&revs->missing_commits, oid);
+				return NULL;
+			}
+			die("bad object %s", oid_to_hex(&tag->tagged->oid));
+		}
+		object->flags |= flags;
+		/*
+		 * We'll handle the tagged object by looping or dropping
+		 * through to the non-tag handlers below. Do not
+		 * propagate path data from the tag's pending entry.
+		 */
+		path = NULL;
+		mode = 0;
+	}
 
     /*
      * Commit object? Just return it, we'll do all the complex
@@ -1451,20 +1439,18 @@ static int process_parents(struct rev_info *revs, struct commit *commit,
 
     pass_flags = (commit->object.flags & (SYMMETRIC_LEFT | ANCESTRY_PATH));
 
-    for (parent = commit->parents; parent; parent = parent->next)
-    {
-        struct commit *p      = parent->item;
-        int            gently = revs->ignore_missing_links || revs->exclude_promisor_objects || revs->do_not_die_on_missing_objects;
-        if (repo_parse_commit_gently(revs->repo, p, gently) < 0)
-        {
-            if (revs->exclude_promisor_objects && is_promisor_object(&p->object.oid))
-            {
-                if (revs->first_parent_only)
-                {
-                    break;
-                }
-                continue;
-            }
+	for (parent = commit->parents; parent; parent = parent->next) {
+		struct commit *p = parent->item;
+		int gently = revs->ignore_missing_links ||
+			     revs->exclude_promisor_objects ||
+			     revs->do_not_die_on_missing_objects;
+		if (repo_parse_commit_gently(revs->repo, p, gently) < 0) {
+			if (revs->exclude_promisor_objects &&
+			    is_promisor_object(revs->repo, &p->object.oid)) {
+				if (revs->first_parent_only)
+					break;
+				continue;
+			}
 
             if (revs->do_not_die_on_missing_objects)
             {
@@ -4089,27 +4075,32 @@ static void free_void_commit_list(void *list)
 
 void release_revisions(struct rev_info *revs)
 {
-    free_commit_list(revs->commits);
-    free_commit_list(revs->ancestry_path_bottoms);
-    release_display_notes(&revs->notes_opt);
-    object_array_clear(&revs->pending);
-    object_array_clear(&revs->boundary_commits);
-    release_revisions_cmdline(&revs->cmdline);
-    list_objects_filter_release(&revs->filter);
-    clear_pathspec(&revs->prune_data);
-    date_mode_release(&revs->date_mode);
-    release_revisions_mailmap(revs->mailmap);
-    free_grep_patterns(&revs->grep_filter);
-    graph_clear(revs->graph);
-    diff_free(&revs->diffopt);
-    diff_free(&revs->pruning);
-    reflog_walk_info_release(revs->reflog_info);
-    release_revisions_topo_walk_info(revs->topo_walk_info);
-    clear_decoration(&revs->children, free_void_commit_list);
-    clear_decoration(&revs->merge_simplification, free);
-    clear_decoration(&revs->treesame, free);
-    line_log_free(revs);
-    oidset_clear(&revs->missing_commits);
+	free_commit_list(revs->commits);
+	free_commit_list(revs->ancestry_path_bottoms);
+	release_display_notes(&revs->notes_opt);
+	object_array_clear(&revs->pending);
+	object_array_clear(&revs->boundary_commits);
+	release_revisions_cmdline(&revs->cmdline);
+	list_objects_filter_release(&revs->filter);
+	clear_pathspec(&revs->prune_data);
+	date_mode_release(&revs->date_mode);
+	release_revisions_mailmap(revs->mailmap);
+	free_grep_patterns(&revs->grep_filter);
+	graph_clear(revs->graph);
+	diff_free(&revs->diffopt);
+	diff_free(&revs->pruning);
+	reflog_walk_info_release(revs->reflog_info);
+	release_revisions_topo_walk_info(revs->topo_walk_info);
+	clear_decoration(&revs->children, free_void_commit_list);
+	clear_decoration(&revs->merge_simplification, free);
+	clear_decoration(&revs->treesame, free);
+	line_log_free(revs);
+	oidset_clear(&revs->missing_commits);
+
+	for (int i = 0; i < revs->bloom_keys_nr; i++)
+		clear_bloom_key(&revs->bloom_keys[i]);
+	FREE_AND_NULL(revs->bloom_keys);
+	revs->bloom_keys_nr = 0;
 }
 
 static void add_child(struct rev_info *revs, struct commit *parent, struct commit *child)
@@ -4931,11 +4922,10 @@ int prepare_revision_walk(struct rev_info *revs)
         revs->treesame.name = "treesame";
     }
 
-    if (revs->exclude_promisor_objects)
-    {
-        for_each_packed_object(mark_uninteresting, revs,
-                               FOR_EACH_OBJECT_PROMISOR_ONLY);
-    }
+	if (revs->exclude_promisor_objects) {
+		for_each_packed_object(revs->repo, mark_uninteresting, revs,
+				       FOR_EACH_OBJECT_PROMISOR_ONLY);
+	}
 
     if (!revs->reflog_info)
     {
@@ -5171,77 +5161,55 @@ static timestamp_t comparison_date(const struct rev_info *revs,
 
 enum commit_action get_commit_action(struct rev_info *revs, struct commit *commit)
 {
-    if (commit->object.flags & SHOWN)
-    {
-        return commit_ignore;
-    }
-    if (revs->unpacked && has_object_pack(&commit->object.oid))
-    {
-        return commit_ignore;
-    }
-    if (revs->no_kept_objects)
-    {
-        if (has_object_kept_pack(&commit->object.oid,
-                                 revs->keep_pack_cache_flags))
-        {
-            return commit_ignore;
-        }
-    }
-    if (commit->object.flags & UNINTERESTING)
-    {
-        return commit_ignore;
-    }
-    if (revs->line_level_traverse && !want_ancestry(revs))
-    {
-        /*
-         * In case of line-level log with parent rewriting
-         * prepare_revision_walk() already took care of all line-level
-         * log filtering, and there is nothing left to do here.
-         *
-         * If parent rewriting was not requested, then this is the
-         * place to perform the line-level log filtering.  Notably,
-         * this check, though expensive, must come before the other,
-         * cheaper filtering conditions, because the tracked line
-         * ranges must be adjusted even when the commit will end up
-         * being ignored based on other conditions.
-         */
-        if (!line_log_process_ranges_arbitrary_commit(revs, commit))
-        {
-            return commit_ignore;
-        }
-    }
-    if (revs->min_age != -1 && comparison_date(revs, commit) > revs->min_age)
-    {
-        return commit_ignore;
-    }
-    if (revs->max_age_as_filter != -1 && comparison_date(revs, commit) < revs->max_age_as_filter)
-    {
-        return commit_ignore;
-    }
-    if (revs->min_parents || (revs->max_parents >= 0))
-    {
-        int n = commit_list_count(commit->parents);
-        if ((n < revs->min_parents) || ((revs->max_parents >= 0) && (n > revs->max_parents)))
-        {
-            return commit_ignore;
-        }
-    }
-    if (!commit_match(commit, revs))
-    {
-        return commit_ignore;
-    }
-    if (revs->prune && revs->dense)
-    {
-        /* Commit without changes? */
-        if (commit->object.flags & TREESAME)
-        {
-            int                 n;
-            struct commit_list *p;
-            /* drop merges unless we want parenthood */
-            if (!want_ancestry(revs))
-            {
-                return commit_ignore;
-            }
+	if (commit->object.flags & SHOWN)
+		return commit_ignore;
+	if (revs->unpacked && has_object_pack(revs->repo, &commit->object.oid))
+		return commit_ignore;
+	if (revs->no_kept_objects) {
+		if (has_object_kept_pack(revs->repo, &commit->object.oid,
+					 revs->keep_pack_cache_flags))
+			return commit_ignore;
+	}
+	if (commit->object.flags & UNINTERESTING)
+		return commit_ignore;
+	if (revs->line_level_traverse && !want_ancestry(revs)) {
+		/*
+		 * In case of line-level log with parent rewriting
+		 * prepare_revision_walk() already took care of all line-level
+		 * log filtering, and there is nothing left to do here.
+		 *
+		 * If parent rewriting was not requested, then this is the
+		 * place to perform the line-level log filtering.  Notably,
+		 * this check, though expensive, must come before the other,
+		 * cheaper filtering conditions, because the tracked line
+		 * ranges must be adjusted even when the commit will end up
+		 * being ignored based on other conditions.
+		 */
+		if (!line_log_process_ranges_arbitrary_commit(revs, commit))
+			return commit_ignore;
+	}
+	if (revs->min_age != -1 &&
+	    comparison_date(revs, commit) > revs->min_age)
+			return commit_ignore;
+	if (revs->max_age_as_filter != -1 &&
+	    comparison_date(revs, commit) < revs->max_age_as_filter)
+			return commit_ignore;
+	if (revs->min_parents || (revs->max_parents >= 0)) {
+		int n = commit_list_count(commit->parents);
+		if ((n < revs->min_parents) ||
+		    ((revs->max_parents >= 0) && (n > revs->max_parents)))
+			return commit_ignore;
+	}
+	if (!commit_match(commit, revs))
+		return commit_ignore;
+	if (revs->prune && revs->dense) {
+		/* Commit without changes? */
+		if (commit->object.flags & TREESAME) {
+			int n;
+			struct commit_list *p;
+			/* drop merges unless we want parenthood */
+			if (!want_ancestry(revs))
+				return commit_ignore;
 
             if (revs->show_pulls && (commit->object.flags & PULL_MERGE))
             {

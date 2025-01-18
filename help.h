@@ -31,17 +31,17 @@ void list_guides_help(void);
 void list_user_interfaces_help(void);
 void list_developer_interfaces_help(void);
 
-void        list_all_main_cmds(struct string_list *list);
-void        list_all_other_cmds(struct string_list *list);
-void        list_cmds_by_category(struct string_list *list,
-                                  const char         *category);
-void        list_cmds_by_config(struct string_list *list);
-const char *help_unknown_cmd(const char *cmd);
-void        load_command_list(const char      *prefix,
-                              struct cmdnames *main_cmds,
-                              struct cmdnames *other_cmds);
-void        load_builtin_commands(const char *prefix, struct cmdnames *cmds);
-void        add_cmdname(struct cmdnames *cmds, const char *name, int len);
+void list_all_main_cmds(struct string_list *list);
+void list_all_other_cmds(struct string_list *list);
+void list_cmds_by_category(struct string_list *list,
+			   const char *category);
+void list_cmds_by_config(struct string_list *list);
+char *help_unknown_cmd(const char *cmd);
+void load_command_list(const char *prefix,
+		       struct cmdnames *main_cmds,
+		       struct cmdnames *other_cmds);
+void load_builtin_commands(const char *prefix, struct cmdnames *cmds);
+void add_cmdname(struct cmdnames *cmds, const char *name, int len);
 /* Here we require that excludes is a sorted list. */
 void exclude_cmds(struct cmdnames *cmds, struct cmdnames *excludes);
 int  is_in_cmdlist(struct cmdnames *cmds, const char *name);
@@ -61,28 +61,26 @@ static inline void list_config_item(struct string_list *list,
     string_list_append_nodup(list, xstrfmt("%s.%s", prefix, str));
 }
 
-#define define_list_config_array(array)                                    \
-    void list_config_##array(struct string_list *list, const char *prefix) \
-    {                                                                      \
-        int i;                                                             \
-        for (i = 0; i < ARRAY_SIZE(array); i++)                            \
-            if ((array)[i])                                                \
-                list_config_item(list, prefix, (array)[i]);                \
-    }                                                                      \
-    struct string_list
+#define define_list_config_array(array)					\
+void list_config_##array(struct string_list *list, const char *prefix)	\
+{									\
+	for (size_t i = 0; i < ARRAY_SIZE(array); i++)			\
+		if (array[i])						\
+			list_config_item(list, prefix, array[i]);	\
+}									\
+struct string_list
 
-#define define_list_config_array_extra(array, values)                      \
-    void list_config_##array(struct string_list *list, const char *prefix) \
-    {                                                                      \
-        int                i;                                              \
-        static const char *extra[] = values;                               \
-        for (i = 0; i < ARRAY_SIZE(extra); i++)                            \
-            list_config_item(list, prefix, extra[i]);                      \
-        for (i = 0; i < ARRAY_SIZE(array); i++)                            \
-            if ((array)[i])                                                \
-                list_config_item(list, prefix, (array)[i]);                \
-    }                                                                      \
-    struct string_list
+#define define_list_config_array_extra(array, values)			\
+void list_config_##array(struct string_list *list, const char *prefix)	\
+{									\
+	static const char *extra[] = values;				\
+	for (size_t i = 0; i < ARRAY_SIZE(extra); i++)			\
+		list_config_item(list, prefix, extra[i]);		\
+	for (size_t i = 0; i < ARRAY_SIZE(array); i++)			\
+		if (array[i])						\
+			list_config_item(list, prefix, array[i]);	\
+}									\
+struct string_list
 
 /* These are actually scattered over many C files */
 void list_config_advices(struct string_list *list, const char *prefix);

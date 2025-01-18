@@ -10,7 +10,6 @@ properly (without access to the index or attribute stack).
 '
 
 TEST_NO_CREATE_REPO=1
-TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 . "$TEST_DIRECTORY/lib-parallel-checkout.sh"
 . "$TEST_DIRECTORY/lib-encoding.sh"
@@ -34,7 +33,7 @@ test_expect_success 'parallel-checkout with ident' '
 	)
 '
 
-test_expect_success 'parallel-checkout with re-encoding' '
+test_expect_success ICONV 'parallel-checkout with re-encoding' '
 	set_checkout_config 2 0 &&
 	git init encoding &&
 	(

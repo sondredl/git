@@ -3,7 +3,10 @@
  *
  * Copyright (c) 2006 Junio C Hamano
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "config.h"
 #include "ewah/ewok.h"
@@ -715,77 +718,69 @@ int cmd_diff(int                     argc,
         paths += rev.prune_data.nr;
     }
 
-    if (obj->type == OBJ_TREE)
-    {
-        if (sdiff.skip && bitmap_get(sdiff.skip, i))
-            continue;
-        obj->flags |= flags;
-        add_object_array(obj, name, &ent);
-        if (first_non_parent < 0 && (i >= rev.cmdline.nr || /* HEAD by hand. */
-                                     rev.cmdline.rev[i].whence != REV_CMD_PARENTS_ONLY))
-            first_non_parent = ent.nr - 1;
-    }
-    else if (obj->type == OBJ_BLOB)
-    {
-        if (2 <= blobs)
-            die(_("more than two blobs given: '%s'"), name);
-        blob[blobs] = entry;
-        blobs++;
-    }
-    else
-    {
-        die(_("unhandled object '%s' given."), name);
-    }
-}
-if (rev.prune_data.nr)
-    paths += rev.prune_data.nr;
+		if (obj->type == OBJ_TREE) {
+			if (sdiff.skip && bitmap_get(sdiff.skip, i))
+				continue;
+			obj->flags |= flags;
+			add_object_array(obj, name, &ent);
+			if (first_non_parent < 0 &&
+			    (i >= rev.cmdline.nr || /* HEAD by hand. */
+			     rev.cmdline.rev[i].whence != REV_CMD_PARENTS_ONLY))
+				first_non_parent = ent.nr - 1;
+		} else if (obj->type == OBJ_BLOB) {
+			if (2 <= blobs)
+				die(_("more than two blobs given: '%s'"), name);
+			blob[blobs] = entry;
+			blobs++;
 
-/*
- * Now, do the arguments look reasonable?
- */
-if (!ent.nr)
-{
-    switch (blobs)
-    {
-        case 0:
-            builtin_diff_files(&rev, argc, argv);
-            break;
-        case 1:
-            if (paths != 1)
-                usage(builtin_diff_usage);
-            builtin_diff_b_f(&rev, argc, argv, blob);
-            break;
-        case 2:
-            if (paths)
-                usage(builtin_diff_usage);
-            builtin_diff_blobs(&rev, argc, argv, blob);
-            break;
-        default:
-            usage(builtin_diff_usage);
-    }
-}
-else if (blobs)
-    usage(builtin_diff_usage);
-else if (ent.nr == 1)
-    builtin_diff_index(&rev, argc, argv);
-else if (ent.nr == 2)
-{
-    if (sdiff.warn)
-        warning(_("%s...%s: multiple merge bases, using %s"),
-                sdiff.left, sdiff.right, sdiff.base);
-    builtin_diff_tree(&rev, argc, argv,
-                      &ent.objects[0], &ent.objects[1]);
-}
-else
-    builtin_diff_combined(&rev, argc, argv,
-                          ent.objects, ent.nr,
-                          first_non_parent);
-result = diff_result_code(&rev);
-if (1 < rev.diffopt.skip_stat_unmatch)
-    refresh_index_quietly();
-release_revisions(&rev);
-object_array_clear(&ent);
-symdiff_release(&sdiff);
-UNLEAK(blob);
-return result;
+		} else {
+			die(_("unhandled object '%s' given."), name);
+		}
+	}
+	if (rev.prune_data.nr)
+		paths += rev.prune_data.nr;
+
+	/*
+	 * Now, do the arguments look reasonable?
+	 */
+	if (!ent.nr) {
+		switch (blobs) {
+		case 0:
+			builtin_diff_files(&rev, argc, argv);
+			break;
+		case 1:
+			if (paths != 1)
+				usage(builtin_diff_usage);
+			builtin_diff_b_f(&rev, argc, argv, blob);
+			break;
+		case 2:
+			if (paths)
+				usage(builtin_diff_usage);
+			builtin_diff_blobs(&rev, argc, argv, blob);
+			break;
+		default:
+			usage(builtin_diff_usage);
+		}
+	}
+	else if (blobs)
+		usage(builtin_diff_usage);
+	else if (ent.nr == 1)
+		builtin_diff_index(&rev, argc, argv);
+	else if (ent.nr == 2) {
+		if (sdiff.warn)
+			warning(_("%s...%s: multiple merge bases, using %s"),
+				sdiff.left, sdiff.right, sdiff.base);
+		builtin_diff_tree(&rev, argc, argv,
+				  &ent.objects[0], &ent.objects[1]);
+	} else
+		builtin_diff_combined(&rev, argc, argv,
+				      ent.objects, ent.nr,
+				      first_non_parent);
+	result = diff_result_code(&rev);
+	if (1 < rev.diffopt.skip_stat_unmatch)
+		refresh_index_quietly();
+	release_revisions(&rev);
+	object_array_clear(&ent);
+	symdiff_release(&sdiff);
+	return result;
 }

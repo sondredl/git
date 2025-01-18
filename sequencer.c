@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "abspath.h"
@@ -733,16 +734,20 @@ static int fast_forward_to(struct repository      *r,
 
     strbuf_addf(&sb, "%s: fast-forward", action_name(opts));
 
-    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                              &err);
-    if (!transaction || ref_transaction_update(transaction, "HEAD", to, unborn && !is_rebase_i(opts) ? null_oid() : from, NULL, NULL, 0, sb.buf, &err) || ref_transaction_commit(transaction, &err))
-    {
-        ref_transaction_free(transaction);
-        error("%s", err.buf);
-        strbuf_release(&sb);
-        strbuf_release(&err);
-        return -1;
-    }
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  0, &err);
+	if (!transaction ||
+	    ref_transaction_update(transaction, "HEAD",
+				   to, unborn && !is_rebase_i(opts) ?
+				   null_oid() : from, NULL, NULL,
+				   0, sb.buf, &err) ||
+	    ref_transaction_commit(transaction, &err)) {
+		ref_transaction_free(transaction);
+		error("%s", err.buf);
+		strbuf_release(&sb);
+		strbuf_release(&err);
+		return -1;
+	}
 
     strbuf_release(&sb);
     strbuf_release(&err);
@@ -1544,14 +1549,17 @@ int update_head_with_reflog(const struct commit    *old_head,
         strbuf_addch(&sb, '\n');
     }
 
-    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                              err);
-    if (!transaction || ref_transaction_update(transaction, "HEAD", new_head, old_head ? &old_head->object.oid : null_oid(), NULL, NULL, 0, sb.buf, err) || ref_transaction_commit(transaction, err))
-    {
-        ret = -1;
-    }
-    ref_transaction_free(transaction);
-    strbuf_release(&sb);
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  0, err);
+	if (!transaction ||
+	    ref_transaction_update(transaction, "HEAD", new_head,
+				   old_head ? &old_head->object.oid : null_oid(),
+				   NULL, NULL, 0, sb.buf, err) ||
+	    ref_transaction_commit(transaction, err)) {
+		ret = -1;
+	}
+	ref_transaction_free(transaction);
+	strbuf_release(&sb);
 
     return ret;
 }
@@ -2312,12 +2320,12 @@ static int seen_squash(struct replay_ctx *ctx)
 
 static void update_comment_bufs(struct strbuf *buf1, struct strbuf *buf2, int n)
 {
-    strbuf_setlen(buf1, 2);
-    strbuf_addf(buf1, _(nth_commit_msg_fmt), n);
-    strbuf_addch(buf1, '\n');
-    strbuf_setlen(buf2, 2);
-    strbuf_addf(buf2, _(skip_nth_commit_msg_fmt), n);
-    strbuf_addch(buf2, '\n');
+	strbuf_setlen(buf1, strlen(comment_line_str) + 1);
+	strbuf_addf(buf1, _(nth_commit_msg_fmt), n);
+	strbuf_addch(buf1, '\n');
+	strbuf_setlen(buf2, strlen(comment_line_str) + 1);
+	strbuf_addf(buf2, _(skip_nth_commit_msg_fmt), n);
+	strbuf_addch(buf2, '\n');
 }
 
 /*
@@ -2336,61 +2344,53 @@ static void update_squash_message_for_fixup(struct strbuf *msg)
     size_t        orig_msg_len;
     int           i = 1;
 
-    strbuf_addf(&buf1, "# %s\n", _(first_commit_msg_str));
-    strbuf_addf(&buf2, "# %s\n", _(skip_first_commit_msg_str));
-    s = start = orig_msg = strbuf_detach(msg, &orig_msg_len);
-    while (s)
-    {
-        const char *next;
-        size_t      off;
-        if (skip_prefix(s, buf1.buf, &next))
-        {
-            /*
-             * Copy the last message, preserving the blank line
-             * preceding the current line
-             */
-            off = (s > start + 1 && s[-2] == '\n') ? 1 : 0;
-            copy_lines(msg, start, s - start - off);
-            if (off)
-            {
-                strbuf_addch(msg, '\n');
-            }
-            /*
-             * The next message needs to be commented out but the
-             * message header is already commented out so just copy
-             * it and the blank line that follows it.
-             */
-            strbuf_addbuf(msg, &buf2);
-            if (*next == '\n')
-            {
-                strbuf_addch(msg, *next++);
-            }
-            start = s  = next;
-            copy_lines = add_commented_lines;
-            update_comment_bufs(&buf1, &buf2, ++i);
-        }
-        else if (skip_prefix(s, buf2.buf, &next))
-        {
-            off = (s > start + 1 && s[-2] == '\n') ? 1 : 0;
-            copy_lines(msg, start, s - start - off);
-            start      = s - off;
-            s          = next;
-            copy_lines = strbuf_add;
-            update_comment_bufs(&buf1, &buf2, ++i);
-        }
-        else
-        {
-            s = strchr(s, '\n');
-            if (s)
-            {
-                s++;
-            }
-        }
-    }
-    copy_lines(msg, start, orig_msg_len - (start - orig_msg));
-    free(orig_msg);
-    strbuf_release(&buf1);
-    strbuf_release(&buf2);
+	strbuf_add_commented_lines(&buf1, _(first_commit_msg_str),
+				   strlen(_(first_commit_msg_str)),
+				   comment_line_str);
+	strbuf_add_commented_lines(&buf2, _(skip_first_commit_msg_str),
+				   strlen(_(skip_first_commit_msg_str)),
+				   comment_line_str);
+	s = start = orig_msg = strbuf_detach(msg, &orig_msg_len);
+	while (s) {
+		const char *next;
+		size_t off;
+		if (skip_prefix(s, buf1.buf, &next)) {
+			/*
+			 * Copy the last message, preserving the blank line
+			 * preceding the current line
+			 */
+			off = (s > start + 1 && s[-2] == '\n') ? 1 : 0;
+			copy_lines(msg, start, s - start - off);
+			if (off)
+				strbuf_addch(msg, '\n');
+			/*
+			 * The next message needs to be commented out but the
+			 * message header is already commented out so just copy
+			 * it and the blank line that follows it.
+			 */
+			strbuf_addbuf(msg, &buf2);
+			if (*next == '\n')
+				strbuf_addch(msg, *next++);
+			start = s = next;
+			copy_lines = add_commented_lines;
+			update_comment_bufs(&buf1, &buf2, ++i);
+		} else if (skip_prefix(s, buf2.buf, &next)) {
+			off = (s > start + 1 && s[-2] == '\n') ? 1 : 0;
+			copy_lines(msg, start, s - start - off);
+			start = s - off;
+			s = next;
+			copy_lines = strbuf_add;
+			update_comment_bufs(&buf1, &buf2, ++i);
+		} else {
+			s = strchr(s, '\n');
+			if (s)
+				s++;
+		}
+	}
+	copy_lines(msg, start, orig_msg_len - (start - orig_msg));
+	free(orig_msg);
+	strbuf_release(&buf1);
+	strbuf_release(&buf2);
 }
 
 static int append_squash_message(struct strbuf *buf, const char *body,
@@ -2811,34 +2811,30 @@ static int do_pick_commit(struct repository  *r,
     {
         const char *orig_subject;
 
-        base       = commit;
-        base_label = msg.label;
-        next       = parent;
-        next_label = msg.parent_label;
-        if (opts->commit_use_reference)
-        {
-            strbuf_addstr(&ctx->message,
-                          "# *** SAY WHY WE ARE REVERTING ON THE TITLE LINE ***");
-        }
-        else if (skip_prefix(msg.subject, "Revert \"", &orig_subject) &&
-                 /*
-                  * We don't touch pre-existing repeated reverts, because
-                  * theoretically these can be nested arbitrarily deeply,
-                  * thus requiring excessive complexity to deal with.
-                  */
-                 !starts_with(orig_subject, "Revert \""))
-        {
-            strbuf_addstr(&ctx->message, "Reapply \"");
-            strbuf_addstr(&ctx->message, orig_subject);
-        }
-        else
-        {
-            strbuf_addstr(&ctx->message, "Revert \"");
-            strbuf_addstr(&ctx->message, msg.subject);
-            strbuf_addstr(&ctx->message, "\"");
-        }
-        strbuf_addstr(&ctx->message, "\n\nThis reverts commit ");
-        refer_to_commit(opts, &ctx->message, commit);
+		base = commit;
+		base_label = msg.label;
+		next = parent;
+		next_label = msg.parent_label;
+		if (opts->commit_use_reference) {
+			strbuf_commented_addf(&ctx->message, comment_line_str,
+				"*** SAY WHY WE ARE REVERTING ON THE TITLE LINE ***");
+		} else if (skip_prefix(msg.subject, "Revert \"", &orig_subject) &&
+			   /*
+			    * We don't touch pre-existing repeated reverts, because
+			    * theoretically these can be nested arbitrarily deeply,
+			    * thus requiring excessive complexity to deal with.
+			    */
+			   !starts_with(orig_subject, "Revert \"")) {
+			strbuf_addstr(&ctx->message, "Reapply \"");
+			strbuf_addstr(&ctx->message, orig_subject);
+			strbuf_addstr(&ctx->message, "\n");
+		} else {
+			strbuf_addstr(&ctx->message, "Revert \"");
+			strbuf_addstr(&ctx->message, msg.subject);
+			strbuf_addstr(&ctx->message, "\"\n");
+		}
+		strbuf_addstr(&ctx->message, "\nThis reverts commit ");
+		refer_to_commit(opts, &ctx->message, commit);
 
         if (commit->parents && commit->parents->next)
         {
@@ -4769,29 +4765,23 @@ static int do_label(struct repository *r, const char *name, int len)
     strbuf_addf(&ref_name, "refs/rewritten/%.*s", len, name);
     strbuf_addf(&msg, "rebase (label) '%.*s'", len, name);
 
-    transaction = ref_store_transaction_begin(refs, &err);
-    if (!transaction)
-    {
-        error("%s", err.buf);
-        ret = -1;
-    }
-    else if (repo_get_oid(r, "HEAD", &head_oid))
-    {
-        error(_("could not read HEAD"));
-        ret = -1;
-    }
-    else if (ref_transaction_update(transaction, ref_name.buf,
-                                    &head_oid, NULL, NULL, NULL,
-                                    0, msg.buf, &err)
-                 < 0
-             || ref_transaction_commit(transaction, &err))
-    {
-        error("%s", err.buf);
-        ret = -1;
-    }
-    ref_transaction_free(transaction);
-    strbuf_release(&err);
-    strbuf_release(&msg);
+	transaction = ref_store_transaction_begin(refs, 0, &err);
+	if (!transaction) {
+		error("%s", err.buf);
+		ret = -1;
+	} else if (repo_get_oid(r, "HEAD", &head_oid)) {
+		error(_("could not read HEAD"));
+		ret = -1;
+	} else if (ref_transaction_update(transaction, ref_name.buf,
+					  &head_oid, NULL, NULL, NULL,
+					  0, msg.buf, &err) < 0 ||
+		   ref_transaction_commit(transaction, &err)) {
+		error("%s", err.buf);
+		ret = -1;
+	}
+	ref_transaction_free(transaction);
+	strbuf_release(&err);
+	strbuf_release(&msg);
 
     if (!ret)
     {
@@ -7760,18 +7750,16 @@ static int add_decorations_to_list(const struct commit            *commit,
         item = &ctx->items[ctx->items_nr];
         memset(item, 0, sizeof(*item));
 
-        /* If the branch is checked out, then leave a comment instead. */
-        if ((path = branch_checked_out(decoration->name)))
-        {
-            item->command = TODO_COMMENT;
-            strbuf_addf(ctx->buf, "# Ref %s checked out at '%s'\n",
-                        decoration->name, path);
-        }
-        else
-        {
-            struct string_list_item *sti;
-            item->command = TODO_UPDATE_REF;
-            strbuf_addf(ctx->buf, "%s\n", decoration->name);
+		/* If the branch is checked out, then leave a comment instead. */
+		if ((path = branch_checked_out(decoration->name))) {
+			item->command = TODO_COMMENT;
+			strbuf_commented_addf(ctx->buf, comment_line_str,
+					      "Ref %s checked out at '%s'\n",
+					      decoration->name, path);
+		} else {
+			struct string_list_item *sti;
+			item->command = TODO_UPDATE_REF;
+			strbuf_addf(ctx->buf, "%s\n", decoration->name);
 
             sti       = string_list_insert(&ctx->refs_to_oids,
                                            decoration->name);

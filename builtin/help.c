@@ -1,8 +1,9 @@
-
 /*
  * Builtin help command
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "config.h"
 #include "exec-cmd.h"
@@ -116,24 +117,24 @@ struct slot_expansion
 
 static void list_config_help(enum show_config_type type)
 {
-    struct slot_expansion slot_expansions[] = {
-        {"advice", "*", list_config_advices},
-        {"color.branch", "<slot>", list_config_color_branch_slots},
-        {"color.decorate", "<slot>", list_config_color_decorate_slots},
-        {"color.diff", "<slot>", list_config_color_diff_slots},
-        {"color.grep", "<slot>", list_config_color_grep_slots},
-        {"color.interactive", "<slot>", list_config_color_interactive_slots},
-        {"color.remote", "<slot>", list_config_color_sideband_slots},
-        {"color.status", "<slot>", list_config_color_status_slots},
-        {"fsck", "<msg-id>", list_config_fsck_msg_ids},
-        {"receive.fsck", "<msg-id>", list_config_fsck_msg_ids},
-        {NULL, NULL, NULL}};
-    const char             **p;
-    struct slot_expansion   *e;
-    struct string_list       keys      = STRING_LIST_INIT_DUP;
-    struct string_list       keys_uniq = STRING_LIST_INIT_DUP;
-    struct string_list_item *item;
-    int                      i;
+	struct slot_expansion slot_expansions[] = {
+		{ "advice", "*", list_config_advices },
+		{ "color.branch", "<slot>", list_config_color_branch_slots },
+		{ "color.decorate", "<slot>", list_config_color_decorate_slots },
+		{ "color.diff", "<slot>", list_config_color_diff_slots },
+		{ "color.grep", "<slot>", list_config_color_grep_slots },
+		{ "color.interactive", "<slot>", list_config_color_interactive_slots },
+		{ "color.remote", "<slot>", list_config_color_sideband_slots },
+		{ "color.status", "<slot>", list_config_color_status_slots },
+		{ "fsck", "<msg-id>", list_config_fsck_msg_ids },
+		{ "receive.fsck", "<msg-id>", list_config_fsck_msg_ids },
+		{ NULL, NULL, NULL }
+	};
+	const char **p;
+	struct slot_expansion *e;
+	struct string_list keys = STRING_LIST_INIT_DUP;
+	struct string_list keys_uniq = STRING_LIST_INIT_DUP;
+	struct string_list_item *item;
 
     for (p = config_name_list; *p; p++)
     {
@@ -168,15 +169,12 @@ static void list_config_help(enum show_config_type type)
         }
     }
 
-    string_list_sort(&keys);
-    for (i = 0; i < keys.nr; i++)
-    {
-        const char   *var = keys.items[i].string;
-        const char   *wildcard;
-        const char   *tag;
-        const char   *cut;
-        const char   *dot = NULL;
-        struct strbuf sb  = STRBUF_INIT;
+	string_list_sort(&keys);
+	for (size_t i = 0; i < keys.nr; i++) {
+		const char *var = keys.items[i].string;
+		const char *wildcard, *tag, *cut;
+		const char *dot = NULL;
+		struct strbuf sb = STRBUF_INIT;
 
         switch (type)
         {
@@ -638,14 +636,12 @@ static void show_html_page(const char *page)
     open_html(page_path.buf);
 }
 
-static const char *check_git_cmd(const char *cmd)
+static char *check_git_cmd(const char *cmd)
 {
     char *alias;
 
-    if (is_git_command(cmd))
-    {
-        return cmd;
-    }
+	if (is_git_command(cmd))
+		return xstrdup(cmd);
 
     alias = alias_lookup(cmd);
     if (alias)
@@ -653,45 +649,41 @@ static const char *check_git_cmd(const char *cmd)
         const char **argv;
         int          count;
 
-        /*
-         * handle_builtin() in git.c rewrites "git cmd --help"
-         * to "git help --exclude-guides cmd", so we can use
-         * exclude_guides to distinguish "git cmd --help" from
-         * "git help cmd". In the latter case, or if cmd is an
-         * alias for a shell command, just print the alias
-         * definition.
-         */
-        if (!exclude_guides || alias[0] == '!')
-        {
-            printf_ln(_("'%s' is aliased to '%s'"), cmd, alias);
-            free(alias);
-            exit(0);
-        }
-        /*
-         * Otherwise, we pretend that the command was "git
-         * word0 --help". We use split_cmdline() to get the
-         * first word of the alias, to ensure that we use the
-         * same rules as when the alias is actually
-         * used. split_cmdline() modifies alias in-place.
-         */
-        fprintf_ln(stderr, _("'%s' is aliased to '%s'"), cmd, alias);
-        count = split_cmdline(alias, &argv);
-        if (count < 0)
-        {
-            die(_("bad alias.%s string: %s"), cmd,
-                split_cmdline_strerror(count));
-        }
-        free(argv);
-        UNLEAK(alias);
-        return alias;
-    }
+		/*
+		 * handle_builtin() in git.c rewrites "git cmd --help"
+		 * to "git help --exclude-guides cmd", so we can use
+		 * exclude_guides to distinguish "git cmd --help" from
+		 * "git help cmd". In the latter case, or if cmd is an
+		 * alias for a shell command, just print the alias
+		 * definition.
+		 */
+		if (!exclude_guides || alias[0] == '!') {
+			printf_ln(_("'%s' is aliased to '%s'"), cmd, alias);
+			free(alias);
+			exit(0);
+		}
+		/*
+		 * Otherwise, we pretend that the command was "git
+		 * word0 --help". We use split_cmdline() to get the
+		 * first word of the alias, to ensure that we use the
+		 * same rules as when the alias is actually
+		 * used. split_cmdline() modifies alias in-place.
+		 */
+		fprintf_ln(stderr, _("'%s' is aliased to '%s'"), cmd, alias);
+		count = split_cmdline(alias, &argv);
+		if (count < 0)
+			die(_("bad alias.%s string: %s"), cmd,
+			    split_cmdline_strerror(count));
+		free(argv);
+		return alias;
+	}
 
     if (exclude_guides)
     {
         return help_unknown_cmd(cmd);
     }
 
-    return cmd;
+	return xstrdup(cmd);
 }
 
 static void no_help_format(const char *opt_mode, enum help_format fmt)
@@ -738,9 +730,10 @@ int cmd_help(int                     argc,
              const char             *prefix,
              struct repository *repo UNUSED)
 {
-    int              nongit;
-    enum help_format parsed_help_format;
-    const char      *page;
+	int nongit;
+	enum help_format parsed_help_format;
+	char *command = NULL;
+	const char *page;
 
     argc               = parse_options(argc, argv, prefix, builtin_help_options,
                                        builtin_help_usage, 0);
@@ -818,22 +811,22 @@ int cmd_help(int                     argc,
         help_format = parse_help_format(DEFAULT_HELP_FORMAT);
     }
 
-    argv[0] = check_git_cmd(argv[0]);
+	command = check_git_cmd(argv[0]);
 
-    page = cmd_to_page(argv[0]);
-    switch (help_format)
-    {
-        case HELP_FORMAT_NONE:
-        case HELP_FORMAT_MAN:
-            show_man_page(page);
-            break;
-        case HELP_FORMAT_INFO:
-            show_info_page(page);
-            break;
-        case HELP_FORMAT_WEB:
-            show_html_page(page);
-            break;
-    }
+	page = cmd_to_page(command);
+	switch (help_format) {
+	case HELP_FORMAT_NONE:
+	case HELP_FORMAT_MAN:
+		show_man_page(page);
+		break;
+	case HELP_FORMAT_INFO:
+		show_info_page(page);
+		break;
+	case HELP_FORMAT_WEB:
+		show_html_page(page);
+		break;
+	}
 
-    return 0;
+	free(command);
+	return 0;
 }

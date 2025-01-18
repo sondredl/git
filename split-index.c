@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "gettext.h"
@@ -115,13 +116,17 @@ void move_cache_to_base_index(struct index_state *istate)
         mem_pool_combine(istate->ce_mem_pool, istate->split_index->base->ce_mem_pool);
     }
 
-    ALLOC_ARRAY(si->base, 1);
-    index_state_init(si->base, istate->repo);
-    si->base->version = istate->version;
-    /* zero timestamp disables racy test in ce_write_index() */
-    si->base->timestamp = istate->timestamp;
-    ALLOC_GROW(si->base->cache, istate->cache_nr, si->base->cache_alloc);
-    si->base->cache_nr = istate->cache_nr;
+	if (si->base)
+		release_index(si->base);
+	else
+		ALLOC_ARRAY(si->base, 1);
+
+	index_state_init(si->base, istate->repo);
+	si->base->version = istate->version;
+	/* zero timestamp disables racy test in ce_write_index() */
+	si->base->timestamp = istate->timestamp;
+	ALLOC_GROW(si->base->cache, istate->cache_nr, si->base->cache_alloc);
+	si->base->cache_nr = istate->cache_nr;
 
     /*
      * The mem_pool needs to move with the allocated entries.

@@ -156,11 +156,11 @@ static void interpret_trailers(const struct process_trailer_options *opts,
                                struct list_head                     *new_trailer_head,
                                const char                           *file)
 {
-    LIST_HEAD(head);
-    struct strbuf        sb            = STRBUF_INIT;
-    struct strbuf        trailer_block = STRBUF_INIT;
-    struct trailer_info *info;
-    FILE                *outfile = stdout;
+	LIST_HEAD(head);
+	struct strbuf sb = STRBUF_INIT;
+	struct strbuf trailer_block_sb = STRBUF_INIT;
+	struct trailer_block *trailer_block;
+	FILE *outfile = stdout;
 
     trailer_config_init();
 
@@ -171,18 +171,14 @@ static void interpret_trailers(const struct process_trailer_options *opts,
         outfile = create_in_place_tempfile(file);
     }
 
-    info = parse_trailers(opts, sb.buf, &head);
+	trailer_block = parse_trailers(opts, sb.buf, &head);
 
-    /* Print the lines before the trailers */
-    if (!opts->only_trailers)
-    {
-        fwrite(sb.buf, 1, trailer_block_start(info), outfile);
-    }
+	/* Print the lines before the trailer block */
+	if (!opts->only_trailers)
+		fwrite(sb.buf, 1, trailer_block_start(trailer_block), outfile);
 
-    if (!opts->only_trailers && !blank_line_before_trailer_block(info))
-    {
-        fprintf(outfile, "\n");
-    }
+	if (!opts->only_trailers && !blank_line_before_trailer_block(trailer_block))
+		fprintf(outfile, "\n");
 
     if (!opts->only_input)
     {
@@ -200,20 +196,17 @@ static void interpret_trailers(const struct process_trailer_options *opts,
     fwrite(trailer_block.buf, 1, trailer_block.len, outfile);
     strbuf_release(&trailer_block);
 
-    /* Print the lines after the trailers as is */
-    if (!opts->only_trailers)
-    {
-        fwrite(sb.buf + trailer_block_end(info), 1, sb.len - trailer_block_end(info), outfile);
-    }
-    trailer_info_release(info);
+	/* Print trailer block. */
+	format_trailers(opts, &head, &trailer_block_sb);
+	free_trailers(&head);
+	fwrite(trailer_block_sb.buf, 1, trailer_block_sb.len, outfile);
+	strbuf_release(&trailer_block_sb);
 
-    if (opts->in_place)
-    {
-        if (rename_tempfile(&trailers_tempfile, file))
-        {
-            die_errno(_("could not rename temporary file to %s"), file);
-        }
-    }
+	/* Print the lines after the trailer block as is. */
+	if (!opts->only_trailers)
+		fwrite(sb.buf + trailer_block_end(trailer_block), 1,
+		       sb.len - trailer_block_end(trailer_block), outfile);
+	trailer_block_release(trailer_block);
 
     strbuf_release(&sb);
 }

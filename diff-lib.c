@@ -3,6 +3,7 @@
  */
 
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "commit.h"
@@ -759,10 +760,11 @@ int do_diff_cache(const struct object_id *tree_oid, struct diff_options *opt)
 {
     struct rev_info revs;
 
-    repo_init_revisions(opt->repo, &revs, NULL);
-    copy_pathspec(&revs.prune_data, &opt->pathspec);
-    revs.diffopt         = *opt;
-    revs.diffopt.no_free = 1;
+	repo_init_revisions(opt->repo, &revs, NULL);
+	copy_pathspec(&revs.prune_data, &opt->pathspec);
+	diff_free(&revs.diffopt);
+	revs.diffopt = *opt;
+	revs.diffopt.no_free = 1;
 
     if (diff_cache(&revs, tree_oid, NULL, 1))
     {

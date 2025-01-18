@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "abspath.h"
@@ -511,107 +512,104 @@ static int handle_config(const char *key, const char *value,
                                  value);
     }
 
-    if (!name)
-        return 0;
-    /* Handle remote.<name>.* variables */
-    if (*name == '/')
-    {
-        warning(_("config remote shorthand cannot begin with '/': %s"),
-                name);
-        return 0;
-    }
-    remote         = make_remote(remote_state, name, namelen);
-    remote->origin = REMOTE_CONFIG;
-    if (kvi->scope == CONFIG_SCOPE_LOCAL || kvi->scope == CONFIG_SCOPE_WORKTREE)
-        remote->configured_in_repo = 1;
-    if (!strcmp(subkey, "mirror"))
-        remote->mirror = git_config_bool(key, value);
-    else if (!strcmp(subkey, "skipdefaultupdate"))
-        remote->skip_default_update = git_config_bool(key, value);
-    else if (!strcmp(subkey, "skipfetchall"))
-        remote->skip_default_update = git_config_bool(key, value);
-    else if (!strcmp(subkey, "prune"))
-        remote->prune = git_config_bool(key, value);
-    else if (!strcmp(subkey, "prunetags"))
-        remote->prune_tags = git_config_bool(key, value);
-    else if (!strcmp(subkey, "url"))
-    {
-        if (!value)
-            return config_error_nonbool(key);
-        add_url(remote, value);
-    }
-    else if (!strcmp(subkey, "pushurl"))
-    {
-        if (!value)
-            return config_error_nonbool(key);
-        add_pushurl(remote, value);
-    }
-    else if (!strcmp(subkey, "push"))
-    {
-        char *v;
-        if (git_config_string(&v, key, value))
-            return -1;
-        refspec_append(&remote->push, v);
-        free(v);
-    }
-    else if (!strcmp(subkey, "fetch"))
-    {
-        char *v;
-        if (git_config_string(&v, key, value))
-            return -1;
-        refspec_append(&remote->fetch, v);
-        free(v);
-    }
-    else if (!strcmp(subkey, "receivepack"))
-    {
-        char *v;
-        if (git_config_string(&v, key, value))
-            return -1;
-        if (!remote->receivepack)
-            remote->receivepack = v;
-        else
-            error(_("more than one receivepack given, using the first"));
-    }
-    else if (!strcmp(subkey, "uploadpack"))
-    {
-        char *v;
-        if (git_config_string(&v, key, value))
-            return -1;
-        if (!remote->uploadpack)
-            remote->uploadpack = v;
-        else
-            error(_("more than one uploadpack given, using the first"));
-    }
-    else if (!strcmp(subkey, "tagopt"))
-    {
-        if (!strcmp(value, "--no-tags"))
-            remote->fetch_tags = -1;
-        else if (!strcmp(value, "--tags"))
-            remote->fetch_tags = 2;
-    }
-    else if (!strcmp(subkey, "proxy"))
-    {
-        FREE_AND_NULL(remote->http_proxy);
-        return git_config_string(&remote->http_proxy,
-                                 key, value);
-    }
-    else if (!strcmp(subkey, "proxyauthmethod"))
-    {
-        FREE_AND_NULL(remote->http_proxy_authmethod);
-        return git_config_string(&remote->http_proxy_authmethod,
-                                 key, value);
-    }
-    else if (!strcmp(subkey, "vcs"))
-    {
-        FREE_AND_NULL(remote->foreign_vcs);
-        return git_config_string(&remote->foreign_vcs, key, value);
-    }
-    else if (!strcmp(subkey, "serveroption"))
-    {
-        return parse_transport_option(key, value,
-                                      &remote->server_options);
-    }
-    return 0;
+	if (!name)
+		return 0;
+	/* Handle remote.<name>.* variables */
+	if (*name == '/') {
+		warning(_("config remote shorthand cannot begin with '/': %s"),
+			name);
+		return 0;
+	}
+	remote = make_remote(remote_state, name, namelen);
+	remote->origin = REMOTE_CONFIG;
+	if (kvi->scope == CONFIG_SCOPE_LOCAL ||
+	    kvi->scope == CONFIG_SCOPE_WORKTREE)
+		remote->configured_in_repo = 1;
+	if (!strcmp(subkey, "mirror"))
+		remote->mirror = git_config_bool(key, value);
+	else if (!strcmp(subkey, "skipdefaultupdate"))
+		remote->skip_default_update = git_config_bool(key, value);
+	else if (!strcmp(subkey, "skipfetchall"))
+		remote->skip_default_update = git_config_bool(key, value);
+	else if (!strcmp(subkey, "prune"))
+		remote->prune = git_config_bool(key, value);
+	else if (!strcmp(subkey, "prunetags"))
+		remote->prune_tags = git_config_bool(key, value);
+	else if (!strcmp(subkey, "url")) {
+		if (!value)
+			return config_error_nonbool(key);
+		add_url(remote, value);
+	} else if (!strcmp(subkey, "pushurl")) {
+		if (!value)
+			return config_error_nonbool(key);
+		add_pushurl(remote, value);
+	} else if (!strcmp(subkey, "push")) {
+		char *v;
+		if (git_config_string(&v, key, value))
+			return -1;
+		refspec_append(&remote->push, v);
+		free(v);
+	} else if (!strcmp(subkey, "fetch")) {
+		char *v;
+		if (git_config_string(&v, key, value))
+			return -1;
+		refspec_append(&remote->fetch, v);
+		free(v);
+	} else if (!strcmp(subkey, "receivepack")) {
+		char *v;
+		if (git_config_string(&v, key, value))
+			return -1;
+		if (!remote->receivepack)
+			remote->receivepack = v;
+		else
+			error(_("more than one receivepack given, using the first"));
+	} else if (!strcmp(subkey, "uploadpack")) {
+		char *v;
+		if (git_config_string(&v, key, value))
+			return -1;
+		if (!remote->uploadpack)
+			remote->uploadpack = v;
+		else
+			error(_("more than one uploadpack given, using the first"));
+	} else if (!strcmp(subkey, "tagopt")) {
+		if (!strcmp(value, "--no-tags"))
+			remote->fetch_tags = -1;
+		else if (!strcmp(value, "--tags"))
+			remote->fetch_tags = 2;
+	} else if (!strcmp(subkey, "proxy")) {
+		FREE_AND_NULL(remote->http_proxy);
+		return git_config_string(&remote->http_proxy,
+					 key, value);
+	} else if (!strcmp(subkey, "proxyauthmethod")) {
+		FREE_AND_NULL(remote->http_proxy_authmethod);
+		return git_config_string(&remote->http_proxy_authmethod,
+					 key, value);
+	} else if (!strcmp(subkey, "vcs")) {
+		FREE_AND_NULL(remote->foreign_vcs);
+		return git_config_string(&remote->foreign_vcs, key, value);
+	} else if (!strcmp(subkey, "serveroption")) {
+		return parse_transport_option(key, value,
+					      &remote->server_options);
+	} else if (!strcmp(subkey, "followremotehead")) {
+		const char *no_warn_branch;
+		if (!strcmp(value, "never"))
+			remote->follow_remote_head = FOLLOW_REMOTE_NEVER;
+		else if (!strcmp(value, "create"))
+			remote->follow_remote_head = FOLLOW_REMOTE_CREATE;
+		else if (!strcmp(value, "warn")) {
+			remote->follow_remote_head = FOLLOW_REMOTE_WARN;
+			remote->no_warn_branch = NULL;
+		} else if (skip_prefix(value, "warn-if-not-", &no_warn_branch)) {
+			remote->follow_remote_head = FOLLOW_REMOTE_WARN;
+			remote->no_warn_branch = no_warn_branch;
+		} else if (!strcmp(value, "always")) {
+			remote->follow_remote_head = FOLLOW_REMOTE_ALWAYS;
+		} else {
+			warning(_("unrecognized followRemoteHEAD value '%s' ignored"),
+				value);
+		}
+	}
+	return 0;
 }
 
 static void alias_all_urls(struct remote_state *remote_state)
@@ -1835,10 +1833,9 @@ static struct ref **tail_ref(struct ref **head)
     return tail;
 }
 
-struct tips
-{
-    struct commit **tip;
-    int             nr, alloc;
+struct tips {
+	struct commit **tip;
+	size_t nr, alloc;
 };
 
 static void add_to_tips(struct tips *tips, const struct object_id *oid)
@@ -1911,21 +1908,19 @@ static void add_missing_tags(struct ref *src, struct ref **dst, struct ref ***ds
     }
     string_list_clear(&dst_tag, 0);
 
-    /*
-     * At this point, src_tag lists tags that are missing from
-     * dst, and sent_tips lists the tips we are pushing or those
-     * that we know they already have. An element in the src_tag
-     * that is an ancestor of any of the sent_tips needs to be
-     * sent to the other side.
-     */
-    if (sent_tips.nr)
-    {
-        const int           reachable_flag = 1;
-        struct commit_list *found_commits;
-        struct commit     **src_commits;
-        int                 nr_src_commits    = 0;
-        int                 alloc_src_commits = 16;
-        ALLOC_ARRAY(src_commits, alloc_src_commits);
+	/*
+	 * At this point, src_tag lists tags that are missing from
+	 * dst, and sent_tips lists the tips we are pushing or those
+	 * that we know they already have. An element in the src_tag
+	 * that is an ancestor of any of the sent_tips needs to be
+	 * sent to the other side.
+	 */
+	if (sent_tips.nr) {
+		const int reachable_flag = 1;
+		struct commit_list *found_commits;
+		struct commit **src_commits;
+		size_t nr_src_commits = 0, alloc_src_commits = 16;
+		ALLOC_ARRAY(src_commits, alloc_src_commits);
 
         for_each_string_list_item(item, &src_tag)
         {
@@ -3481,9 +3476,9 @@ void apply_push_cas(struct push_cas_option *cas,
 
 struct remote_state *remote_state_new(void)
 {
-    struct remote_state *r = xmalloc(sizeof(*r));
+	struct remote_state *r;
 
-    memset(r, 0, sizeof(*r));
+	CALLOC_ARRAY(r, 1);
 
     hashmap_init(&r->remotes_hash, remotes_hash_cmp, NULL, 0);
     hashmap_init(&r->branches_hash, branches_hash_cmp, NULL, 0);

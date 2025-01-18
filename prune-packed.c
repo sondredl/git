@@ -26,10 +26,8 @@ static int prune_object(const struct object_id *oid, const char *path,
 {
     int *opts = data;
 
-    if (!has_object_pack(oid))
-    {
-        return 0;
-    }
+	if (!has_object_pack(the_repository, oid))
+		return 0;
 
     if (*opts & PRUNE_PACKED_DRY_RUN)
     {

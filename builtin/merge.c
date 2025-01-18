@@ -5,7 +5,10 @@
  *
  * Based on git-merge.sh by Junio C Hamano.
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 
 #include "abspath.h"
@@ -584,8 +587,8 @@ static void merge_name(const char *remote, struct strbuf *msg)
     int                       len;
     int                       early;
 
-    strbuf_branchname(&bname, remote, 0);
-    remote = bname.buf;
+	copy_branchname(&bname, remote, 0);
+	remote = bname.buf;
 
     oidclr(&branch_head, the_repository->hash_algo);
     remote_head = get_merge_parent(remote);
@@ -903,19 +906,16 @@ static int try_merge_strategy(const char *strategy, struct commit_list *common,
             commit_list_insert(j->item, &reversed);
         }
 
-        repo_hold_locked_index(the_repository, &lock,
-                               LOCK_DIE_ON_ERROR);
-        if (!strcmp(strategy, "ort"))
-        {
-            clean = merge_ort_recursive(&o, head, remoteheads->item,
-                                        reversed, &result);
-        }
-        else
-        {
-            clean = merge_recursive(&o, head, remoteheads->item,
-                                    reversed, &result);
-        }
-        free_commit_list(reversed);
+		repo_hold_locked_index(the_repository, &lock,
+				       LOCK_DIE_ON_ERROR);
+		if (!strcmp(strategy, "ort"))
+			clean = merge_ort_recursive(&o, head, remoteheads->item,
+						    reversed, &result);
+		else
+			clean = merge_recursive(&o, head, remoteheads->item,
+						reversed, &result);
+		free_commit_list(reversed);
+		strbuf_release(&o.obuf);
 
         if (clean < 0)
         {

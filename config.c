@@ -7,6 +7,7 @@
  */
 
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "abspath.h"
@@ -1816,49 +1817,19 @@ static int git_default_core_config(const char *var, const char *value,
         return 0;
     }
 
-    if (!strcmp(var, "core.packedgitwindowsize"))
-    {
-        int pgsz_x2            = getpagesize() * 2;
-        packed_git_window_size = git_config_ulong(var, value, ctx->kvi);
+	if (!strcmp(var, "core.bigfilethreshold")) {
+		big_file_threshold = git_config_ulong(var, value, ctx->kvi);
+		return 0;
+	}
 
-        /* This value must be multiple of (pagesize * 2) */
-        packed_git_window_size /= pgsz_x2;
-        if (packed_git_window_size < 1)
-        {
-            packed_git_window_size = 1;
-        }
-        packed_git_window_size *= pgsz_x2;
-        return 0;
-    }
-
-    if (!strcmp(var, "core.bigfilethreshold"))
-    {
-        big_file_threshold = git_config_ulong(var, value, ctx->kvi);
-        return 0;
-    }
-
-    if (!strcmp(var, "core.packedgitlimit"))
-    {
-        packed_git_limit = git_config_ulong(var, value, ctx->kvi);
-        return 0;
-    }
-
-    if (!strcmp(var, "core.deltabasecachelimit"))
-    {
-        delta_base_cache_limit = git_config_ulong(var, value, ctx->kvi);
-        return 0;
-    }
-
-    if (!strcmp(var, "core.autocrlf"))
-    {
-        if (value && !strcasecmp(value, "input"))
-        {
-            auto_crlf = AUTO_CRLF_INPUT;
-            return 0;
-        }
-        auto_crlf = git_config_bool(var, value);
-        return 0;
-    }
+	if (!strcmp(var, "core.autocrlf")) {
+		if (value && !strcasecmp(value, "input")) {
+			auto_crlf = AUTO_CRLF_INPUT;
+			return 0;
+		}
+		auto_crlf = git_config_bool(var, value);
+		return 0;
+	}
 
     if (!strcmp(var, "core.safecrlf"))
     {

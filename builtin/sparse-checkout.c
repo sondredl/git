@@ -1,4 +1,6 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "config.h"
 #include "dir.h"
@@ -51,7 +53,8 @@ static char const *const builtin_sparse_checkout_list_usage[] = {
     "git sparse-checkout list",
     NULL};
 
-static int sparse_checkout_list(int argc, const char **argv, const char *prefix)
+static int sparse_checkout_list(int argc, const char **argv, const char *prefix,
+				struct repository *repo UNUSED)
 {
     static struct option builtin_sparse_checkout_list_options[] = {
         OPT_END(),
@@ -517,7 +520,8 @@ static struct sparse_checkout_init_opts
     int sparse_index;
 } init_opts;
 
-static int sparse_checkout_init(int argc, const char **argv, const char *prefix)
+static int sparse_checkout_init(int argc, const char **argv, const char *prefix,
+				struct repository *repo UNUSED)
 {
     struct pattern_list pl;
     char               *sparse_filename;
@@ -790,31 +794,26 @@ static void add_patterns_literal(int argc, const char **argv,
     add_patterns_from_input(pl, argc, argv, use_stdin ? stdin : NULL);
 }
 
-static int modify_pattern_list(int argc, const char **argv, int use_stdin,
-                               enum modify_type m)
+static int modify_pattern_list(struct strvec *args, int use_stdin,
+			       enum modify_type m)
 {
     int                  result;
     int                  changed_config = 0;
     struct pattern_list *pl             = xcalloc(1, sizeof(*pl));
 
-    switch (m)
-    {
-        case ADD:
-            if (core_sparse_checkout_cone)
-            {
-                add_patterns_cone_mode(argc, argv, pl, use_stdin);
-            }
-            else
-            {
-                add_patterns_literal(argc, argv, pl, use_stdin);
-            }
-            break;
+	switch (m) {
+	case ADD:
+		if (core_sparse_checkout_cone)
+			add_patterns_cone_mode(args->nr, args->v, pl, use_stdin);
+		else
+			add_patterns_literal(args->nr, args->v, pl, use_stdin);
+		break;
 
-        case REPLACE:
-            add_patterns_from_input(pl, argc, argv,
-                                    use_stdin ? stdin : NULL);
-            break;
-    }
+	case REPLACE:
+		add_patterns_from_input(pl, args->nr, args->v,
+					use_stdin ? stdin : NULL);
+		break;
+	}
 
     if (!core_apply_sparse_checkout)
     {
@@ -835,15 +834,13 @@ static int modify_pattern_list(int argc, const char **argv, int use_stdin,
     return result;
 }
 
-static void sanitize_paths(int argc, const char **argv,
-                           const char *prefix, int skip_checks)
+static void sanitize_paths(struct strvec *args,
+			   const char *prefix, int skip_checks)
 {
     int i;
 
-    if (!argc)
-    {
-        return;
-    }
+	if (!args->nr)
+		return;
 
     if (prefix && *prefix && core_sparse_checkout_cone)
     {
@@ -853,11 +850,12 @@ static void sanitize_paths(int argc, const char **argv,
          */
         int prefix_len = strlen(prefix);
 
-        for (i = 0; i < argc; i++)
-        {
-            argv[i] = prefix_path(prefix, prefix_len, argv[i]);
-        }
-    }
+		for (i = 0; i < args->nr; i++) {
+			char *prefixed_path = prefix_path(prefix, prefix_len, args->v[i]);
+			strvec_replace(args, i, prefixed_path);
+			free(prefixed_path);
+		}
+	}
 
     if (skip_checks)
     {
@@ -869,30 +867,21 @@ static void sanitize_paths(int argc, const char **argv,
         die(_("please run from the toplevel directory in non-cone mode"));
     }
 
-    if (core_sparse_checkout_cone)
-    {
-        for (i = 0; i < argc; i++)
-        {
-            if (argv[i][0] == '/')
-            {
-                die(_("specify directories rather than patterns (no leading slash)"));
-            }
-            if (argv[i][0] == '!')
-            {
-                die(_("specify directories rather than patterns.  If your directory starts with a '!', pass --skip-checks"));
-            }
-            if (strpbrk(argv[i], "*?[]"))
-            {
-                die(_("specify directories rather than patterns.  If your directory really has any of '*?[]\\' in it, pass --skip-checks"));
-            }
-        }
-    }
+	if (core_sparse_checkout_cone) {
+		for (i = 0; i < args->nr; i++) {
+			if (args->v[i][0] == '/')
+				die(_("specify directories rather than patterns (no leading slash)"));
+			if (args->v[i][0] == '!')
+				die(_("specify directories rather than patterns.  If your directory starts with a '!', pass --skip-checks"));
+			if (strpbrk(args->v[i], "*?[]"))
+				die(_("specify directories rather than patterns.  If your directory really has any of '*?[]\\' in it, pass --skip-checks"));
+		}
+	}
 
-    for (i = 0; i < argc; i++)
-    {
-        struct cache_entry *ce;
-        struct index_state *index = the_repository->index;
-        int                 pos   = index_name_pos(index, argv[i], strlen(argv[i]));
+	for (i = 0; i < args->nr; i++) {
+		struct cache_entry *ce;
+		struct index_state *index = the_repository->index;
+		int pos = index_name_pos(index, args->v[i], strlen(args->v[i]));
 
         if (pos < 0)
         {
@@ -904,15 +893,11 @@ static void sanitize_paths(int argc, const char **argv,
             continue;
         }
 
-        if (core_sparse_checkout_cone)
-        {
-            die(_("'%s' is not a directory; to treat it as a directory anyway, rerun with --skip-checks"), argv[i]);
-        }
-        else
-        {
-            warning(_("pass a leading slash before paths such as '%s' if you want a single file (see NON-CONE PROBLEMS in the git-sparse-checkout manual)."), argv[i]);
-        }
-    }
+		if (core_sparse_checkout_cone)
+			die(_("'%s' is not a directory; to treat it as a directory anyway, rerun with --skip-checks"), args->v[i]);
+		else
+			warning(_("pass a leading slash before paths such as '%s' if you want a single file (see NON-CONE PROBLEMS in the git-sparse-checkout manual)."), args->v[i]);
+	}
 }
 
 static char const *const builtin_sparse_checkout_add_usage[] = {
@@ -925,16 +910,19 @@ static struct sparse_checkout_add_opts
     int use_stdin;
 } add_opts;
 
-static int sparse_checkout_add(int argc, const char **argv, const char *prefix)
+static int sparse_checkout_add(int argc, const char **argv, const char *prefix,
+			       struct repository *repo UNUSED)
 {
-    static struct option builtin_sparse_checkout_add_options[] = {
-        OPT_BOOL_F(0, "skip-checks", &add_opts.skip_checks,
-                   N_("skip some sanity checks on the given paths that might give false positives"),
-                   PARSE_OPT_NONEG),
-        OPT_BOOL(0, "stdin", &add_opts.use_stdin,
-                 N_("read patterns from standard in")),
-        OPT_END(),
-    };
+	static struct option builtin_sparse_checkout_add_options[] = {
+		OPT_BOOL_F(0, "skip-checks", &add_opts.skip_checks,
+			   N_("skip some sanity checks on the given paths that might give false positives"),
+			   PARSE_OPT_NONEG),
+		OPT_BOOL(0, "stdin", &add_opts.use_stdin,
+			 N_("read patterns from standard in")),
+		OPT_END(),
+	};
+	struct strvec patterns = STRVEC_INIT;
+	int ret;
 
     setup_work_tree();
     if (!core_apply_sparse_checkout)
@@ -948,9 +936,14 @@ static int sparse_checkout_add(int argc, const char **argv, const char *prefix)
                          builtin_sparse_checkout_add_options,
                          builtin_sparse_checkout_add_usage, 0);
 
-    sanitize_paths(argc, argv, prefix, add_opts.skip_checks);
+	for (int i = 0; i < argc; i++)
+		strvec_push(&patterns, argv[i]);
+	sanitize_paths(&patterns, prefix, add_opts.skip_checks);
 
-    return modify_pattern_list(argc, argv, add_opts.use_stdin, ADD);
+	ret = modify_pattern_list(&patterns, add_opts.use_stdin, ADD);
+
+	strvec_clear(&patterns);
+	return ret;
 }
 
 static char const *const builtin_sparse_checkout_set_usage[] = {
@@ -965,24 +958,27 @@ static struct sparse_checkout_set_opts
     int use_stdin;
 } set_opts;
 
-static int sparse_checkout_set(int argc, const char **argv, const char *prefix)
+static int sparse_checkout_set(int argc, const char **argv, const char *prefix,
+			       struct repository *repo UNUSED)
 {
     int         default_patterns_nr = 2;
     const char *default_patterns[]  = {"/*", "!/*/", NULL};
 
-    static struct option builtin_sparse_checkout_set_options[] = {
-        OPT_BOOL(0, "cone", &set_opts.cone_mode,
-                 N_("initialize the sparse-checkout in cone mode")),
-        OPT_BOOL(0, "sparse-index", &set_opts.sparse_index,
-                 N_("toggle the use of a sparse index")),
-        OPT_BOOL_F(0, "skip-checks", &set_opts.skip_checks,
-                   N_("skip some sanity checks on the given paths that might give false positives"),
-                   PARSE_OPT_NONEG),
-        OPT_BOOL_F(0, "stdin", &set_opts.use_stdin,
-                   N_("read patterns from standard in"),
-                   PARSE_OPT_NONEG),
-        OPT_END(),
-    };
+	static struct option builtin_sparse_checkout_set_options[] = {
+		OPT_BOOL(0, "cone", &set_opts.cone_mode,
+			 N_("initialize the sparse-checkout in cone mode")),
+		OPT_BOOL(0, "sparse-index", &set_opts.sparse_index,
+			 N_("toggle the use of a sparse index")),
+		OPT_BOOL_F(0, "skip-checks", &set_opts.skip_checks,
+			   N_("skip some sanity checks on the given paths that might give false positives"),
+			   PARSE_OPT_NONEG),
+		OPT_BOOL_F(0, "stdin", &set_opts.use_stdin,
+			   N_("read patterns from standard in"),
+			   PARSE_OPT_NONEG),
+		OPT_END(),
+	};
+	struct strvec patterns = STRVEC_INIT;
+	int ret;
 
     setup_work_tree();
     repo_read_index(the_repository);
@@ -999,22 +995,24 @@ static int sparse_checkout_set(int argc, const char **argv, const char *prefix)
         return 1;
     }
 
-    /*
-     * Cone mode automatically specifies the toplevel directory.  For
-     * non-cone mode, if nothing is specified, manually select just the
-     * top-level directory (much as 'init' would do).
-     */
-    if (!core_sparse_checkout_cone && !set_opts.use_stdin && argc == 0)
-    {
-        argv = default_patterns;
-        argc = default_patterns_nr;
-    }
-    else
-    {
-        sanitize_paths(argc, argv, prefix, set_opts.skip_checks);
-    }
+	/*
+	 * Cone mode automatically specifies the toplevel directory.  For
+	 * non-cone mode, if nothing is specified, manually select just the
+	 * top-level directory (much as 'init' would do).
+	 */
+	if (!core_sparse_checkout_cone && !set_opts.use_stdin && argc == 0) {
+		for (int i = 0; i < default_patterns_nr; i++)
+			strvec_push(&patterns, default_patterns[i]);
+	} else {
+		for (int i = 0; i < argc; i++)
+			strvec_push(&patterns, argv[i]);
+		sanitize_paths(&patterns, prefix, set_opts.skip_checks);
+	}
 
-    return modify_pattern_list(argc, argv, set_opts.use_stdin, REPLACE);
+	ret = modify_pattern_list(&patterns, set_opts.use_stdin, REPLACE);
+
+	strvec_clear(&patterns);
+	return ret;
 }
 
 static char const *const builtin_sparse_checkout_reapply_usage[] = {
@@ -1028,7 +1026,8 @@ static struct sparse_checkout_reapply_opts
 } reapply_opts;
 
 static int sparse_checkout_reapply(int argc, const char **argv,
-                                   const char *prefix)
+				   const char *prefix,
+				   struct repository *repo UNUSED)
 {
     static struct option builtin_sparse_checkout_reapply_options[] = {
         OPT_BOOL(0, "cone", &reapply_opts.cone_mode,
@@ -1066,7 +1065,8 @@ static char const *const builtin_sparse_checkout_disable_usage[] = {
     NULL};
 
 static int sparse_checkout_disable(int argc, const char **argv,
-                                   const char *prefix)
+				   const char *prefix,
+				   struct repository *repo UNUSED)
 {
     static struct option builtin_sparse_checkout_disable_options[] = {
         OPT_END(),
@@ -1163,7 +1163,8 @@ static int check_rules(struct pattern_list *pl, int null_terminated)
     return 0;
 }
 
-static int sparse_checkout_check_rules(int argc, const char **argv, const char *prefix)
+static int sparse_checkout_check_rules(int argc, const char **argv, const char *prefix,
+				       struct repository *repo UNUSED)
 {
     static struct option builtin_sparse_checkout_check_rules_options[] = {
         OPT_BOOL('z', NULL, &check_rules_opts.null_termination,
@@ -1215,10 +1216,10 @@ static int sparse_checkout_check_rules(int argc, const char **argv, const char *
     return ret;
 }
 
-int cmd_sparse_checkout(int                     argc,
-                        const char            **argv,
-                        const char             *prefix,
-                        struct repository *repo UNUSED)
+int cmd_sparse_checkout(int argc,
+			const char **argv,
+			const char *prefix,
+			struct repository *repo)
 {
     parse_opt_subcommand_fn *fn                                = NULL;
     struct option            builtin_sparse_checkout_options[] = {
@@ -1241,5 +1242,5 @@ int cmd_sparse_checkout(int                     argc,
     prepare_repo_settings(the_repository);
     the_repository->settings.command_requires_full_index = 0;
 
-    return fn(argc, argv, prefix);
+	return fn(argc, argv, prefix, repo);
 }

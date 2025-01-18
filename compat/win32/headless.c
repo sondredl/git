@@ -50,10 +50,11 @@ int WINAPI wWinMain(_In_ HINSTANCE     instance,
                     _In_opt_ HINSTANCE previous_instance,
                     _In_ LPWSTR command_line, _In_ int show)
 {
-    wchar_t        git_command_line[32768];
-    size_t         size         = sizeof(git_command_line) / sizeof(wchar_t);
-    const wchar_t *needs_quotes = L"";
-    int            slash        = 0, i;
+	wchar_t git_command_line[32768];
+	size_t size = sizeof(git_command_line) / sizeof(wchar_t);
+	const wchar_t *needs_quotes = L"";
+	size_t slash = 0;
+	int len;
 
     STARTUPINFO startup_info = {
         .cb          = sizeof(STARTUPINFO),
@@ -64,12 +65,12 @@ int WINAPI wWinMain(_In_ HINSTANCE     instance,
     DWORD               creation_flags = CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE | CREATE_NO_WINDOW;
     DWORD               exit_code;
 
-    /* First, determine the full path of argv[0] */
-    for (i = 0; _wpgmptr[i]; i++)
-        if (_wpgmptr[i] == L' ')
-            needs_quotes = L"\"";
-        else if (_wpgmptr[i] == L'\\')
-            slash = i;
+	/* First, determine the full path of argv[0] */
+	for (size_t i = 0; _wpgmptr[i]; i++)
+		if (_wpgmptr[i] == L' ')
+			needs_quotes = L"\"";
+		else if (_wpgmptr[i] == L'\\')
+			slash = i;
 
     if (slash >= size - 11)
         return 127; /* Too long path */
@@ -77,20 +78,19 @@ int WINAPI wWinMain(_In_ HINSTANCE     instance,
     /* If it is in Git's exec path, add the bin/ directory to the PATH */
     extend_path(_wpgmptr, slash);
 
-    /* Then, add the full path of `git.exe` as argv[0] */
-    i = swprintf_s(git_command_line, size, L"%ls%.*ls\\git.exe%ls",
-                   needs_quotes, slash, _wpgmptr, needs_quotes);
-    if (i < 0)
-        return 127; /* Too long path */
+	/* Then, add the full path of `git.exe` as argv[0] */
+	len = swprintf_s(git_command_line, size, L"%ls%.*ls\\git.exe%ls",
+			 needs_quotes, (int) slash, _wpgmptr, needs_quotes);
+	if (len < 0)
+		return 127; /* Too long path */
 
-    if (*command_line)
-    {
-        /* Now, append the command-line arguments */
-        i = swprintf_s(git_command_line + i, size - i,
-                       L" %ls", command_line);
-        if (i < 0)
-            return 127;
-    }
+	if (*command_line) {
+		/* Now, append the command-line arguments */
+		len = swprintf_s(git_command_line + len, size - len,
+				 L" %ls", command_line);
+		if (len < 0)
+			return 127;
+	}
 
     startup_info.hStdInput  = GetStdHandle(STD_INPUT_HANDLE);
     startup_info.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);

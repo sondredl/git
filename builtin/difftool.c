@@ -11,7 +11,9 @@
  *
  * Copyright (C) 2016 Johannes Schindelin
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 
 #include "abspath.h"
@@ -393,7 +395,7 @@ static void write_file_in_directory(struct strbuf *dir, size_t dir_len,
 /* Write the file contents for the left and right sides of the difftool
  * dir-diff representation for submodules and symlinks. Symlinks and submodules
  * are written as regular text files so that external diff tools can diff them
- * as text files, resulting in behavior that is analogous to to what "git diff"
+ * as text files, resulting in behavior that is analogous to what "git diff"
  * displays for symlink and submodule diffs.
  */
 static void write_standin_files(struct pair_entry *entry,
@@ -413,38 +415,30 @@ static void write_standin_files(struct pair_entry *entry,
 static int run_dir_diff(const char *extcmd, int symlinks, const char *prefix,
                         struct child_process *child)
 {
-    struct strbuf        info      = STRBUF_INIT;
-    struct strbuf        lpath     = STRBUF_INIT;
-    struct strbuf        rpath     = STRBUF_INIT;
-    struct strbuf        buf       = STRBUF_INIT;
-    struct strbuf        ldir      = STRBUF_INIT;
-    struct strbuf        rdir      = STRBUF_INIT;
-    struct strbuf        wtdir     = STRBUF_INIT;
-    struct strbuf        tmpdir    = STRBUF_INIT;
-    char                *lbase_dir = NULL;
-    char                *rbase_dir = NULL;
-    size_t               ldir_len;
-    size_t               rdir_len;
-    size_t               wtdir_len;
-    const char          *workdir;
-    const char          *tmp;
-    int                  ret = 0;
-    int                  i;
-    FILE                *fp                = NULL;
-    struct hashmap       working_tree_dups = HASHMAP_INIT(working_tree_entry_cmp,
-                                                          NULL);
-    struct hashmap       submodules        = HASHMAP_INIT(pair_cmp, NULL);
-    struct hashmap       symlinks2         = HASHMAP_INIT(pair_cmp, NULL);
-    struct hashmap_iter  iter;
-    struct pair_entry   *entry;
-    struct index_state   wtindex = INDEX_STATE_INIT(the_repository);
-    struct checkout      lstate;
-    struct checkout      rstate;
-    int                  err = 0;
-    struct child_process cmd = CHILD_PROCESS_INIT;
-    struct hashmap       wt_modified;
-    struct hashmap       tmp_modified;
-    int                  indices_loaded = 0;
+	struct strbuf info = STRBUF_INIT, lpath = STRBUF_INIT;
+	struct strbuf rpath = STRBUF_INIT, buf = STRBUF_INIT;
+	struct strbuf ldir = STRBUF_INIT, rdir = STRBUF_INIT;
+	struct strbuf wtdir = STRBUF_INIT;
+	struct strbuf tmpdir = STRBUF_INIT;
+	char *lbase_dir = NULL, *rbase_dir = NULL;
+	size_t ldir_len, rdir_len, wtdir_len;
+	const char *workdir, *tmp;
+	int ret = 0;
+	size_t i;
+	FILE *fp = NULL;
+	struct hashmap working_tree_dups = HASHMAP_INIT(working_tree_entry_cmp,
+							NULL);
+	struct hashmap submodules = HASHMAP_INIT(pair_cmp, NULL);
+	struct hashmap symlinks2 = HASHMAP_INIT(pair_cmp, NULL);
+	struct hashmap_iter iter;
+	struct pair_entry *entry;
+	struct index_state wtindex = INDEX_STATE_INIT(the_repository);
+	struct checkout lstate, rstate;
+	int err = 0;
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	struct hashmap wt_modified = HASHMAP_INIT(path_entry_cmp, NULL);
+	struct hashmap tmp_modified = HASHMAP_INIT(path_entry_cmp, NULL);
+	int indices_loaded = 0;
 
     workdir = repo_get_work_tree(the_repository);
 
@@ -708,25 +702,21 @@ static int run_dir_diff(const char *extcmd, int symlinks, const char *prefix,
     /* TODO: audit for interaction with sparse-index. */
     ensure_full_index(&wtindex);
 
-    /*
-     * If the diff includes working copy files and those
-     * files were modified during the diff, then the changes
-     * should be copied back to the working tree.
-     * Do not copy back files when symlinks are used and the
-     * external tool did not replace the original link with a file.
-     *
-     * These hashes are loaded lazily since they aren't needed
-     * in the common case of --symlinks and the difftool updating
-     * files through the symlink.
-     */
-    hashmap_init(&wt_modified, path_entry_cmp, NULL, wtindex.cache_nr);
-    hashmap_init(&tmp_modified, path_entry_cmp, NULL, wtindex.cache_nr);
-
-    for (i = 0; i < wtindex.cache_nr; i++)
-    {
-        struct hashmap_entry dummy;
-        const char          *name = wtindex.cache[i]->name;
-        struct stat          st;
+	/*
+	 * If the diff includes working copy files and those
+	 * files were modified during the diff, then the changes
+	 * should be copied back to the working tree.
+	 * Do not copy back files when symlinks are used and the
+	 * external tool did not replace the original link with a file.
+	 *
+	 * These hashes are loaded lazily since they aren't needed
+	 * in the common case of --symlinks and the difftool updating
+	 * files through the symlink.
+	 */
+	for (i = 0; i < wtindex.cache_nr; i++) {
+		struct hashmap_entry dummy;
+		const char *name = wtindex.cache[i]->name;
+		struct stat st;
 
         add_path(&rdir, rdir_len, name);
         if (lstat(rdir.buf, &st))

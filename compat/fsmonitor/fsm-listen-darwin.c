@@ -187,32 +187,30 @@ static void fsevent_callback(ConstFSEventStreamRef streamRef UNUSED,
                              const FSEventStreamEventFlags   event_flags[],
                              const FSEventStreamEventId      event_ids[] UNUSED)
 {
-    struct fsmonitor_daemon_state *state       = ctx;
-    struct fsm_listen_data        *data        = state->listen_data;
-    char                         **paths       = (char **)event_paths;
-    struct fsmonitor_batch        *batch       = NULL;
-    struct string_list             cookie_list = STRING_LIST_INIT_DUP;
-    const char                    *path_k;
-    const char                    *slash;
-    char                          *resolved = NULL;
-    struct strbuf                  tmp      = STRBUF_INIT;
-    int                            k;
+	struct fsmonitor_daemon_state *state = ctx;
+	struct fsm_listen_data *data = state->listen_data;
+	char **paths = (char **)event_paths;
+	struct fsmonitor_batch *batch = NULL;
+	struct string_list cookie_list = STRING_LIST_INIT_DUP;
+	const char *path_k;
+	const char *slash;
+	char *resolved = NULL;
+	struct strbuf tmp = STRBUF_INIT;
 
-    /*
-     * Build a list of all filesystem changes into a private/local
-     * list and without holding any locks.
-     */
-    for (k = 0; k < num_of_events; k++)
-    {
-        /*
-         * On Mac, we receive an array of absolute paths.
-         */
-        free(resolved);
-        resolved = fsmonitor__resolve_alias(paths[k], &state->alias);
-        if (resolved)
-            path_k = resolved;
-        else
-            path_k = paths[k];
+	/*
+	 * Build a list of all filesystem changes into a private/local
+	 * list and without holding any locks.
+	 */
+	for (size_t k = 0; k < num_of_events; k++) {
+		/*
+		 * On Mac, we receive an array of absolute paths.
+		 */
+		free(resolved);
+		resolved = fsmonitor__resolve_alias(paths[k], &state->alias);
+		if (resolved)
+			path_k = resolved;
+		else
+			path_k = paths[k];
 
         /*
          * If you want to debug FSEvents, log them to GIT_TRACE_FSMONITOR.

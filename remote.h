@@ -63,9 +63,15 @@ struct remote_state
 void                 remote_state_clear(struct remote_state *remote_state);
 struct remote_state *remote_state_new(void);
 
-struct remote
-{
-    struct hashmap_entry ent;
+	enum follow_remote_head_settings {
+		FOLLOW_REMOTE_NEVER = -1,
+		FOLLOW_REMOTE_CREATE = 0,
+		FOLLOW_REMOTE_WARN = 1,
+		FOLLOW_REMOTE_ALWAYS = 2,
+	};
+
+struct remote {
+	struct hashmap_entry ent;
 
     /* The user's nickname for the remote */
     const char *name;
@@ -111,7 +117,10 @@ struct remote
     /* The method used for authenticating against `http_proxy`. */
     char *http_proxy_authmethod;
 
-    struct string_list server_options;
+	struct string_list server_options;
+
+	enum follow_remote_head_settings follow_remote_head;
+	const char *no_warn_branch;
 };
 
 /**

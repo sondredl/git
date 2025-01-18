@@ -14,13 +14,14 @@ https://developers.google.com/open-source/licenses/bsd
 #include "tree.h"
 #include "reftable-writer.h"
 
-struct reftable_writer
-{
-    ssize_t (*write)(void *, const void *, size_t);
-    int (*flush)(void *);
-    void               *write_arg;
-    int                 pending_padding;
-    struct reftable_buf last_key;
+struct reftable_writer {
+	ssize_t (*write)(void *, const void *, size_t);
+	int (*flush)(void *);
+	void *write_arg;
+	int pending_padding;
+	struct reftable_buf last_key;
+	/* Scratch buffer used to avoid allocations. */
+	struct reftable_buf scratch;
 
     /* offset of next block to write. */
     uint64_t                      next;

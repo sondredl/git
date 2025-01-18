@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "gettext.h"
@@ -264,7 +265,7 @@ static void mark_reachable(struct expire_reflog_policy_cb *cb)
     cb->mark_list = leftover;
 }
 
-static int unreachable(struct expire_reflog_policy_cb *cb, struct commit *commit, struct object_id *oid)
+static int is_unreachable(struct expire_reflog_policy_cb *cb, struct commit *commit, struct object_id *oid)
 {
     /*
      * We may or may not have the commit yet - if not, look it
@@ -325,21 +326,17 @@ int should_expire_reflog_ent(struct object_id *ooid, struct object_id *noid,
         return 1;
     }
 
-    if (timestamp < cb->cmd.expire_unreachable)
-    {
-        switch (cb->unreachable_expire_kind)
-        {
-            case UE_ALWAYS:
-                return 1;
-            case UE_NORMAL:
-            case UE_HEAD:
-                if (unreachable(cb, old_commit, ooid) || unreachable(cb, new_commit, noid))
-                {
-                    return 1;
-                }
-                break;
-        }
-    }
+	if (timestamp < cb->cmd.expire_unreachable) {
+		switch (cb->unreachable_expire_kind) {
+		case UE_ALWAYS:
+			return 1;
+		case UE_NORMAL:
+		case UE_HEAD:
+			if (is_unreachable(cb, old_commit, ooid) || is_unreachable(cb, new_commit, noid))
+				return 1;
+			break;
+		}
+	}
 
     if (cb->cmd.recno && --(cb->cmd.recno) == 0)
     {

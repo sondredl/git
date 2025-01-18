@@ -27,42 +27,39 @@
 #include "setup.h"
 #include "write-or-die.h"
 
-int                    trust_executable_bit = 1;
-int                    trust_ctime          = 1;
-int                    check_stat           = 1;
-int                    has_symlinks         = 1;
-int                    minimum_abbrev = 4, default_abbrev = -1;
-int                    ignore_case;
-int                    assume_unchanged;
-int                    is_bare_repository_cfg           = -1; /* unspecified */
-int                    warn_on_object_refname_ambiguity = 1;
-int                    repository_format_precious_objects;
-char                  *git_commit_encoding;
-char                  *git_log_output_encoding;
-char                  *apply_default_whitespace;
-char                  *apply_default_ignorewhitespace;
-char                  *git_attributes_file;
-char                  *git_hooks_path;
-int                    zlib_compression_level = Z_BEST_SPEED;
-int                    pack_compression_level = Z_DEFAULT_COMPRESSION;
-int                    fsync_object_files     = -1;
-int                    use_fsync              = -1;
-enum fsync_method      fsync_method           = FSYNC_METHOD_DEFAULT;
-enum fsync_component   fsync_components       = FSYNC_COMPONENTS_DEFAULT;
-size_t                 packed_git_window_size = DEFAULT_PACKED_GIT_WINDOW_SIZE;
-size_t                 packed_git_limit       = DEFAULT_PACKED_GIT_LIMIT;
-size_t                 delta_base_cache_limit = 96 * 1024 * 1024;
-unsigned long          big_file_threshold     = 512 * 1024 * 1024;
-char                  *editor_program;
-char                  *askpass_program;
-char                  *excludes_file;
-enum auto_crlf         auto_crlf             = AUTO_CRLF_FALSE;
-enum eol               core_eol              = EOL_UNSET;
-int                    global_conv_flags_eol = CONV_EOL_RNDTRP_WARN;
-char                  *check_roundtrip_encoding;
-enum branch_track      git_branch_track = BRANCH_TRACK_REMOTE;
-enum rebase_setup_type autorebase       = AUTOREBASE_NEVER;
-enum push_default_type push_default     = PUSH_DEFAULT_UNSPECIFIED;
+int trust_executable_bit = 1;
+int trust_ctime = 1;
+int check_stat = 1;
+int has_symlinks = 1;
+int minimum_abbrev = 4, default_abbrev = -1;
+int ignore_case;
+int assume_unchanged;
+int is_bare_repository_cfg = -1; /* unspecified */
+int warn_on_object_refname_ambiguity = 1;
+int repository_format_precious_objects;
+char *git_commit_encoding;
+char *git_log_output_encoding;
+char *apply_default_whitespace;
+char *apply_default_ignorewhitespace;
+char *git_attributes_file;
+char *git_hooks_path;
+int zlib_compression_level = Z_BEST_SPEED;
+int pack_compression_level = Z_DEFAULT_COMPRESSION;
+int fsync_object_files = -1;
+int use_fsync = -1;
+enum fsync_method fsync_method = FSYNC_METHOD_DEFAULT;
+enum fsync_component fsync_components = FSYNC_COMPONENTS_DEFAULT;
+unsigned long big_file_threshold = 512 * 1024 * 1024;
+char *editor_program;
+char *askpass_program;
+char *excludes_file;
+enum auto_crlf auto_crlf = AUTO_CRLF_FALSE;
+enum eol core_eol = EOL_UNSET;
+int global_conv_flags_eol = CONV_EOL_RNDTRP_WARN;
+char *check_roundtrip_encoding;
+enum branch_track git_branch_track = BRANCH_TRACK_REMOTE;
+enum rebase_setup_type autorebase = AUTOREBASE_NEVER;
+enum push_default_type push_default = PUSH_DEFAULT_UNSPECIFIED;
 #ifndef OBJECT_CREATION_MODE
     #define OBJECT_CREATION_MODE OBJECT_CREATION_USES_HARDLINKS
 #endif

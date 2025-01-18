@@ -302,10 +302,11 @@ int repo_init(struct repository *repo,
         goto error;
     }
 
-    repo_set_hash_algo(repo, format.hash_algo);
-    repo_set_compat_hash_algo(repo, format.compat_hash_algo);
-    repo_set_ref_storage_format(repo, format.ref_storage_format);
-    repo->repository_format_worktree_config = format.worktree_config;
+	repo_set_hash_algo(repo, format.hash_algo);
+	repo_set_compat_hash_algo(repo, format.compat_hash_algo);
+	repo_set_ref_storage_format(repo, format.ref_storage_format);
+	repo->repository_format_worktree_config = format.worktree_config;
+	repo->repository_format_relative_worktrees = format.relative_worktrees;
 
     /* take ownership of format.partial_clone */
     repo->repository_format_partial_clone = format.partial_clone;

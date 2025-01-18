@@ -125,17 +125,17 @@ static int build_sandbox_path(void)
     if (_mktemp(_clar_path) == NULL)
         return -1;
 
-    if (mkdir(_clar_path, 0700) != 0)
-        return -1;
-#elif defined(__TANDEM)
-    if (mktemp(_clar_path) == NULL)
-        return -1;
-
-    if (mkdir(_clar_path, 0700) != 0)
-        return -1;
+	if (mkdir(_clar_path, 0700) != 0)
+		return -1;
 #elif defined(_WIN32)
-    if (_mktemp_s(_clar_path, sizeof(_clar_path)) != 0)
-        return -1;
+	if (_mktemp_s(_clar_path, sizeof(_clar_path)) != 0)
+		return -1;
+
+	if (mkdir(_clar_path, 0700) != 0)
+		return -1;
+#elif defined(__sun) || defined(__TANDEM)
+	if (mktemp(_clar_path) == NULL)
+		return -1;
 
     if (mkdir(_clar_path, 0700) != 0)
         return -1;
@@ -147,15 +147,14 @@ static int build_sandbox_path(void)
     return 0;
 }
 
-static int clar_sandbox(void)
+static void clar_sandbox(void)
 {
-    if (_clar_path[0] == '\0' && build_sandbox_path() < 0)
-        return -1;
+	if (_clar_path[0] == '\0' && build_sandbox_path() < 0)
+		clar_abort("Failed to build sandbox path.\n");
 
-    if (chdir(_clar_path) != 0)
-        return -1;
-
-    return 0;
+	if (chdir(_clar_path) != 0)
+		clar_abort("Failed to change into sandbox directory '%s': %s.\n",
+			   _clar_path, strerror(errno));
 }
 
 const char *clar_sandbox_path(void)

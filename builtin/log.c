@@ -4,7 +4,9 @@
  * (C) Copyright 2006 Linus Torvalds
  *		 2006 Junio Hamano
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "abspath.h"
 #include "config.h"
@@ -225,10 +227,9 @@ static void cmd_log_init_defaults(struct rev_info   *rev,
 
 static void set_default_decoration_filter(struct decoration_filter *decoration_filter)
 {
-    int                       i;
-    char                     *value   = NULL;
-    struct string_list       *include = decoration_filter->include_ref_pattern;
-    const struct string_list *config_exclude;
+	char *value = NULL;
+	struct string_list *include = decoration_filter->include_ref_pattern;
+	const struct string_list *config_exclude;
 
     if (!git_config_get_string_multi("log.excludeDecoration",
                                      &config_exclude))
@@ -255,16 +256,13 @@ static void set_default_decoration_filter(struct decoration_filter *decoration_f
         return;
     }
 
-    /*
-     * No command-line or config options were given, so
-     * populate with sensible defaults.
-     */
-    for (i = 0; i < ARRAY_SIZE(ref_namespace); i++)
-    {
-        if (!ref_namespace[i].decoration)
-        {
-            continue;
-        }
+	/*
+	 * No command-line or config options were given, so
+	 * populate with sensible defaults.
+	 */
+	for (size_t i = 0; i < ARRAY_SIZE(ref_namespace); i++) {
+		if (!ref_namespace[i].decoration)
+			continue;
 
         string_list_append(include, ref_namespace[i].ref);
     }
@@ -581,43 +579,39 @@ static int cmd_log_walk_no_free(struct rev_info *rev)
         finish_early_output(rev);
     }
 
-    /*
-     * For --check and --exit-code, the exit code is based on CHECK_FAILED
-     * and HAS_CHANGES being accumulated in rev->diffopt, so be careful to
-     * retain that state information if replacing rev->diffopt in this loop
-     */
-    while ((commit = get_revision(rev)) != NULL)
-    {
-        if (!log_tree_commit(rev, commit) && rev->max_count >= 0)
-        {
-            /*
-             * We decremented max_count in get_revision,
-             * but we didn't actually show the commit.
-             */
-            rev->max_count++;
-        }
-        if (!rev->reflog_info)
-        {
-            /*
-             * We may show a given commit multiple times when
-             * walking the reflogs.
-             */
-            free_commit_buffer(the_repository->parsed_objects,
-                               commit);
-            free_commit_list(commit->parents);
-            commit->parents = NULL;
-        }
-        if (saved_nrl < rev->diffopt.needed_rename_limit)
-        {
-            saved_nrl = rev->diffopt.needed_rename_limit;
-        }
-        if (rev->diffopt.degraded_cc_to_c)
-        {
-            saved_dcctc = 1;
-        }
-    }
-    rev->diffopt.degraded_cc_to_c    = saved_dcctc;
-    rev->diffopt.needed_rename_limit = saved_nrl;
+	/*
+	 * For --check and --exit-code, the exit code is based on CHECK_FAILED
+	 * and HAS_CHANGES being accumulated in rev->diffopt, so be careful to
+	 * retain that state information if replacing rev->diffopt in this loop
+	 */
+	while ((commit = get_revision(rev)) != NULL) {
+		if (!log_tree_commit(rev, commit) && rev->max_count >= 0)
+			/*
+			 * We decremented max_count in get_revision,
+			 * but we didn't actually show the commit.
+			 */
+			rev->max_count++;
+		if (!rev->reflog_info && !rev->remerge_diff) {
+			/*
+			 * We may show a given commit multiple times when
+			 * walking the reflogs. Therefore we still need it.
+			 *
+			 * Likewise, we potentially still need the parents
+			 * of * already shown commits to determine merge
+			 * bases when showing remerge diffs.
+			 */
+			free_commit_buffer(the_repository->parsed_objects,
+					   commit);
+			free_commit_list(commit->parents);
+			commit->parents = NULL;
+		}
+		if (saved_nrl < rev->diffopt.needed_rename_limit)
+			saved_nrl = rev->diffopt.needed_rename_limit;
+		if (rev->diffopt.degraded_cc_to_c)
+			saved_dcctc = 1;
+	}
+	rev->diffopt.degraded_cc_to_c = saved_dcctc;
+	rev->diffopt.needed_rename_limit = saved_nrl;
 
     result = diff_result_code(rev);
     if (rev->diffopt.output_format & DIFF_FORMAT_CHECKDIFF && rev->diffopt.flags.check_failed)
@@ -804,31 +798,26 @@ static int show_blob_object(const struct object_id *oid, struct rev_info *rev, c
 
 static int show_tag_object(const struct object_id *oid, struct rev_info *rev)
 {
-    unsigned long    size;
-    enum object_type type;
-    char            *buf    = repo_read_object_file(the_repository, oid, &type, &size);
-    int              offset = 0;
+	unsigned long size;
+	enum object_type type;
+	char *buf = repo_read_object_file(the_repository, oid, &type, &size);
+	unsigned long offset = 0;
 
     if (!buf)
     {
         return error(_("could not read object %s"), oid_to_hex(oid));
     }
 
-    assert(type == OBJ_TAG);
-    while (offset < size && buf[offset] != '\n')
-    {
-        int         new_offset = offset + 1;
-        const char *ident;
-        while (new_offset < size && buf[new_offset++] != '\n')
-        {
-            ; /* do nothing */
-        }
-        if (skip_prefix(buf + offset, "tagger ", &ident))
-        {
-            show_tagger(ident, rev);
-        }
-        offset = new_offset;
-    }
+	assert(type == OBJ_TAG);
+	while (offset < size && buf[offset] != '\n') {
+		unsigned long new_offset = offset + 1;
+		const char *ident;
+		while (new_offset < size && buf[new_offset++] != '\n')
+			; /* do nothing */
+		if (skip_prefix(buf + offset, "tagger ", &ident))
+			show_tagger(ident, rev);
+		offset = new_offset;
+	}
 
     if (offset < size)
     {
@@ -1523,44 +1512,32 @@ static void print_signature(const char *signature, FILE *file)
 
 static char *find_branch_name(struct rev_info *rev)
 {
-    int                     i;
-    int                     positive = -1;
-    struct object_id        branch_oid;
-    const struct object_id *tip_oid;
-    const char             *ref;
-    const char             *v;
-    char                   *full_ref;
-    char                   *branch = NULL;
+	struct object_id branch_oid;
+	const struct object_id *tip_oid;
+	const char *ref, *v;
+	char *full_ref, *branch = NULL;
+	int interesting_found = 0;
+	size_t idx;
 
-    for (i = 0; i < rev->cmdline.nr; i++)
-    {
-        if (rev->cmdline.rev[i].flags & UNINTERESTING)
-        {
-            continue;
-        }
-        if (positive < 0)
-        {
-            positive = i;
-        }
-        else
-        {
-            return NULL;
-        }
-    }
-    if (positive < 0)
-    {
-        return NULL;
-    }
-    ref     = rev->cmdline.rev[positive].name;
-    tip_oid = &rev->cmdline.rev[positive].item->oid;
-    if (repo_dwim_ref(the_repository, ref, strlen(ref), &branch_oid,
-                      &full_ref, 0)
-        && skip_prefix(full_ref, "refs/heads/", &v) && oideq(tip_oid, &branch_oid))
-    {
-        branch = xstrdup(v);
-    }
-    free(full_ref);
-    return branch;
+	for (size_t i = 0; i < rev->cmdline.nr; i++) {
+		if (rev->cmdline.rev[i].flags & UNINTERESTING)
+			continue;
+		if (interesting_found)
+			return NULL;
+		interesting_found = 1;
+		idx = i;
+	}
+	if (!interesting_found)
+		return NULL;
+	ref = rev->cmdline.rev[idx].name;
+	tip_oid = &rev->cmdline.rev[idx].item->oid;
+	if (repo_dwim_ref(the_repository, ref, strlen(ref), &branch_oid,
+			  &full_ref, 0) &&
+	    skip_prefix(full_ref, "refs/heads/", &v) &&
+	    oideq(tip_oid, &branch_oid))
+		branch = xstrdup(v);
+	free(full_ref);
+	return branch;
 }
 
 static void show_diffstat(struct rev_info *rev,
@@ -2055,16 +2032,13 @@ struct base_tree_info
 };
 
 static struct commit *get_base_commit(const struct format_config *cfg,
-                                      struct commit             **list,
-                                      int                         total)
+				      struct commit **list,
+				      size_t total)
 {
-    struct commit  *base = NULL;
-    struct commit **rev;
-    int             i      = 0;
-    int             rev_nr = 0;
-    int             auto_select;
-    int             die_on_failure;
-    int             ret;
+	struct commit *base = NULL;
+	struct commit **rev;
+	int auto_select, die_on_failure, ret;
+	size_t i = 0, rev_nr = 0;
 
     switch (cfg->auto_base)
     {
@@ -2250,15 +2224,14 @@ static struct commit *get_base_commit(const struct format_config *cfg,
 define_commit_slab(commit_base, int);
 
 static void prepare_bases(struct base_tree_info *bases,
-                          struct commit         *base,
-                          struct commit        **list,
-                          int                    total)
+			  struct commit *base,
+			  struct commit **list,
+			  size_t total)
 {
-    struct commit      *commit;
-    struct rev_info     revs;
-    struct diff_options diffopt;
-    struct commit_base  commit_base;
-    int                 i;
+	struct commit *commit;
+	struct rev_info revs;
+	struct diff_options diffopt;
+	struct commit_base commit_base;
 
     if (!base)
     {
@@ -2272,17 +2245,16 @@ static void prepare_bases(struct base_tree_info *bases,
 
     oidcpy(&bases->base_commit, &base->object.oid);
 
-    repo_init_revisions(the_repository, &revs, NULL);
-    revs.max_parents = 1;
-    revs.topo_order  = 1;
-    for (i = 0; i < total; i++)
-    {
-        list[i]->object.flags &= ~UNINTERESTING;
-        add_pending_object(&revs, &list[i]->object, "rev_list");
-        *commit_base_at(&commit_base, list[i]) = 1;
-    }
-    base->object.flags |= UNINTERESTING;
-    add_pending_object(&revs, &base->object, "base");
+	repo_init_revisions(the_repository, &revs, NULL);
+	revs.max_parents = 1;
+	revs.topo_order = 1;
+	for (size_t i = 0; i < total; i++) {
+		list[i]->object.flags &= ~UNINTERESTING;
+		add_pending_object(&revs, &list[i]->object, "rev_list");
+		*commit_base_at(&commit_base, list[i]) = 1;
+	}
+	base->object.flags |= UNINTERESTING;
+	add_pending_object(&revs, &base->object, "base");
 
     if (prepare_revision_walk(&revs))
     {
@@ -2394,53 +2366,51 @@ int cmd_format_patch(int                     argc,
                      const char             *prefix,
                      struct repository *repo UNUSED)
 {
-    struct format_config      cfg;
-    struct commit            *commit;
-    struct commit           **list = NULL;
-    struct rev_info           rev;
-    char                     *to_free = NULL;
-    struct setup_revision_opt s_r_opt;
-    int                       nr = 0;
-    int                       total;
-    int                       i;
-    int                       use_stdout            = 0;
-    int                       start_number          = -1;
-    int                       just_numbers          = 0;
-    int                       ignore_if_in_upstream = 0;
-    int                       cover_letter          = -1;
-    int                       boundary_count        = 0;
-    int                       no_binary_diff        = 0;
-    int                       zero_commit           = 0;
-    struct commit            *origin                = NULL;
-    const char               *in_reply_to           = NULL;
-    struct patch_ids          ids;
-    struct strbuf             buf                        = STRBUF_INIT;
-    int                       use_patch_format           = 0;
-    int                       quiet                      = 0;
-    const char               *reroll_count               = NULL;
-    char                     *cover_from_description_arg = NULL;
-    char                     *description_file           = NULL;
-    char                     *branch_name                = NULL;
-    struct base_tree_info     bases;
-    struct commit            *base;
-    int                       show_progress      = 0;
-    struct progress          *progress           = NULL;
-    struct oid_array          idiff_prev         = OID_ARRAY_INIT;
-    struct strbuf             idiff_title        = STRBUF_INIT;
-    const char               *rdiff_prev         = NULL;
-    struct strbuf             rdiff1             = STRBUF_INIT;
-    struct strbuf             rdiff2             = STRBUF_INIT;
-    struct strbuf             rdiff_title        = STRBUF_INIT;
-    const char               *rfc                = NULL;
-    int                       creation_factor    = -1;
-    const char               *signature          = git_version_string;
-    char                     *signature_to_free  = NULL;
-    char                     *signature_file_arg = NULL;
-    struct keep_callback_data keep_callback_data = {
-        .cfg  = &cfg,
-        .revs = &rev,
-    };
-    const char *fmt_patch_suffix = NULL;
+	struct format_config cfg;
+	struct commit *commit;
+	struct commit **list = NULL;
+	struct rev_info rev;
+	char *to_free = NULL;
+	struct setup_revision_opt s_r_opt;
+	size_t nr = 0, total, i;
+	int use_stdout = 0;
+	int start_number = -1;
+	int just_numbers = 0;
+	int ignore_if_in_upstream = 0;
+	int cover_letter = -1;
+	int boundary_count = 0;
+	int no_binary_diff = 0;
+	int zero_commit = 0;
+	struct commit *origin = NULL;
+	const char *in_reply_to = NULL;
+	struct patch_ids ids;
+	struct strbuf buf = STRBUF_INIT;
+	int use_patch_format = 0;
+	int quiet = 0;
+	const char *reroll_count = NULL;
+	char *cover_from_description_arg = NULL;
+	char *description_file = NULL;
+	char *branch_name = NULL;
+	struct base_tree_info bases;
+	struct commit *base;
+	int show_progress = 0;
+	struct progress *progress = NULL;
+	struct oid_array idiff_prev = OID_ARRAY_INIT;
+	struct strbuf idiff_title = STRBUF_INIT;
+	const char *rdiff_prev = NULL;
+	struct strbuf rdiff1 = STRBUF_INIT;
+	struct strbuf rdiff2 = STRBUF_INIT;
+	struct strbuf rdiff_title = STRBUF_INIT;
+	const char *rfc = NULL;
+	int creation_factor = -1;
+	const char *signature = git_version_string;
+	char *signature_to_free = NULL;
+	char *signature_file_arg = NULL;
+	struct keep_callback_data keep_callback_data = {
+		.cfg = &cfg,
+		.revs = &rev,
+	};
+	const char *fmt_patch_suffix = NULL;
 
     const struct option builtin_format_patch_options[] = {
         OPT_CALLBACK_F('n', "numbered", &cfg, NULL,
@@ -2580,11 +2550,9 @@ int cmd_format_patch(int                     argc,
         fmt_patch_suffix = cfg.fmt_patch_suffix;
     }
 
-    /* Make sure "0000-$sub.patch" gives non-negative length for $sub */
-    if (cfg.log.fmt_patch_name_max <= strlen("0000-") + strlen(fmt_patch_suffix))
-    {
-        cfg.log.fmt_patch_name_max = strlen("0000-") + strlen(fmt_patch_suffix);
-    }
+	/* Make sure "0000-$sub.patch" gives non-negative length for $sub */
+	if (cfg.log.fmt_patch_name_max <= cast_size_t_to_int(strlen("0000-") + strlen(fmt_patch_suffix)))
+		cfg.log.fmt_patch_name_max = strlen("0000-") + strlen(fmt_patch_suffix);
 
     if (cover_from_description_arg)
     {
@@ -3018,57 +2986,51 @@ int cmd_format_patch(int                     argc,
     }
     rev.add_signoff = cfg.do_signoff;
 
-    if (show_progress)
-    {
-        progress = start_delayed_progress(_("Generating patches"), total);
-    }
-    while (0 <= --nr)
-    {
-        int shown;
-        display_progress(progress, total - nr);
-        commit = list[nr];
-        rev.nr = total - nr + (start_number - 1);
-        /* Make the second and subsequent mails replies to the first */
-        if (cfg.thread)
-        {
-            /* Have we already had a message ID? */
-            if (rev.message_id)
-            {
-                /*
-                 * For deep threading: make every mail
-                 * a reply to the previous one, no
-                 * matter what other options are set.
-                 *
-                 * For shallow threading:
-                 *
-                 * Without --cover-letter and
-                 * --in-reply-to, make every mail a
-                 * reply to the one before.
-                 *
-                 * With --in-reply-to but no
-                 * --cover-letter, make every mail a
-                 * reply to the <reply-to>.
-                 *
-                 * With --cover-letter, make every
-                 * mail but the cover letter a reply
-                 * to the cover letter.  The cover
-                 * letter is a reply to the
-                 * --in-reply-to, if specified.
-                 */
-                if (cfg.thread == THREAD_SHALLOW
-                    && rev.ref_message_ids->nr > 0
-                    && (!cover_letter || rev.nr > 1))
-                {
-                    free(rev.message_id);
-                }
-                else
-                {
-                    string_list_append_nodup(rev.ref_message_ids,
-                                             rev.message_id);
-                }
-            }
-            gen_message_id(&rev, oid_to_hex(&commit->object.oid));
-        }
+	if (show_progress)
+		progress = start_delayed_progress(_("Generating patches"), total);
+	for (i = 0; i < nr; i++) {
+		size_t idx = nr - i - 1;
+		int shown;
+
+		display_progress(progress, total - idx);
+		commit = list[idx];
+		rev.nr = total - idx + (start_number - 1);
+
+		/* Make the second and subsequent mails replies to the first */
+		if (cfg.thread) {
+			/* Have we already had a message ID? */
+			if (rev.message_id) {
+				/*
+				 * For deep threading: make every mail
+				 * a reply to the previous one, no
+				 * matter what other options are set.
+				 *
+				 * For shallow threading:
+				 *
+				 * Without --cover-letter and
+				 * --in-reply-to, make every mail a
+				 * reply to the one before.
+				 *
+				 * With --in-reply-to but no
+				 * --cover-letter, make every mail a
+				 * reply to the <reply-to>.
+				 *
+				 * With --cover-letter, make every
+				 * mail but the cover letter a reply
+				 * to the cover letter.  The cover
+				 * letter is a reply to the
+				 * --in-reply-to, if specified.
+				 */
+				if (cfg.thread == THREAD_SHALLOW
+				    && rev.ref_message_ids->nr > 0
+				    && (!cover_letter || rev.nr > 1))
+					free(rev.message_id);
+				else
+					string_list_append_nodup(rev.ref_message_ids,
+								 rev.message_id);
+			}
+			gen_message_id(&rev, oid_to_hex(&commit->object.oid));
+		}
 
         if (output_directory && open_next_file(rev.numbered_files ? NULL : commit, NULL, &rev, quiet))
         {

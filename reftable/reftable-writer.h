@@ -31,10 +31,10 @@ struct reftable_write_options
     /* how often to write complete keys in each block. */
     uint16_t restart_interval;
 
-    /* 4-byte identifier ("sha1", "s256") of the hash.
-     * Defaults to SHA1 if unset
-     */
-    uint32_t hash_id;
+	/* 4-byte identifier ("sha1", "s256") of the hash.
+	 * Defaults to SHA1 if unset
+	 */
+	enum reftable_hash hash_id;
 
     /* Default mode for creating files. If unset, use 0666 (+umask) */
     unsigned int default_permissions;
@@ -53,16 +53,31 @@ struct reftable_write_options
      */
     uint8_t auto_compaction_factor;
 
-    /*
-     * The number of milliseconds to wait when trying to lock "tables.list".
-     * Note that this does not apply to locking individual tables, as these
-     * should only ever be locked when already holding the "tables.list"
-     * lock.
-     *
-     * Passing 0 will fail immediately when the file is locked, passing a
-     * negative value will cause us to block indefinitely.
-     */
-    long lock_timeout_ms;
+	/*
+	 * The number of milliseconds to wait when trying to lock "tables.list".
+	 * Note that this does not apply to locking individual tables, as these
+	 * should only ever be locked when already holding the "tables.list"
+	 * lock.
+	 *
+	 * Passing 0 will fail immediately when the file is locked, passing a
+	 * negative value will cause us to block indefinitely.
+	 */
+	long lock_timeout_ms;
+
+	/*
+	 * Optional callback used to fsync files to disk. Falls back to using
+	 * fsync(3P) when unset.
+	 */
+	int (*fsync)(int fd);
+
+	/*
+	 * Callback function to execute whenever the stack is being reloaded.
+	 * This can be used e.g. to discard cached information that relies on
+	 * the old stack's data. The payload data will be passed as argument to
+	 * the callback.
+	 */
+	void (*on_reload)(void *payload);
+	void *on_reload_payload;
 };
 
 /* reftable_block_stats holds statistics for a single block type */

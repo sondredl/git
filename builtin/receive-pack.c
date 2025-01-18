@@ -1,4 +1,6 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "abspath.h"
 
@@ -2237,15 +2239,14 @@ static void execute_commands_non_atomic(struct command      *commands,
             continue;
         }
 
-        transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                                  &err);
-        if (!transaction)
-        {
-            rp_error("%s", err.buf);
-            strbuf_reset(&err);
-            cmd->error_string = "transaction failed to start";
-            continue;
-        }
+		transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+							  0, &err);
+		if (!transaction) {
+			rp_error("%s", err.buf);
+			strbuf_reset(&err);
+			cmd->error_string = "transaction failed to start";
+			continue;
+		}
 
         cmd->error_string = update(cmd, si);
 
@@ -2268,15 +2269,14 @@ static void execute_commands_atomic(struct command      *commands,
     struct strbuf   err            = STRBUF_INIT;
     const char     *reported_error = "atomic push failure";
 
-    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                              &err);
-    if (!transaction)
-    {
-        rp_error("%s", err.buf);
-        strbuf_reset(&err);
-        reported_error = "transaction failed to start";
-        goto failure;
-    }
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  0, &err);
+	if (!transaction) {
+		rp_error("%s", err.buf);
+		strbuf_reset(&err);
+		reported_error = "transaction failed to start";
+		goto failure;
+	}
 
     for (cmd = commands; cmd; cmd = cmd->next)
     {

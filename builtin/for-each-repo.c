@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
@@ -35,12 +36,11 @@ int cmd_for_each_repo(int                     argc,
                       const char             *prefix,
                       struct repository *repo UNUSED)
 {
-    static const char        *config_key = NULL;
-    int                       keep_going = 0;
-    int                       i;
-    int                       result = 0;
-    const struct string_list *values;
-    int                       err;
+	static const char *config_key = NULL;
+	int keep_going = 0;
+	int result = 0;
+	const struct string_list *values;
+	int err;
 
     const struct option options[] = {
         OPT_STRING(0, "config", &config_key, N_("config"),
@@ -68,18 +68,14 @@ int cmd_for_each_repo(int                     argc,
         return 0;
     }
 
-    for (i = 0; i < values->nr; i++)
-    {
-        int ret = run_command_on_repo(values->items[i].string, argc, argv);
-        if (ret)
-        {
-            if (!keep_going)
-            {
-                return ret;
-            }
-            result = 1;
-        }
-    }
+	for (size_t i = 0; i < values->nr; i++) {
+		int ret = run_command_on_repo(values->items[i].string, argc, argv);
+		if (ret) {
+			if (!keep_going)
+					return ret;
+			result = 1;
+		}
+	}
 
     return result;
 }

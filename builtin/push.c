@@ -1,7 +1,9 @@
 /*
  * "git push"
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "advice.h"
 #include "branch.h"
@@ -509,43 +511,32 @@ static int do_push(int                       flags,
                    const struct string_list *push_options,
                    struct remote            *remote)
 {
-    int             i;
-    int             errs;
-    struct strvec  *url;
-    struct refspec *push_refspec = &rs;
+	int errs;
+	struct strvec *url;
+	struct refspec *push_refspec = &rs;
 
     if (push_options->nr)
     {
         flags |= TRANSPORT_PUSH_OPTIONS;
     }
 
-    if (!push_refspec->nr && !(flags & TRANSPORT_PUSH_ALL))
-    {
-        if (remote->push.nr)
-        {
-            push_refspec = &remote->push;
-        }
-        else if (!(flags & TRANSPORT_PUSH_MIRROR))
-        {
-            setup_default_push_refspecs(&flags, remote);
-        }
-    }
-    errs = 0;
-    url  = push_url_of_remote(remote);
-    for (i = 0; i < url->nr; i++)
-    {
-        struct transport *transport =
-            transport_get(remote, url->v[i]);
-        if (flags & TRANSPORT_PUSH_OPTIONS)
-        {
-            transport->push_options = push_options;
-        }
-        if (push_with_options(transport, push_refspec, flags))
-        {
-            errs++;
-        }
-    }
-    return !!errs;
+	if (!push_refspec->nr && !(flags & TRANSPORT_PUSH_ALL)) {
+		if (remote->push.nr) {
+			push_refspec = &remote->push;
+		} else if (!(flags & TRANSPORT_PUSH_MIRROR))
+			setup_default_push_refspecs(&flags, remote);
+	}
+	errs = 0;
+	url = push_url_of_remote(remote);
+	for (size_t i = 0; i < url->nr; i++) {
+		struct transport *transport =
+			transport_get(remote, url->v[i]);
+		if (flags & TRANSPORT_PUSH_OPTIONS)
+			transport->push_options = push_options;
+		if (push_with_options(transport, push_refspec, flags))
+			errs++;
+	}
+	return !!errs;
 }
 
 static int option_parse_recurse_submodules(const struct option *opt,

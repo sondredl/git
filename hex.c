@@ -7,18 +7,14 @@
 static int get_hash_hex_algop(const char *hex, unsigned char *hash,
                               const struct git_hash_algo *algop)
 {
-    int i;
-    for (i = 0; i < algop->rawsz; i++)
-    {
-        int val = hex2chr(hex);
-        if (val < 0)
-        {
-            return -1;
-        }
-        *hash++ = val;
-        hex += 2;
-    }
-    return 0;
+	for (size_t i = 0; i < algop->rawsz; i++) {
+		int val = hex2chr(hex);
+		if (val < 0)
+			return -1;
+		*hash++ = val;
+		hex += 2;
+	}
+	return 0;
 }
 
 int get_hash_hex(const char *hex, unsigned char *sha1)
@@ -94,9 +90,8 @@ int parse_oid_hex(const char *hex, struct object_id *oid, const char **end)
 char *hash_to_hex_algop_r(char *buffer, const unsigned char *hash,
                           const struct git_hash_algo *algop)
 {
-    static const char hex[] = "0123456789abcdef";
-    char             *buf   = buffer;
-    int               i;
+	static const char hex[] = "0123456789abcdef";
+	char *buf = buffer;
 
     /*
      * Our struct object_id has been memset to 0, so default to printing
@@ -107,13 +102,12 @@ char *hash_to_hex_algop_r(char *buffer, const unsigned char *hash,
         algop = the_hash_algo;
     }
 
-    for (i = 0; i < algop->rawsz; i++)
-    {
-        unsigned int val = *hash++;
-        *buf++           = hex[val >> 4];
-        *buf++           = hex[val & 0xf];
-    }
-    *buf = '\0';
+	for (size_t i = 0; i < algop->rawsz; i++) {
+		unsigned int val = *hash++;
+		*buf++ = hex[val >> 4];
+		*buf++ = hex[val & 0xf];
+	}
+	*buf = '\0';
 
     return buffer;
 }

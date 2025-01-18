@@ -24,26 +24,19 @@ int try_merge_command(struct repository *r,
                       const char **xopts, struct commit_list *common,
                       const char *head_arg, struct commit_list *remotes)
 {
-    struct child_process cmd = CHILD_PROCESS_INIT;
-    int                  i;
-    int                  ret;
-    struct commit_list  *j;
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	int ret;
+	struct commit_list *j;
 
-    strvec_pushf(&cmd.args, "merge-%s", strategy);
-    for (i = 0; i < xopts_nr; i++)
-    {
-        strvec_pushf(&cmd.args, "--%s", xopts[i]);
-    }
-    for (j = common; j; j = j->next)
-    {
-        strvec_push(&cmd.args, merge_argument(j->item));
-    }
-    strvec_push(&cmd.args, "--");
-    strvec_push(&cmd.args, head_arg);
-    for (j = remotes; j; j = j->next)
-    {
-        strvec_push(&cmd.args, merge_argument(j->item));
-    }
+	strvec_pushf(&cmd.args, "merge-%s", strategy);
+	for (size_t i = 0; i < xopts_nr; i++)
+		strvec_pushf(&cmd.args, "--%s", xopts[i]);
+	for (j = common; j; j = j->next)
+		strvec_push(&cmd.args, merge_argument(j->item));
+	strvec_push(&cmd.args, "--");
+	strvec_push(&cmd.args, head_arg);
+	for (j = remotes; j; j = j->next)
+		strvec_push(&cmd.args, merge_argument(j->item));
 
     cmd.git_cmd = 1;
     ret         = run_command(&cmd);

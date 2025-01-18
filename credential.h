@@ -165,13 +165,15 @@ struct credential
      */
     unsigned header_is_last_match : 1;
 
-    unsigned approved : 1,
-        ephemeral : 1,
-        configured : 1,
-        multistage : 1,
-        quit : 1,
-        use_http_path : 1,
-        username_from_proto : 1;
+	unsigned approved:1,
+		 ephemeral:1,
+		 configured:1,
+		 multistage: 1,
+		 quit:1,
+		 use_http_path:1,
+		 username_from_proto:1,
+		 sanitize_prompt:1,
+		 protect_protocol:1;
 
     struct credential_capability capa_authtype;
     struct credential_capability capa_state;
@@ -192,14 +194,15 @@ struct credential
     char *authtype;
 };
 
-#define CREDENTIAL_INIT                                \
-    {                                                  \
-        .helpers               = STRING_LIST_INIT_DUP, \
-        .password_expiry_utc   = TIME_MAX,             \
-        .wwwauth_headers       = STRVEC_INIT,          \
-        .state_headers         = STRVEC_INIT,          \
-        .state_headers_to_send = STRVEC_INIT,          \
-    }
+#define CREDENTIAL_INIT { \
+	.helpers = STRING_LIST_INIT_DUP, \
+	.password_expiry_utc = TIME_MAX, \
+	.wwwauth_headers = STRVEC_INIT, \
+	.state_headers = STRVEC_INIT, \
+	.state_headers_to_send = STRVEC_INIT, \
+	.sanitize_prompt = 1, \
+	.protect_protocol = 1, \
+}
 
 /* Initialize a credential structure, setting all fields to empty. */
 void credential_init(struct credential *);

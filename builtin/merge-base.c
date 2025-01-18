@@ -8,7 +8,7 @@
 #include "parse-options.h"
 #include "commit-reach.h"
 
-static int show_merge_base(struct commit **rev, int rev_nr, int show_all)
+static int show_merge_base(struct commit **rev, size_t rev_nr, int show_all)
 {
     struct commit_list *result = NULL;
     struct commit_list *r;
@@ -186,11 +186,11 @@ int cmd_merge_base(int                     argc,
                    const char             *prefix,
                    struct repository *repo UNUSED)
 {
-    struct commit **rev;
-    int             rev_nr   = 0;
-    int             show_all = 0;
-    int             cmdmode  = 0;
-    int             ret;
+	struct commit **rev;
+	size_t rev_nr = 0;
+	int show_all = 0;
+	int cmdmode = 0;
+	int ret;
 
     struct option options[] = {
         OPT_BOOL('a', "all", &show_all, N_("output all common ancestors")),

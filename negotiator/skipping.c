@@ -136,32 +136,28 @@ static int push_parent(struct data *data, struct entry *entry,
 {
     struct entry *parent_entry;
 
-    if (to_push->object.flags & SEEN)
-    {
-        int i;
-        if (to_push->object.flags & POPPED)
-            /*
-             * The entry for this commit has already been popped,
-             * due to clock skew. Pretend that this parent does not
-             * exist.
-             */
-            return 0;
-        /*
-         * Find the existing entry and use it.
-         */
-        for (i = 0; i < data->rev_list.nr; i++)
-        {
-            parent_entry = data->rev_list.array[i].data;
-            if (parent_entry->commit == to_push)
-                goto parent_found;
-        }
-        BUG("missing parent in priority queue");
-    parent_found:;
-    }
-    else
-    {
-        parent_entry = rev_list_push(data, to_push, 0);
-    }
+	if (to_push->object.flags & SEEN) {
+		if (to_push->object.flags & POPPED)
+			/*
+			 * The entry for this commit has already been popped,
+			 * due to clock skew. Pretend that this parent does not
+			 * exist.
+			 */
+			return 0;
+		/*
+		 * Find the existing entry and use it.
+		 */
+		for (size_t i = 0; i < data->rev_list.nr; i++) {
+			parent_entry = data->rev_list.array[i].data;
+			if (parent_entry->commit == to_push)
+				goto parent_found;
+		}
+		BUG("missing parent in priority queue");
+parent_found:
+		;
+	} else {
+		parent_entry = rev_list_push(data, to_push, 0);
+	}
 
     if (entry->commit->object.flags & (COMMON | ADVERTISED))
     {
@@ -260,11 +256,11 @@ static int ack(struct fetch_negotiator *n, struct commit *c)
 
 static void release(struct fetch_negotiator *n)
 {
-    struct data *data = n->data;
-    for (int i = 0; i < data->rev_list.nr; i++)
-        free(data->rev_list.array[i].data);
-    clear_prio_queue(&data->rev_list);
-    FREE_AND_NULL(data);
+	struct data *data = n->data;
+	for (size_t i = 0; i < data->rev_list.nr; i++)
+		free(data->rev_list.array[i].data);
+	clear_prio_queue(&data->rev_list);
+	FREE_AND_NULL(data);
 }
 
 void skipping_negotiator_init(struct fetch_negotiator *negotiator)

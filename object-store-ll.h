@@ -10,6 +10,7 @@
 struct oidmap;
 struct oidtree;
 struct strbuf;
+struct repository;
 
 struct object_directory
 {
@@ -102,44 +103,47 @@ void odb_clear_loose_cache(struct object_directory *odb);
 /* Clear and free the specified object directory */
 void free_object_directory(struct object_directory *odb);
 
-struct packed_git
-{
-    struct hashmap_entry packmap_ent;
-    struct packed_git   *next;
-    struct list_head     mru;
-    struct pack_window  *windows;
-    off_t                pack_size;
-    const void          *index_data;
-    size_t               index_size;
-    uint32_t             num_objects;
-    size_t               crc_offset;
-    struct oidset        bad_objects;
-    int                  index_version;
-    time_t               mtime;
-    int                  pack_fd;
-    int                  index; /* for builtin/pack-objects.c */
-    unsigned             pack_local : 1,
-        pack_keep : 1,
-        pack_keep_in_core : 1,
-        freshened : 1,
-        do_not_close : 1,
-        pack_promisor : 1,
-        multi_pack_index : 1,
-        is_cruft : 1;
-    unsigned char          hash[GIT_MAX_RAWSZ];
-    struct revindex_entry *revindex;
-    const uint32_t        *revindex_data;
-    const uint32_t        *revindex_map;
-    size_t                 revindex_size;
-    /*
-     * mtimes_map points at the beginning of the memory mapped region of
-     * this pack's corresponding .mtimes file, and mtimes_size is the size
-     * of that .mtimes file
-     */
-    const uint32_t *mtimes_map;
-    size_t          mtimes_size;
-    /* something like ".git/objects/pack/xxxxx.pack" */
-    char pack_name[FLEX_ARRAY]; /* more */
+struct packed_git {
+	struct hashmap_entry packmap_ent;
+	struct packed_git *next;
+	struct list_head mru;
+	struct pack_window *windows;
+	off_t pack_size;
+	const void *index_data;
+	size_t index_size;
+	uint32_t num_objects;
+	size_t crc_offset;
+	struct oidset bad_objects;
+	int index_version;
+	time_t mtime;
+	int pack_fd;
+	int index;              /* for builtin/pack-objects.c */
+	unsigned pack_local:1,
+		 pack_keep:1,
+		 pack_keep_in_core:1,
+		 freshened:1,
+		 do_not_close:1,
+		 pack_promisor:1,
+		 multi_pack_index:1,
+		 is_cruft:1;
+	unsigned char hash[GIT_MAX_RAWSZ];
+	struct revindex_entry *revindex;
+	const uint32_t *revindex_data;
+	const uint32_t *revindex_map;
+	size_t revindex_size;
+	/*
+	 * mtimes_map points at the beginning of the memory mapped region of
+	 * this pack's corresponding .mtimes file, and mtimes_size is the size
+	 * of that .mtimes file
+	 */
+	const uint32_t *mtimes_map;
+	size_t mtimes_size;
+
+	/* repo denotes the repository this packfile belongs to */
+	struct repository *repo;
+
+	/* something like ".git/objects/pack/xxxxx.pack" */
+	char pack_name[FLEX_ARRAY]; /* more */
 };
 
 struct multi_pack_index;
@@ -557,13 +561,13 @@ int for_each_loose_object(each_loose_object_fn, void *,
  * pack are visited in pack-idx order (i.e., sorted by oid).
  */
 typedef int each_packed_object_fn(const struct object_id *oid,
-                                  struct packed_git      *pack,
-                                  uint32_t                pos,
-                                  void                   *data);
-int         for_each_object_in_pack(struct packed_git *p,
-                                    each_packed_object_fn, void *data,
-                                    enum for_each_object_flags flags);
-int         for_each_packed_object(each_packed_object_fn, void *,
-                                   enum for_each_object_flags flags);
+				  struct packed_git *pack,
+				  uint32_t pos,
+				  void *data);
+int for_each_object_in_pack(struct packed_git *p,
+			    each_packed_object_fn, void *data,
+			    enum for_each_object_flags flags);
+int for_each_packed_object(struct repository *repo, each_packed_object_fn cb,
+			   void *data, enum for_each_object_flags flags);
 
 #endif /* OBJECT_STORE_LL_H */

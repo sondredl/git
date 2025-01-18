@@ -176,16 +176,14 @@ static struct protocol_capability capabilities[] = {
 
 void protocol_v2_advertise_capabilities(void)
 {
-    struct strbuf capability = STRBUF_INIT;
-    struct strbuf value      = STRBUF_INIT;
-    int           i;
+	struct strbuf capability = STRBUF_INIT;
+	struct strbuf value = STRBUF_INIT;
 
     /* serve by default supports v2 */
     packet_write_fmt(1, "version 2\n");
 
-    for (i = 0; i < ARRAY_SIZE(capabilities); i++)
-    {
-        struct protocol_capability *c = &capabilities[i];
+	for (size_t i = 0; i < ARRAY_SIZE(capabilities); i++) {
+		struct protocol_capability *c = &capabilities[i];
 
         if (c->advertise(the_repository, &value))
         {
@@ -212,32 +210,23 @@ void protocol_v2_advertise_capabilities(void)
 
 static struct protocol_capability *get_capability(const char *key, const char **value)
 {
-    int i;
+	if (!key)
+		return NULL;
 
-    if (!key)
-    {
-        return NULL;
-    }
-
-    for (i = 0; i < ARRAY_SIZE(capabilities); i++)
-    {
-        struct protocol_capability *c = &capabilities[i];
-        const char                 *out;
-        if (!skip_prefix(key, c->name, &out))
-        {
-            continue;
-        }
-        if (!*out)
-        {
-            *value = NULL;
-            return c;
-        }
-        if (*out++ == '=')
-        {
-            *value = out;
-            return c;
-        }
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(capabilities); i++) {
+		struct protocol_capability *c = &capabilities[i];
+		const char *out;
+		if (!skip_prefix(key, c->name, &out))
+			continue;
+		if (!*out) {
+			*value = NULL;
+			return c;
+		}
+		if (*out++ == '=') {
+			*value = out;
+			return c;
+		}
+	}
 
     return NULL;
 }

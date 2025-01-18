@@ -56,7 +56,7 @@ static void list_builtins(struct string_list *list, unsigned int exclude_option)
 
 static void exclude_helpers_from_list(struct string_list *list)
 {
-    int i = 0;
+	size_t i = 0;
 
     while (i < list->nr)
     {
@@ -80,9 +80,8 @@ static int match_token(const char *spec, int len, const char *token)
 
 static int list_cmds(const char *spec)
 {
-    struct string_list list = STRING_LIST_INIT_DUP;
-    int                i;
-    int                nongit;
+	struct string_list list = STRING_LIST_INIT_DUP;
+	int nongit;
 
     /*
      * Set up the repository so we can pick up any repo-level config (like
@@ -123,26 +122,20 @@ static int list_cmds(const char *spec)
         {
             struct strbuf sb = STRBUF_INIT;
 
-            strbuf_add(&sb, spec + 5, len - 5);
-            list_cmds_by_category(&list, sb.buf);
-            strbuf_release(&sb);
-        }
-        else
-        {
-            die(_("unsupported command listing type '%s'"), spec);
-        }
-        spec += len;
-        if (*spec == ',')
-        {
-            spec++;
-        }
-    }
-    for (i = 0; i < list.nr; i++)
-    {
-        puts(list.items[i].string);
-    }
-    string_list_clear(&list, 0);
-    return 0;
+			strbuf_add(&sb, spec + 5, len - 5);
+			list_cmds_by_category(&list, sb.buf);
+			strbuf_release(&sb);
+		}
+		else
+			die(_("unsupported command listing type '%s'"), spec);
+		spec += len;
+		if (*spec == ',')
+			spec++;
+	}
+	for (size_t i = 0; i < list.nr; i++)
+		puts(list.items[i].string);
+	string_list_clear(&list, 0);
+	return 0;
 }
 
 static void commit_pager_choice(void)
@@ -203,314 +196,192 @@ static int handle_options(const char ***argv, int *argc, int *envchanged)
             break;
         }
 
-        /*
-         * Check remaining flags.
-         */
-        if (skip_prefix(cmd, "--exec-path", &cmd))
-        {
-            if (*cmd == '=')
-            {
-                git_set_exec_path(cmd + 1);
-            }
-            else
-            {
-                puts(git_exec_path());
-                trace2_cmd_name("_query_");
-                exit(0);
-            }
-        }
-        else if (!strcmp(cmd, "--html-path"))
-        {
-            print_system_path(GIT_HTML_PATH);
-            trace2_cmd_name("_query_");
-            exit(0);
-        }
-        else if (!strcmp(cmd, "--man-path"))
-        {
-            print_system_path(GIT_MAN_PATH);
-            trace2_cmd_name("_query_");
-            exit(0);
-        }
-        else if (!strcmp(cmd, "--info-path"))
-        {
-            print_system_path(GIT_INFO_PATH);
-            trace2_cmd_name("_query_");
-            exit(0);
-        }
-        else if (!strcmp(cmd, "-p") || !strcmp(cmd, "--paginate"))
-        {
-            use_pager = 1;
-        }
-        else if (!strcmp(cmd, "-P") || !strcmp(cmd, "--no-pager"))
-        {
-            use_pager = 0;
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--no-lazy-fetch"))
-        {
-            fetch_if_missing = 0;
-            setenv(NO_LAZY_FETCH_ENVIRONMENT, "1", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--no-replace-objects"))
-        {
-            disable_replace_refs();
-            setenv(NO_REPLACE_OBJECTS_ENVIRONMENT, "1", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--git-dir"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("no directory given for '%s' option\n"), "--git-dir");
-                usage(git_usage_string);
-            }
-            setenv(GIT_DIR_ENVIRONMENT, (*argv)[1], 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (skip_prefix(cmd, "--git-dir=", &cmd))
-        {
-            setenv(GIT_DIR_ENVIRONMENT, cmd, 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--namespace"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("no namespace given for --namespace\n"));
-                usage(git_usage_string);
-            }
-            setenv(GIT_NAMESPACE_ENVIRONMENT, (*argv)[1], 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (skip_prefix(cmd, "--namespace=", &cmd))
-        {
-            setenv(GIT_NAMESPACE_ENVIRONMENT, cmd, 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--work-tree"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("no directory given for '%s' option\n"), "--work-tree");
-                usage(git_usage_string);
-            }
-            setenv(GIT_WORK_TREE_ENVIRONMENT, (*argv)[1], 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (skip_prefix(cmd, "--work-tree=", &cmd))
-        {
-            setenv(GIT_WORK_TREE_ENVIRONMENT, cmd, 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--bare"))
-        {
-            char *cwd              = xgetcwd();
-            is_bare_repository_cfg = 1;
-            setenv(GIT_DIR_ENVIRONMENT, cwd, 0);
-            free(cwd);
-            setenv(GIT_IMPLICIT_WORK_TREE_ENVIRONMENT, "0", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "-c"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("-c expects a configuration string\n"));
-                usage(git_usage_string);
-            }
-            git_config_push_parameter((*argv)[1]);
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (!strcmp(cmd, "--config-env"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("no config key given for --config-env\n"));
-                usage(git_usage_string);
-            }
-            git_config_push_env((*argv)[1]);
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (skip_prefix(cmd, "--config-env=", &cmd))
-        {
-            git_config_push_env(cmd);
-        }
-        else if (!strcmp(cmd, "--literal-pathspecs"))
-        {
-            setenv(GIT_LITERAL_PATHSPECS_ENVIRONMENT, "1", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--no-literal-pathspecs"))
-        {
-            setenv(GIT_LITERAL_PATHSPECS_ENVIRONMENT, "0", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--glob-pathspecs"))
-        {
-            setenv(GIT_GLOB_PATHSPECS_ENVIRONMENT, "1", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--noglob-pathspecs"))
-        {
-            setenv(GIT_NOGLOB_PATHSPECS_ENVIRONMENT, "1", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--icase-pathspecs"))
-        {
-            setenv(GIT_ICASE_PATHSPECS_ENVIRONMENT, "1", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--no-optional-locks"))
-        {
-            setenv(GIT_OPTIONAL_LOCKS_ENVIRONMENT, "0", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--shallow-file"))
-        {
-            (*argv)++;
-            (*argc)--;
-            set_alternate_shallow_file(the_repository, (*argv)[0], 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "-C"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("no directory given for '%s' option\n"), "-C");
-                usage(git_usage_string);
-            }
-            if ((*argv)[1][0])
-            {
-                if (chdir((*argv)[1]))
-                {
-                    die_errno("cannot change to '%s'", (*argv)[1]);
-                }
-                if (envchanged)
-                {
-                    *envchanged = 1;
-                }
-            }
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (skip_prefix(cmd, "--list-cmds=", &cmd))
-        {
-            trace2_cmd_name("_query_");
-            if (!strcmp(cmd, "parseopt"))
-            {
-                struct string_list list = STRING_LIST_INIT_DUP;
-                int                i;
+		/*
+		 * Check remaining flags.
+		 */
+		if (skip_prefix(cmd, "--exec-path", &cmd)) {
+			if (*cmd == '=')
+				git_set_exec_path(cmd + 1);
+			else {
+				puts(git_exec_path());
+				trace2_cmd_name("_query_");
+				exit(0);
+			}
+		} else if (!strcmp(cmd, "--html-path")) {
+			print_system_path(GIT_HTML_PATH);
+			trace2_cmd_name("_query_");
+			exit(0);
+		} else if (!strcmp(cmd, "--man-path")) {
+			print_system_path(GIT_MAN_PATH);
+			trace2_cmd_name("_query_");
+			exit(0);
+		} else if (!strcmp(cmd, "--info-path")) {
+			print_system_path(GIT_INFO_PATH);
+			trace2_cmd_name("_query_");
+			exit(0);
+		} else if (!strcmp(cmd, "-p") || !strcmp(cmd, "--paginate")) {
+			use_pager = 1;
+		} else if (!strcmp(cmd, "-P") || !strcmp(cmd, "--no-pager")) {
+			use_pager = 0;
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--no-lazy-fetch")) {
+			fetch_if_missing = 0;
+			setenv(NO_LAZY_FETCH_ENVIRONMENT, "1", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--no-replace-objects")) {
+			disable_replace_refs();
+			setenv(NO_REPLACE_OBJECTS_ENVIRONMENT, "1", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--git-dir")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("no directory given for '%s' option\n" ), "--git-dir");
+				usage(git_usage_string);
+			}
+			setenv(GIT_DIR_ENVIRONMENT, (*argv)[1], 1);
+			if (envchanged)
+				*envchanged = 1;
+			(*argv)++;
+			(*argc)--;
+		} else if (skip_prefix(cmd, "--git-dir=", &cmd)) {
+			setenv(GIT_DIR_ENVIRONMENT, cmd, 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--namespace")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("no namespace given for --namespace\n" ));
+				usage(git_usage_string);
+			}
+			setenv(GIT_NAMESPACE_ENVIRONMENT, (*argv)[1], 1);
+			if (envchanged)
+				*envchanged = 1;
+			(*argv)++;
+			(*argc)--;
+		} else if (skip_prefix(cmd, "--namespace=", &cmd)) {
+			setenv(GIT_NAMESPACE_ENVIRONMENT, cmd, 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--work-tree")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("no directory given for '%s' option\n" ), "--work-tree");
+				usage(git_usage_string);
+			}
+			setenv(GIT_WORK_TREE_ENVIRONMENT, (*argv)[1], 1);
+			if (envchanged)
+				*envchanged = 1;
+			(*argv)++;
+			(*argc)--;
+		} else if (skip_prefix(cmd, "--work-tree=", &cmd)) {
+			setenv(GIT_WORK_TREE_ENVIRONMENT, cmd, 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--bare")) {
+			char *cwd = xgetcwd();
+			is_bare_repository_cfg = 1;
+			setenv(GIT_DIR_ENVIRONMENT, cwd, 0);
+			free(cwd);
+			setenv(GIT_IMPLICIT_WORK_TREE_ENVIRONMENT, "0", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "-c")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("-c expects a configuration string\n" ));
+				usage(git_usage_string);
+			}
+			git_config_push_parameter((*argv)[1]);
+			(*argv)++;
+			(*argc)--;
+		} else if (!strcmp(cmd, "--config-env")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("no config key given for --config-env\n" ));
+				usage(git_usage_string);
+			}
+			git_config_push_env((*argv)[1]);
+			(*argv)++;
+			(*argc)--;
+		} else if (skip_prefix(cmd, "--config-env=", &cmd)) {
+			git_config_push_env(cmd);
+		} else if (!strcmp(cmd, "--literal-pathspecs")) {
+			setenv(GIT_LITERAL_PATHSPECS_ENVIRONMENT, "1", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--no-literal-pathspecs")) {
+			setenv(GIT_LITERAL_PATHSPECS_ENVIRONMENT, "0", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--glob-pathspecs")) {
+			setenv(GIT_GLOB_PATHSPECS_ENVIRONMENT, "1", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--noglob-pathspecs")) {
+			setenv(GIT_NOGLOB_PATHSPECS_ENVIRONMENT, "1", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--icase-pathspecs")) {
+			setenv(GIT_ICASE_PATHSPECS_ENVIRONMENT, "1", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--no-optional-locks")) {
+			setenv(GIT_OPTIONAL_LOCKS_ENVIRONMENT, "0", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--shallow-file")) {
+			(*argv)++;
+			(*argc)--;
+			set_alternate_shallow_file(the_repository, (*argv)[0], 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "-C")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("no directory given for '%s' option\n" ), "-C");
+				usage(git_usage_string);
+			}
+			if ((*argv)[1][0]) {
+				if (chdir((*argv)[1]))
+					die_errno("cannot change to '%s'", (*argv)[1]);
+				if (envchanged)
+					*envchanged = 1;
+			}
+			(*argv)++;
+			(*argc)--;
+		} else if (skip_prefix(cmd, "--list-cmds=", &cmd)) {
+			trace2_cmd_name("_query_");
+			if (!strcmp(cmd, "parseopt")) {
+				struct string_list list = STRING_LIST_INIT_DUP;
 
-                list_builtins(&list, NO_PARSEOPT);
-                for (i = 0; i < list.nr; i++)
-                {
-                    printf("%s ", list.items[i].string);
-                }
-                string_list_clear(&list, 0);
-                exit(0);
-            }
-            else
-            {
-                exit(list_cmds(cmd));
-            }
-        }
-        else if (!strcmp(cmd, "--attr-source"))
-        {
-            if (*argc < 2)
-            {
-                fprintf(stderr, _("no attribute source given for --attr-source\n"));
-                usage(git_usage_string);
-            }
-            setenv(GIT_ATTR_SOURCE_ENVIRONMENT, (*argv)[1], 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-            (*argv)++;
-            (*argc)--;
-        }
-        else if (skip_prefix(cmd, "--attr-source=", &cmd))
-        {
-            set_git_attr_source(cmd);
-            setenv(GIT_ATTR_SOURCE_ENVIRONMENT, cmd, 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else if (!strcmp(cmd, "--no-advice"))
-        {
-            setenv(GIT_ADVICE_ENVIRONMENT, "0", 1);
-            if (envchanged)
-            {
-                *envchanged = 1;
-            }
-        }
-        else
-        {
-            fprintf(stderr, _("unknown option: %s\n"), cmd);
-            usage(git_usage_string);
-        }
+				list_builtins(&list, NO_PARSEOPT);
+				for (size_t i = 0; i < list.nr; i++)
+					printf("%s ", list.items[i].string);
+				string_list_clear(&list, 0);
+				exit(0);
+			} else {
+				exit(list_cmds(cmd));
+			}
+		} else if (!strcmp(cmd, "--attr-source")) {
+			if (*argc < 2) {
+				fprintf(stderr, _("no attribute source given for --attr-source\n" ));
+				usage(git_usage_string);
+			}
+			setenv(GIT_ATTR_SOURCE_ENVIRONMENT, (*argv)[1], 1);
+			if (envchanged)
+				*envchanged = 1;
+			(*argv)++;
+			(*argc)--;
+		} else if (skip_prefix(cmd, "--attr-source=", &cmd)) {
+			set_git_attr_source(cmd);
+			setenv(GIT_ATTR_SOURCE_ENVIRONMENT, cmd, 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else if (!strcmp(cmd, "--no-advice")) {
+			setenv(GIT_ADVICE_ENVIRONMENT, "0", 1);
+			if (envchanged)
+				*envchanged = 1;
+		} else {
+			fprintf(stderr, _("unknown option: %s\n"), cmd);
+			usage(git_usage_string);
+		}
 
         (*argv)++;
         (*argc)--;
@@ -518,7 +389,7 @@ static int handle_options(const char ***argv, int *argc, int *envchanged)
     return (*argv) - orig_argv;
 }
 
-static int handle_alias(int *argcp, const char ***argv)
+static int handle_alias(struct strvec *args)
 {
     int          envchanged  = 0;
     int          ret         = 0;
@@ -529,31 +400,27 @@ static int handle_alias(int *argcp, const char ***argv)
     const char  *alias_command;
     char        *alias_string;
 
-    alias_command = (*argv)[0];
-    alias_string  = alias_lookup(alias_command);
-    if (alias_string)
-    {
-        if (*argcp > 1 && !strcmp((*argv)[1], "-h"))
-        {
-            fprintf_ln(stderr, _("'%s' is aliased to '%s'"),
-                       alias_command, alias_string);
-        }
-        if (alias_string[0] == '!')
-        {
-            struct child_process child = CHILD_PROCESS_INIT;
-            int                  nongit_ok;
+	alias_command = args->v[0];
+	alias_string = alias_lookup(alias_command);
+	if (alias_string) {
+		if (args->nr > 1 && !strcmp(args->v[1], "-h"))
+			fprintf_ln(stderr, _("'%s' is aliased to '%s'"),
+				   alias_command, alias_string);
+		if (alias_string[0] == '!') {
+			struct child_process child = CHILD_PROCESS_INIT;
+			int nongit_ok;
 
             /* Aliases expect GIT_PREFIX, GIT_DIR etc to be set */
             setup_git_directory_gently(&nongit_ok);
 
             commit_pager_choice();
 
-            child.use_shell          = 1;
-            child.clean_on_exit      = 1;
-            child.wait_after_clean   = 1;
-            child.trace2_child_class = "shell_alias";
-            strvec_push(&child.args, alias_string + 1);
-            strvec_pushv(&child.args, (*argv) + 1);
+			child.use_shell = 1;
+			child.clean_on_exit = 1;
+			child.wait_after_clean = 1;
+			child.trace2_child_class = "shell_alias";
+			strvec_push(&child.args, alias_string + 1);
+			strvec_pushv(&child.args, args->v + 1);
 
             trace2_cmd_alias(alias_command, child.args.v);
             trace2_cmd_name("_run_shell_alias_");
@@ -593,18 +460,16 @@ static int handle_alias(int *argcp, const char ***argv)
             die(_("recursive alias: %s"), alias_command);
         }
 
-        trace_argv_printf(new_argv,
-                          "trace: alias expansion: %s =>",
-                          alias_command);
+		trace_argv_printf(new_argv,
+				  "trace: alias expansion: %s =>",
+				  alias_command);
+		trace2_cmd_alias(alias_command, new_argv);
 
-        REALLOC_ARRAY(new_argv, count + *argcp);
-        /* insert after command name */
-        COPY_ARRAY(new_argv + count, *argv + 1, *argcp);
+		/* Replace the alias with the new arguments. */
+		strvec_splice(args, 0, 1, new_argv, count);
 
-        trace2_cmd_alias(alias_command, new_argv);
-
-        *argv = new_argv;
-        *argcp += count - 1;
+		free(alias_string);
+		free(new_argv);
 
         ret = 1;
     }
@@ -846,16 +711,12 @@ static struct cmd_struct commands[] = {
 
 static struct cmd_struct *get_builtin(const char *s)
 {
-    int i;
-    for (i = 0; i < ARRAY_SIZE(commands); i++)
-    {
-        struct cmd_struct *p = commands + i;
-        if (!strcmp(s, p->cmd))
-        {
-            return p;
-        }
-    }
-    return NULL;
+	for (size_t i = 0; i < ARRAY_SIZE(commands); i++) {
+		struct cmd_struct *p = commands + i;
+		if (!strcmp(s, p->cmd))
+			return p;
+	}
+	return NULL;
 }
 
 int is_builtin(const char *s)
@@ -865,21 +726,17 @@ int is_builtin(const char *s)
 
 static void list_builtins(struct string_list *out, unsigned int exclude_option)
 {
-    int i;
-    for (i = 0; i < ARRAY_SIZE(commands); i++)
-    {
-        if (exclude_option && (commands[i].option & exclude_option))
-        {
-            continue;
-        }
-        string_list_append(out, commands[i].cmd);
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(commands); i++) {
+		if (exclude_option &&
+		    (commands[i].option & exclude_option))
+			continue;
+		string_list_append(out, commands[i].cmd);
+	}
 }
 
 void load_builtin_commands(const char *prefix, struct cmdnames *cmds)
 {
-    const char *name;
-    int         i;
+	const char *name;
 
     /*
      * Callers can ask for a subset of the commands based on a certain
@@ -892,78 +749,63 @@ void load_builtin_commands(const char *prefix, struct cmdnames *cmds)
         BUG("prefix '%s' must start with 'git-'", prefix);
     }
 
-    for (i = 0; i < ARRAY_SIZE(commands); i++)
-    {
-        if (skip_prefix(commands[i].cmd, prefix, &name))
-        {
-            add_cmdname(cmds, name, strlen(name));
-        }
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(commands); i++)
+		if (skip_prefix(commands[i].cmd, prefix, &name))
+			add_cmdname(cmds, name, strlen(name));
 }
 
 #ifdef STRIP_EXTENSION
-static void strip_extension(const char **argv)
+static void strip_extension(struct strvec *args)
 {
     size_t len;
 
-    if (strip_suffix(argv[0], STRIP_EXTENSION, &len))
-        argv[0] = xmemdupz(argv[0], len);
+	if (strip_suffix(args->v[0], STRIP_EXTENSION, &len)) {
+		char *stripped = xmemdupz(args->v[0], len);
+		strvec_replace(args, 0, stripped);
+		free(stripped);
+	}
 }
 #else
     #define strip_extension(cmd)
 #endif
 
-static void handle_builtin(int argc, const char **argv)
+static void handle_builtin(struct strvec *args)
 {
-    struct strvec      args      = STRVEC_INIT;
-    const char       **argv_copy = NULL;
-    const char        *cmd;
-    struct cmd_struct *builtin;
+	const char *cmd;
+	struct cmd_struct *builtin;
 
-    strip_extension(argv);
-    cmd = argv[0];
+	strip_extension(args);
+	cmd = args->v[0];
 
-    /* Turn "git cmd --help" into "git help --exclude-guides cmd" */
-    if (argc > 1 && !strcmp(argv[1], "--help"))
-    {
-        int i;
+	/* Turn "git cmd --help" into "git help --exclude-guides cmd" */
+	if (args->nr > 1 && !strcmp(args->v[1], "--help")) {
+		const char *exclude_guides_arg[] = { "--exclude-guides" };
 
-        argv[1] = argv[0];
-        argv[0] = cmd = "help";
+		strvec_replace(args, 1, args->v[0]);
+		strvec_replace(args, 0, "help");
+		cmd = "help";
+		strvec_splice(args, 2, 0, exclude_guides_arg,
+			      ARRAY_SIZE(exclude_guides_arg));
+	}
 
-        for (i = 0; i < argc; i++)
-        {
-            strvec_push(&args, argv[i]);
-            if (!i)
-            {
-                strvec_push(&args, "--exclude-guides");
-            }
-        }
+	builtin = get_builtin(cmd);
+	if (builtin) {
+		const char **argv_copy = NULL;
+		int ret;
 
-        argc++;
+		/*
+		 * `run_builtin()` will modify the argv array, so we need to
+		 * create a shallow copy such that we can free all of its
+		 * strings.
+		 */
+		if (args->nr)
+			DUP_ARRAY(argv_copy, args->v, args->nr + 1);
 
-        /*
-         * `run_builtin()` will modify the argv array, so we need to
-         * create a shallow copy such that we can free all of its
-         * strings.
-         */
-        CALLOC_ARRAY(argv_copy, argc + 1);
-        COPY_ARRAY(argv_copy, args.v, argc);
-
-        argv = argv_copy;
-    }
-
-    builtin = get_builtin(cmd);
-    if (builtin)
-    {
-        int ret = run_builtin(builtin, argc, argv, the_repository);
-        strvec_clear(&args);
-        free(argv_copy);
-        exit(ret);
-    }
-
-    strvec_clear(&args);
-    free(argv_copy);
+		ret = run_builtin(builtin, args->nr, argv_copy, the_repository);
+		strvec_clear(args);
+		free(argv_copy);
+		exit(ret);
+	}
 }
 
 static void execv_dashed_external(const char **argv)
@@ -1015,31 +857,27 @@ static void execv_dashed_external(const char **argv)
     }
 }
 
-static int run_argv(int *argcp, const char ***argv)
+static int run_argv(struct strvec *args)
 {
-    int                      done_alias = 0;
-    struct string_list       cmd_list   = STRING_LIST_INIT_NODUP;
-    struct string_list_item *seen;
+	int done_alias = 0;
+	struct string_list cmd_list = STRING_LIST_INIT_DUP;
+	struct string_list_item *seen;
 
-    while (1)
-    {
-        /*
-         * If we tried alias and futzed with our environment,
-         * it no longer is safe to invoke builtins directly in
-         * general.  We have to spawn them as dashed externals.
-         *
-         * NEEDSWORK: if we can figure out cases
-         * where it is safe to do, we can avoid spawning a new
-         * process.
-         */
-        if (!done_alias)
-        {
-            handle_builtin(*argcp, *argv);
-        }
-        else if (get_builtin(**argv))
-        {
-            struct child_process cmd = CHILD_PROCESS_INIT;
-            int                  i;
+	while (1) {
+		/*
+		 * If we tried alias and futzed with our environment,
+		 * it no longer is safe to invoke builtins directly in
+		 * general.  We have to spawn them as dashed externals.
+		 *
+		 * NEEDSWORK: if we can figure out cases
+		 * where it is safe to do, we can avoid spawning a new
+		 * process.
+		 */
+		if (!done_alias)
+			handle_builtin(args);
+		else if (get_builtin(args->v[0])) {
+			struct child_process cmd = CHILD_PROCESS_INIT;
+			int err;
 
             /*
              * The current process is committed to launching a
@@ -1052,41 +890,34 @@ static int run_argv(int *argcp, const char ***argv)
 
             commit_pager_choice();
 
-            strvec_push(&cmd.args, "git");
-            for (i = 0; i < *argcp; i++)
-            {
-                strvec_push(&cmd.args, (*argv)[i]);
-            }
+			strvec_push(&cmd.args, "git");
+			for (size_t i = 0; i < args->nr; i++)
+				strvec_push(&cmd.args, args->v[i]);
 
             trace_argv_printf(cmd.args.v, "trace: exec:");
 
-            /*
-             * if we fail because the command is not found, it is
-             * OK to return. Otherwise, we just pass along the status code.
-             */
-            cmd.silent_exec_failure = 1;
-            cmd.clean_on_exit       = 1;
-            cmd.wait_after_clean    = 1;
-            cmd.trace2_child_class  = "git_alias";
-            i                       = run_command(&cmd);
-            if (i >= 0 || errno != ENOENT)
-            {
-                exit(i);
-            }
-            die("could not execute builtin %s", **argv);
-        }
+			/*
+			 * if we fail because the command is not found, it is
+			 * OK to return. Otherwise, we just pass along the status code.
+			 */
+			cmd.silent_exec_failure = 1;
+			cmd.clean_on_exit = 1;
+			cmd.wait_after_clean = 1;
+			cmd.trace2_child_class = "git_alias";
+			err = run_command(&cmd);
+			if (err >= 0 || errno != ENOENT)
+				exit(err);
+			die("could not execute builtin %s", args->v[0]);
+		}
 
-        /* .. then try the external ones */
-        execv_dashed_external(*argv);
+		/* .. then try the external ones */
+		execv_dashed_external(args->v);
 
-        seen = unsorted_string_list_lookup(&cmd_list, *argv[0]);
-        if (seen)
-        {
-            int           i;
-            struct strbuf sb = STRBUF_INIT;
-            for (i = 0; i < cmd_list.nr; i++)
-            {
-                struct string_list_item *item = &cmd_list.items[i];
+		seen = unsorted_string_list_lookup(&cmd_list, args->v[0]);
+		if (seen) {
+			struct strbuf sb = STRBUF_INIT;
+			for (size_t i = 0; i < cmd_list.nr; i++) {
+				struct string_list_item *item = &cmd_list.items[i];
 
                 strbuf_addf(&sb, "\n  %s", item->string);
                 if (item == seen)
@@ -1103,19 +934,17 @@ static int run_argv(int *argcp, const char ***argv)
                 cmd_list.items[0].string, sb.buf);
         }
 
-        string_list_append(&cmd_list, *argv[0]);
+		string_list_append(&cmd_list, args->v[0]);
 
-        /*
-         * It could be an alias -- this works around the insanity
-         * of overriding "git log" with "git show" by having
-         * alias.log = show
-         */
-        if (!handle_alias(argcp, argv))
-        {
-            break;
-        }
-        done_alias = 1;
-    }
+		/*
+		 * It could be an alias -- this works around the insanity
+		 * of overriding "git log" with "git show" by having
+		 * alias.log = show
+		 */
+		if (!handle_alias(args))
+			break;
+		done_alias = 1;
+	}
 
     string_list_clear(&cmd_list, 0);
 
@@ -1124,8 +953,9 @@ static int run_argv(int *argcp, const char ***argv)
 
 int cmd_main(int argc, const char **argv)
 {
-    const char *cmd;
-    int         done_help = 0;
+	struct strvec args = STRVEC_INIT;
+	const char *cmd;
+	int done_help = 0;
 
     cmd = argv[0];
     if (!cmd)
@@ -1143,22 +973,23 @@ int cmd_main(int argc, const char **argv)
 
     trace_command_performance(argv);
 
-    /*
-     * "git-xxxx" is the same as "git xxxx", but we obviously:
-     *
-     *  - cannot take flags in between the "git" and the "xxxx".
-     *  - cannot execute it externally (since it would just do
-     *    the same thing over again)
-     *
-     * So we just directly call the builtin handler, and die if
-     * that one cannot handle it.
-     */
-    if (skip_prefix(cmd, "git-", &cmd))
-    {
-        argv[0] = cmd;
-        handle_builtin(argc, argv);
-        die(_("cannot handle %s as a builtin"), cmd);
-    }
+	/*
+	 * "git-xxxx" is the same as "git xxxx", but we obviously:
+	 *
+	 *  - cannot take flags in between the "git" and the "xxxx".
+	 *  - cannot execute it externally (since it would just do
+	 *    the same thing over again)
+	 *
+	 * So we just directly call the builtin handler, and die if
+	 * that one cannot handle it.
+	 */
+	if (skip_prefix(cmd, "git-", &cmd)) {
+		strvec_push(&args, cmd);
+		strvec_pushv(&args, argv + 1);
+		handle_builtin(&args);
+		strvec_clear(&args);
+		die(_("cannot handle %s as a builtin"), cmd);
+	}
 
     /* Look for flags.. */
     argv++;
@@ -1194,33 +1025,34 @@ int cmd_main(int argc, const char **argv)
      */
     setup_path();
 
-    while (1)
-    {
-        int was_alias = run_argv(&argc, &argv);
-        if (errno != ENOENT)
-        {
-            break;
-        }
-        if (was_alias)
-        {
-            fprintf(stderr, _("expansion of alias '%s' failed; "
-                              "'%s' is not a git command\n"),
-                    cmd, argv[0]);
-            exit(1);
-        }
-        if (!done_help)
-        {
-            cmd = argv[0] = help_unknown_cmd(cmd);
-            done_help     = 1;
-        }
-        else
-        {
-            break;
-        }
-    }
+	for (int i = 0; i < argc; i++)
+		strvec_push(&args, argv[i]);
 
-    fprintf(stderr, _("failed to run command '%s': %s\n"),
-            cmd, strerror(errno));
+	while (1) {
+		int was_alias = run_argv(&args);
+		if (errno != ENOENT)
+			break;
+		if (was_alias) {
+			fprintf(stderr, _("expansion of alias '%s' failed; "
+					  "'%s' is not a git command\n"),
+				cmd, args.v[0]);
+			strvec_clear(&args);
+			exit(1);
+		}
+		if (!done_help) {
+			char *assumed = help_unknown_cmd(cmd);
+			strvec_replace(&args, 0, assumed);
+			free(assumed);
+			cmd = args.v[0];
+			done_help = 1;
+		} else {
+			break;
+		}
+	}
+
+	fprintf(stderr, _("failed to run command '%s': %s\n"),
+		cmd, strerror(errno));
+	strvec_clear(&args);
 
     return 1;
 }

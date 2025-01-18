@@ -12,13 +12,13 @@
  */
 #define CREATION_FACTOR_FOR_THE_SAME_SERIES 999
 
-struct range_diff_options
-{
-    int                        creation_factor;
-    unsigned                   dual_color : 1;
-    unsigned                   left_only : 1, right_only : 1;
-    const struct diff_options *diffopt;   /* may be NULL */
-    const struct strvec       *other_arg; /* may be NULL */
+struct range_diff_options {
+	int creation_factor;
+	unsigned dual_color:1;
+	unsigned left_only:1, right_only:1;
+	unsigned include_merges:1;
+	const struct diff_options *diffopt; /* may be NULL */
+	const struct strvec *other_arg; /* may be NULL */
 };
 
 /*

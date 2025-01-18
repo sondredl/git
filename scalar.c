@@ -438,21 +438,20 @@ static int delete_enlistment(struct strbuf *enlistment)
         return error(_("failed to unregister repository"));
     }
 
-    /*
-     * Change the current directory to one outside of the enlistment so
-     * that we may delete everything underneath it.
-     */
-    offset   = offset_1st_component(enlistment->buf);
-    path_sep = find_last_dir_sep(enlistment->buf + offset);
-    strbuf_add(&parent, enlistment->buf,
-               path_sep ? path_sep - enlistment->buf : offset);
-    if (chdir(parent.buf) < 0)
-    {
-        int res = error_errno(_("could not switch to '%s'"), parent.buf);
-        strbuf_release(&parent);
-        return res;
-    }
-    strbuf_release(&parent);
+	/*
+	 * Change the current directory to one outside of the enlistment so
+	 * that we may delete everything underneath it.
+	 */
+	offset = offset_1st_component(enlistment->buf);
+	path_sep = find_last_dir_sep(enlistment->buf + offset);
+	strbuf_add(&parent, enlistment->buf,
+		   path_sep ? (size_t) (path_sep - enlistment->buf) : offset);
+	if (chdir(parent.buf) < 0) {
+		int res = error_errno(_("could not switch to '%s'"), parent.buf);
+		strbuf_release(&parent);
+		return res;
+	}
+	strbuf_release(&parent);
 
     if (have_fsmonitor_support() && stop_fsmonitor_daemon())
     {
@@ -753,20 +752,19 @@ static int remove_deleted_enlistment(struct strbuf *path)
 
 static int cmd_reconfigure(int argc, const char **argv)
 {
-    int           all       = 0;
-    struct option options[] = {
-        OPT_BOOL('a', "all", &all,
-                 N_("reconfigure all registered enlistments")),
-        OPT_END(),
-    };
-    const char *const usage[] = {
-        N_("scalar reconfigure [--all | <enlistment>]"),
-        NULL};
-    struct string_list scalar_repos = STRING_LIST_INIT_DUP;
-    int                i;
-    int                res       = 0;
-    struct strbuf      commondir = STRBUF_INIT;
-    struct strbuf      gitdir    = STRBUF_INIT;
+	int all = 0;
+	struct option options[] = {
+		OPT_BOOL('a', "all", &all,
+			 N_("reconfigure all registered enlistments")),
+		OPT_END(),
+	};
+	const char * const usage[] = {
+		N_("scalar reconfigure [--all | <enlistment>]"),
+		NULL
+	};
+	struct string_list scalar_repos = STRING_LIST_INIT_DUP;
+	int res = 0;
+	struct strbuf commondir = STRBUF_INIT, gitdir = STRBUF_INIT;
 
     argc = parse_options(argc, argv, NULL, options,
                          usage, 0);
@@ -786,12 +784,10 @@ static int cmd_reconfigure(int argc, const char **argv)
 
     git_config(get_scalar_repos, &scalar_repos);
 
-    for (i = 0; i < scalar_repos.nr; i++)
-    {
-        int                succeeded = 0;
-        struct repository *old_repo;
-        struct repository  r   = {NULL};
-        const char        *dir = scalar_repos.items[i].string;
+	for (size_t i = 0; i < scalar_repos.nr; i++) {
+		int succeeded = 0;
+		struct repository *old_repo, r = { NULL };
+		const char *dir = scalar_repos.items[i].string;
 
         strbuf_reset(&commondir);
         strbuf_reset(&gitdir);

@@ -8,6 +8,7 @@
  */
 
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "abspath.h"
@@ -44,43 +45,41 @@
 /* The maximum size for an object header. */
 #define MAX_HEADER_LEN 32
 
-#define EMPTY_TREE_SHA1_BIN_LITERAL            \
-    "\x4b\x82\x5d\xc6\x42\xcb\x6e\xb9\xa0\x60" \
-    "\xe5\x4b\xf8\xd6\x92\x88\xfb\xee\x49\x04"
-#define EMPTY_TREE_SHA256_BIN_LITERAL          \
-    "\x6e\xf1\x9b\x41\x22\x5c\x53\x69\xf1\xc1" \
-    "\x04\xd4\x5d\x8d\x85\xef\xa9\xb0\x57\xb5" \
-    "\x3b\x14\xb4\xb9\xb9\x39\xdd\x74\xde\xcc" \
-    "\x53\x21"
-
-#define EMPTY_BLOB_SHA1_BIN_LITERAL            \
-    "\xe6\x9d\xe2\x9b\xb2\xd1\xd6\x43\x4b\x8b" \
-    "\x29\xae\x77\x5a\xd8\xc2\xe4\x8c\x53\x91"
-#define EMPTY_BLOB_SHA256_BIN_LITERAL          \
-    "\x47\x3a\x0f\x4c\x3b\xe8\xa9\x36\x81\xa2" \
-    "\x67\xe3\xb1\xe9\xa7\xdc\xda\x11\x85\x43" \
-    "\x6f\xe1\x41\xf7\x74\x91\x20\xa3\x03\x72" \
-    "\x18\x13"
-
 static const struct object_id empty_tree_oid = {
-    .hash = EMPTY_TREE_SHA1_BIN_LITERAL,
-    .algo = GIT_HASH_SHA1,
+	.hash = {
+		0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
+		0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04
+	},
+	.algo = GIT_HASH_SHA1,
 };
 static const struct object_id empty_blob_oid = {
-    .hash = EMPTY_BLOB_SHA1_BIN_LITERAL,
-    .algo = GIT_HASH_SHA1,
+	.hash = {
+		0xe6, 0x9d, 0xe2, 0x9b, 0xb2, 0xd1, 0xd6, 0x43, 0x4b, 0x8b,
+		0x29, 0xae, 0x77, 0x5a, 0xd8, 0xc2, 0xe4, 0x8c, 0x53, 0x91
+	},
+	.algo = GIT_HASH_SHA1,
 };
 static const struct object_id null_oid_sha1 = {
     .hash = {0},
     .algo = GIT_HASH_SHA1,
 };
 static const struct object_id empty_tree_oid_sha256 = {
-    .hash = EMPTY_TREE_SHA256_BIN_LITERAL,
-    .algo = GIT_HASH_SHA256,
+	.hash = {
+		0x6e, 0xf1, 0x9b, 0x41, 0x22, 0x5c, 0x53, 0x69, 0xf1, 0xc1,
+		0x04, 0xd4, 0x5d, 0x8d, 0x85, 0xef, 0xa9, 0xb0, 0x57, 0xb5,
+		0x3b, 0x14, 0xb4, 0xb9, 0xb9, 0x39, 0xdd, 0x74, 0xde, 0xcc,
+		0x53, 0x21
+	},
+	.algo = GIT_HASH_SHA256,
 };
 static const struct object_id empty_blob_oid_sha256 = {
-    .hash = EMPTY_BLOB_SHA256_BIN_LITERAL,
-    .algo = GIT_HASH_SHA256,
+	.hash = {
+		0x47, 0x3a, 0x0f, 0x4c, 0x3b, 0xe8, 0xa9, 0x36, 0x81, 0xa2,
+		0x67, 0xe3, 0xb1, 0xe9, 0xa7, 0xdc, 0xda, 0x11, 0x85, 0x43,
+		0x6f, 0xe1, 0x41, 0xf7, 0x74, 0x91, 0x20, 0xa3, 0x03, 0x72,
+		0x18, 0x13
+	},
+	.algo = GIT_HASH_SHA256,
 };
 static const struct object_id null_oid_sha256 = {
     .hash = {0},
@@ -325,40 +324,32 @@ int hash_algo_by_length(int len)
  * to write them into the object store (e.g. a browse-only
  * application).
  */
-static struct cached_object
-{
-    struct object_id oid;
-    enum object_type type;
-    const void      *buf;
-    unsigned long    size;
-} * cached_objects;
+static struct cached_object_entry {
+	struct object_id oid;
+	struct cached_object {
+		enum object_type type;
+		const void *buf;
+		unsigned long size;
+	} value;
+} *cached_objects;
 static int cached_object_nr, cached_object_alloc;
 
-static struct cached_object empty_tree = {
-    .oid = {
-        .hash = EMPTY_TREE_SHA1_BIN_LITERAL,
-    },
-    .type = OBJ_TREE,
-    .buf  = "",
-};
-
-static struct cached_object *find_cached_object(const struct object_id *oid)
+static const struct cached_object *find_cached_object(const struct object_id *oid)
 {
-    int                   i;
-    struct cached_object *co = cached_objects;
+	static const struct cached_object empty_tree = {
+		.type = OBJ_TREE,
+		.buf = "",
+	};
+	int i;
+	const struct cached_object_entry *co = cached_objects;
 
-    for (i = 0; i < cached_object_nr; i++, co++)
-    {
-        if (oideq(&co->oid, oid))
-        {
-            return co;
-        }
-    }
-    if (oideq(oid, the_hash_algo->empty_tree))
-    {
-        return &empty_tree;
-    }
-    return NULL;
+	for (i = 0; i < cached_object_nr; i++, co++) {
+		if (oideq(&co->oid, oid))
+			return &co->value;
+	}
+	if (oideq(oid, the_hash_algo->empty_tree))
+		return &empty_tree;
+	return NULL;
 }
 
 static int get_conv_flags(unsigned flags)
@@ -1870,12 +1861,12 @@ static int do_oid_object_info_extended(struct repository      *r,
                                        const struct object_id *oid,
                                        struct object_info *oi, unsigned flags)
 {
-    static struct object_info blank_oi = OBJECT_INFO_INIT;
-    struct cached_object     *co;
-    struct pack_entry         e;
-    int                       rtype;
-    const struct object_id   *real            = oid;
-    int                       already_retried = 0;
+	static struct object_info blank_oi = OBJECT_INFO_INIT;
+	const struct cached_object *co;
+	struct pack_entry e;
+	int rtype;
+	const struct object_id *real = oid;
+	int already_retried = 0;
 
     if (flags & OBJECT_INFO_LOOKUP_REPLACE)
     {
@@ -2164,23 +2155,22 @@ int oid_object_info(struct repository      *r,
 int pretend_object_file(void *buf, unsigned long len, enum object_type type,
                         struct object_id *oid)
 {
-    struct cached_object *co;
-    char                 *co_buf;
+	struct cached_object_entry *co;
+	char *co_buf;
 
-    hash_object_file(the_hash_algo, buf, len, type, oid);
-    if (repo_has_object_file_with_flags(the_repository, oid, OBJECT_INFO_QUICK | OBJECT_INFO_SKIP_FETCH_OBJECT) || find_cached_object(oid))
-    {
-        return 0;
-    }
-    ALLOC_GROW(cached_objects, cached_object_nr + 1, cached_object_alloc);
-    co       = &cached_objects[cached_object_nr++];
-    co->size = len;
-    co->type = type;
-    co_buf   = xmalloc(len);
-    memcpy(co_buf, buf, len);
-    co->buf = co_buf;
-    oidcpy(&co->oid, oid);
-    return 0;
+	hash_object_file(the_hash_algo, buf, len, type, oid);
+	if (repo_has_object_file_with_flags(the_repository, oid, OBJECT_INFO_QUICK | OBJECT_INFO_SKIP_FETCH_OBJECT) ||
+	    find_cached_object(oid))
+		return 0;
+	ALLOC_GROW(cached_objects, cached_object_nr + 1, cached_object_alloc);
+	co = &cached_objects[cached_object_nr++];
+	co->value.size = len;
+	co->value.type = type;
+	co_buf = xmalloc(len);
+	memcpy(co_buf, buf, len);
+	co->value.buf = co_buf;
+	oidcpy(&co->oid, oid);
+	return 0;
 }
 
 /*
@@ -2302,61 +2292,61 @@ static void write_object_file_prepare_literally(const struct git_hash_algo *algo
     hash_object_body(algo, &c, buf, len, oid, hdr, hdrlen);
 }
 
-static int check_collision(const char *filename_a, const char *filename_b)
+#define CHECK_COLLISION_DEST_VANISHED -2
+
+static int check_collision(const char *source, const char *dest)
 {
-    char buf_a[4096], buf_b[4096];
-    int  fd_a = -1, fd_b = -1;
-    int  ret = 0;
+	char buf_source[4096], buf_dest[4096];
+	int fd_source = -1, fd_dest = -1;
+	int ret = 0;
 
-    fd_a = open(filename_a, O_RDONLY);
-    if (fd_a < 0)
-    {
-        ret = error_errno(_("unable to open %s"), filename_a);
-        goto out;
-    }
+	fd_source = open(source, O_RDONLY);
+	if (fd_source < 0) {
+		ret = error_errno(_("unable to open %s"), source);
+		goto out;
+	}
 
-    fd_b = open(filename_b, O_RDONLY);
-    if (fd_b < 0)
-    {
-        ret = error_errno(_("unable to open %s"), filename_b);
-        goto out;
-    }
+	fd_dest = open(dest, O_RDONLY);
+	if (fd_dest < 0) {
+		if (errno != ENOENT)
+			ret = error_errno(_("unable to open %s"), dest);
+		else
+			ret = CHECK_COLLISION_DEST_VANISHED;
+		goto out;
+	}
 
     while (1)
     {
         ssize_t sz_a, sz_b;
 
-        sz_a = read_in_full(fd_a, buf_a, sizeof(buf_a));
-        if (sz_a < 0)
-        {
-            ret = error_errno(_("unable to read %s"), filename_a);
-            goto out;
-        }
+		sz_a = read_in_full(fd_source, buf_source, sizeof(buf_source));
+		if (sz_a < 0) {
+			ret = error_errno(_("unable to read %s"), source);
+			goto out;
+		}
 
-        sz_b = read_in_full(fd_b, buf_b, sizeof(buf_b));
-        if (sz_b < 0)
-        {
-            ret = error_errno(_("unable to read %s"), filename_b);
-            goto out;
-        }
+		sz_b = read_in_full(fd_dest, buf_dest, sizeof(buf_dest));
+		if (sz_b < 0) {
+			ret = error_errno(_("unable to read %s"), dest);
+			goto out;
+		}
 
-        if (sz_a != sz_b || memcmp(buf_a, buf_b, sz_a))
-        {
-            ret = error(_("files '%s' and '%s' differ in contents"),
-                        filename_a, filename_b);
-            goto out;
-        }
+		if (sz_a != sz_b || memcmp(buf_source, buf_dest, sz_a)) {
+			ret = error(_("files '%s' and '%s' differ in contents"),
+				    source, dest);
+			goto out;
+		}
 
-        if (sz_a < sizeof(buf_a))
-            break;
-    }
+		if (sz_a < sizeof(buf_source))
+			break;
+	}
 
 out:
-    if (fd_a > -1)
-        close(fd_a);
-    if (fd_b > -1)
-        close(fd_b);
-    return ret;
+	if (fd_source > -1)
+		close(fd_source);
+	if (fd_dest > -1)
+		close(fd_dest);
+	return ret;
 }
 
 /*
@@ -2370,8 +2360,11 @@ int finalize_object_file(const char *tmpfile, const char *filename)
 int finalize_object_file_flags(const char *tmpfile, const char *filename,
                                enum finalize_object_file_flags flags)
 {
-    struct stat st;
-    int         ret = 0;
+	unsigned retries = 0;
+	int ret;
+
+retry:
+	ret = 0;
 
     if (object_creation_mode == OBJECT_CREATION_USES_RENAMES)
         goto try_rename;
@@ -2380,40 +2373,48 @@ int finalize_object_file_flags(const char *tmpfile, const char *filename,
     else
         unlink_or_warn(tmpfile);
 
-    /*
-     * Coda hack - coda doesn't like cross-directory links,
-     * so we fall back to a rename, which will mean that it
-     * won't be able to check collisions, but that's not a
-     * big deal.
-     *
-     * The same holds for FAT formatted media.
-     *
-     * When this succeeds, we just return.  We have nothing
-     * left to unlink.
-     */
-    if (ret && ret != EEXIST)
-    {
-    try_rename:
-        if (!stat(filename, &st))
-            ret = EEXIST;
-        else if (!rename(tmpfile, filename))
-            goto out;
-        else
-            ret = errno;
-    }
-    if (ret)
-    {
-        if (ret != EEXIST)
-        {
-            int saved_errno = errno;
-            unlink_or_warn(tmpfile);
-            errno = saved_errno;
-            return error_errno(_("unable to write file %s"), filename);
-        }
-        if (!(flags & FOF_SKIP_COLLISION_CHECK) && check_collision(tmpfile, filename))
-            return -1;
-        unlink_or_warn(tmpfile);
-    }
+	/*
+	 * Coda hack - coda doesn't like cross-directory links,
+	 * so we fall back to a rename, which will mean that it
+	 * won't be able to check collisions, but that's not a
+	 * big deal.
+	 *
+	 * The same holds for FAT formatted media.
+	 *
+	 * When this succeeds, we just return.  We have nothing
+	 * left to unlink.
+	 */
+	if (ret && ret != EEXIST) {
+		struct stat st;
+
+	try_rename:
+		if (!stat(filename, &st))
+			ret = EEXIST;
+		else if (!rename(tmpfile, filename))
+			goto out;
+		else
+			ret = errno;
+	}
+	if (ret) {
+		if (ret != EEXIST) {
+			int saved_errno = errno;
+			unlink_or_warn(tmpfile);
+			errno = saved_errno;
+			return error_errno(_("unable to write file %s"), filename);
+		}
+		if (!(flags & FOF_SKIP_COLLISION_CHECK)) {
+			ret = check_collision(tmpfile, filename);
+			if (ret == CHECK_COLLISION_DEST_VANISHED) {
+				if (retries++ > 5)
+					return error(_("unable to write repeatedly vanishing file %s"),
+						     filename);
+				goto retry;
+			}
+			else if (ret)
+				return -1;
+		}
+		unlink_or_warn(tmpfile);
+	}
 
 out:
     if (adjust_shared_perm(filename))

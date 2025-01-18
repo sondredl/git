@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "environment.h"
@@ -3848,9 +3849,8 @@ static void reach_filter(struct ref_array    *array,
                          struct commit_list **check_reachable,
                          int                  include_reached)
 {
-    int             i;
-    int             old_nr;
-    struct commit **to_clear;
+	size_t i, old_nr;
+	struct commit **to_clear;
 
     if (!*check_reachable)
     {

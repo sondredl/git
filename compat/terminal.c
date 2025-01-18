@@ -264,21 +264,19 @@ static DWORD              cmode_in, cmode_out;
 
 void restore_term(void)
 {
-    if (use_stty)
-    {
-        int                  i;
-        struct child_process cp = CHILD_PROCESS_INIT;
+	if (use_stty) {
+		struct child_process cp = CHILD_PROCESS_INIT;
 
         if (stty_restore.nr == 0)
             return;
 
-        strvec_push(&cp.args, "stty");
-        for (i = 0; i < stty_restore.nr; i++)
-            strvec_push(&cp.args, stty_restore.items[i].string);
-        run_command(&cp);
-        string_list_clear(&stty_restore, 0);
-        return;
-    }
+		strvec_push(&cp.args, "stty");
+		for (size_t i = 0; i < stty_restore.nr; i++)
+			strvec_push(&cp.args, stty_restore.items[i].string);
+		run_command(&cp);
+		string_list_clear(&stty_restore, 0);
+		return;
+	}
 
     sigchain_pop_common();
 

@@ -4,7 +4,10 @@
  * Copyright (c) 2007 Kristian Høgsberg <krh@redhat.com>
  * Based on git-commit.sh by Junio C Hamano and Linus Torvalds
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
@@ -134,7 +137,7 @@ static struct strvec trailer_args = STRVEC_INIT;
  * is specified explicitly.
  */
 static enum commit_msg_cleanup_mode cleanup_mode;
-static char                        *cleanup_arg;
+static char *cleanup_config;
 
 static enum commit_whence whence;
 static int                use_editor = 1, include_status = 1;
@@ -866,6 +869,13 @@ static void prepare_amend_commit(struct commit *commit, struct strbuf *sb,
     repo_unuse_commit_buffer(the_repository, commit, buffer);
 }
 
+static void change_data_free(void *util, const char *str UNUSED)
+{
+	struct wt_status_change_data *d = util;
+	free(d->rename_source);
+	free(d);
+}
+
 static int prepare_to_commit(const char *index_file, const char *prefix,
                              struct commit    *current_head,
                              struct wt_status *s,
@@ -1205,16 +1215,14 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 
         status_printf_ln(s, GIT_COLOR_NORMAL, "%s", ""); /* Add new line for clarity */
 
-        saved_color_setting = s->use_color;
-        s->use_color        = 0;
-        committable         = run_status(s->fp, index_file, prefix, 1, s);
-        s->use_color        = saved_color_setting;
-        string_list_clear(&s->change, 1);
-    }
-    else
-    {
-        struct object_id oid;
-        const char      *parent = "HEAD";
+		saved_color_setting = s->use_color;
+		s->use_color = 0;
+		committable = run_status(s->fp, index_file, prefix, 1, s);
+		s->use_color = saved_color_setting;
+		string_list_clear_func(&s->change, change_data_free);
+	} else {
+		struct object_id oid;
+		const char *parent = "HEAD";
 
         if (!the_repository->index->initialized && repo_read_index(the_repository) < 0)
         {
@@ -1714,9 +1722,7 @@ static int parse_and_validate_options(int argc, const char *argv[],
         use_editor = edit_flag;
     }
 
-    cleanup_mode = get_cleanup_mode(cleanup_arg, use_editor);
-
-    handle_untracked_files_arg(s);
+	handle_untracked_files_arg(s);
 
     if (all && argc > 0)
     {
@@ -2015,31 +2021,26 @@ static int git_commit_config(const char *k, const char *v,
 {
     struct wt_status *s = cb;
 
-    if (!strcmp(k, "commit.template"))
-    {
-        return git_config_pathname(&template_file, k, v);
-    }
-    if (!strcmp(k, "commit.status"))
-    {
-        include_status = git_config_bool(k, v);
-        return 0;
-    }
-    if (!strcmp(k, "commit.cleanup"))
-    {
-        return git_config_string(&cleanup_arg, k, v);
-    }
-    if (!strcmp(k, "commit.gpgsign"))
-    {
-        sign_commit = git_config_bool(k, v) ? "" : NULL;
-        return 0;
-    }
-    if (!strcmp(k, "commit.verbose"))
-    {
-        int is_bool;
-        config_commit_verbose = git_config_bool_or_int(k, v, ctx->kvi,
-                                                       &is_bool);
-        return 0;
-    }
+	if (!strcmp(k, "commit.template"))
+		return git_config_pathname(&template_file, k, v);
+	if (!strcmp(k, "commit.status")) {
+		include_status = git_config_bool(k, v);
+		return 0;
+	}
+	if (!strcmp(k, "commit.cleanup")) {
+		FREE_AND_NULL(cleanup_config);
+		return git_config_string(&cleanup_config, k, v);
+	}
+	if (!strcmp(k, "commit.gpgsign")) {
+		sign_commit = git_config_bool(k, v) ? "" : NULL;
+		return 0;
+	}
+	if (!strcmp(k, "commit.verbose")) {
+		int is_bool;
+		config_commit_verbose = git_config_bool_or_int(k, v, ctx->kvi,
+							       &is_bool);
+		return 0;
+	}
 
     return git_status_config(k, v, ctx, s);
 }
@@ -2049,10 +2050,11 @@ int cmd_commit(int                     argc,
                const char             *prefix,
                struct repository *repo UNUSED)
 {
-    static struct wt_status s;
-    static struct option    builtin_commit_options[] = {
-           OPT__QUIET(&quiet, N_("suppress summary after successful commit")),
-           OPT__VERBOSE(&verbose, N_("show diff in commit message template")),
+	static struct wt_status s;
+	static const char *cleanup_arg = NULL;
+	static struct option builtin_commit_options[] = {
+		OPT__QUIET(&quiet, N_("suppress summary after successful commit")),
+		OPT__VERBOSE(&verbose, N_("show diff in commit message template")),
 
            OPT_GROUP(N_("Commit message options")),
            OPT_FILENAME('F', "file", &logfile, N_("read message from file")),
@@ -2158,11 +2160,15 @@ int cmd_commit(int                     argc,
         verbose = (config_commit_verbose < 0) ? 0 : config_commit_verbose;
     }
 
-    if (dry_run)
-    {
-        return dry_run_commit(argv, prefix, current_head, &s);
-    }
-    index_file = prepare_index(argv, prefix, current_head, 0);
+	if (cleanup_arg) {
+		free(cleanup_config);
+		cleanup_config = xstrdup(cleanup_arg);
+	}
+	cleanup_mode = get_cleanup_mode(cleanup_config, use_editor);
+
+	if (dry_run)
+		return dry_run_commit(argv, prefix, current_head, &s);
+	index_file = prepare_index(argv, prefix, current_head, 0);
 
     /* Set up everything for writing the commit object.  This includes
        running hooks, writing the trees, and interacting with the user.  */

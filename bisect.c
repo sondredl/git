@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -28,8 +29,8 @@ static struct oid_array skipped_revs;
 
 static struct object_id *current_bad_oid;
 
-static const char *term_bad;
-static const char *term_good;
+static char *term_bad;
+static char *term_good;
 
 /* Remember to update object flag allocation in object.h */
 #define COUNTED (1u << 16)
@@ -525,22 +526,21 @@ void find_bisection(struct commit_list **commit_list, int *reaches,
     *all = nr;
     CALLOC_ARRAY(weights, on_list);
 
-    /* Do the real work of finding bisection commit. */
-    best = do_find_bisection(list, nr, weights, bisect_flags);
-    if (best)
-    {
-        if (!(bisect_flags & FIND_BISECTION_ALL))
-        {
-            list->item = best->item;
-            free_commit_list(list->next);
-            best       = list;
-            best->next = NULL;
-        }
-        *reaches = weight(best);
-    }
-    free(weights);
-    *commit_list = best;
-    clear_commit_weight(&commit_weight);
+	/* Do the real work of finding bisection commit. */
+	best = do_find_bisection(list, nr, weights, bisect_flags);
+	if (best) {
+		if (!(bisect_flags & FIND_BISECTION_ALL)) {
+			list->item = best->item;
+			free_commit_list(list->next);
+			best = list;
+			best->next = NULL;
+		}
+		*reaches = weight(best);
+	}
+	*commit_list = best;
+
+	free(weights);
+	clear_commit_weight(&commit_weight);
 }
 
 static int register_ref(const char *refname, const char *referent UNUSED, const struct object_id *oid,
@@ -550,19 +550,15 @@ static int register_ref(const char *refname, const char *referent UNUSED, const 
     strbuf_addstr(&good_prefix, term_good);
     strbuf_addstr(&good_prefix, "-");
 
-    if (!strcmp(refname, term_bad))
-    {
-        current_bad_oid = xmalloc(sizeof(*current_bad_oid));
-        oidcpy(current_bad_oid, oid);
-    }
-    else if (starts_with(refname, good_prefix.buf))
-    {
-        oid_array_append(&good_revs, oid);
-    }
-    else if (starts_with(refname, "skip-"))
-    {
-        oid_array_append(&skipped_revs, oid);
-    }
+	if (!strcmp(refname, term_bad)) {
+		free(current_bad_oid);
+		current_bad_oid = xmalloc(sizeof(*current_bad_oid));
+		oidcpy(current_bad_oid, oid);
+	} else if (starts_with(refname, good_prefix.buf)) {
+		oid_array_append(&good_revs, oid);
+	} else if (starts_with(refname, "skip-")) {
+		oid_array_append(&skipped_revs, oid);
+	}
 
     strbuf_release(&good_prefix);
 
@@ -652,44 +648,34 @@ struct commit_list *filter_skipped(struct commit_list  *list,
         return list;
     }
 
-    while (list)
-    {
-        struct commit_list *next = list->next;
-        list->next               = NULL;
-        if (0 <= oid_array_lookup(&skipped_revs, &list->item->object.oid))
-        {
-            if (skipped_first && !*skipped_first)
-            {
-                *skipped_first = 1;
-            }
-            /* Move current to tried list */
-            *tried = list;
-            tried  = &list->next;
-        }
-        else
-        {
-            if (!show_all)
-            {
-                if (!skipped_first || !*skipped_first)
-                {
-                    return list;
-                }
-            }
-            else if (skipped_first && !*skipped_first)
-            {
-                /* This means we know it's not skipped */
-                *skipped_first = -1;
-            }
-            /* Move current to filtered list */
-            *f = list;
-            f  = &list->next;
-            if (count)
-            {
-                (*count)++;
-            }
-        }
-        list = next;
-    }
+	while (list) {
+		struct commit_list *next = list->next;
+		list->next = NULL;
+		if (0 <= oid_array_lookup(&skipped_revs, &list->item->object.oid)) {
+			if (skipped_first && !*skipped_first)
+				*skipped_first = 1;
+			/* Move current to tried list */
+			*tried = list;
+			tried = &list->next;
+		} else {
+			if (!show_all) {
+				if (!skipped_first || !*skipped_first) {
+					free_commit_list(next);
+					free_commit_list(filtered);
+					return list;
+				}
+			} else if (skipped_first && !*skipped_first) {
+				/* This means we know it's not skipped */
+				*skipped_first = -1;
+			}
+			/* Move current to filtered list */
+			*f = list;
+			f = &list->next;
+			if (count)
+				(*count)++;
+		}
+		list = next;
+	}
 
     if (skipped_first && *skipped_first == -1)
     {
@@ -739,11 +725,8 @@ static int sqrti(int val)
 
 static struct commit_list *skip_away(struct commit_list *list, int count)
 {
-    struct commit_list *cur;
-    struct commit_list *previous;
-    int                 prn;
-    int                 index;
-    int                 i;
+	struct commit_list *cur, *previous, *result = list;
+	int prn, index, i;
 
     prn   = get_prn(count);
     index = (count * prn / PRN_MODULO) * sqrti(prn) / sqrti(PRN_MODULO);
@@ -751,24 +734,26 @@ static struct commit_list *skip_away(struct commit_list *list, int count)
     cur      = list;
     previous = NULL;
 
-    for (i = 0; cur; cur = cur->next, i++)
-    {
-        if (i == index)
-        {
-            if (!oideq(&cur->item->object.oid, current_bad_oid))
-            {
-                return cur;
-            }
-            if (previous)
-            {
-                return previous;
-            }
-            return list;
-        }
-        previous = cur;
-    }
+	for (i = 0; cur; cur = cur->next, i++) {
+		if (i == index) {
+			if (!oideq(&cur->item->object.oid, current_bad_oid))
+				result = cur;
+			else if (previous)
+				result = previous;
+			else
+				result = list;
+			break;
+		}
+		previous = cur;
+	}
 
-    return list;
+	for (cur = list; cur != result; ) {
+		struct commit_list *next = cur->next;
+		free(cur);
+		cur = next;
+	}
+
+	return result;
 }
 
 static struct commit_list *managed_skipped(struct commit_list  *list,
@@ -931,11 +916,10 @@ static struct commit *get_commit_reference(struct repository      *r,
 }
 
 static struct commit **get_bad_and_good_commits(struct repository *r,
-                                                int               *rev_nr)
+						size_t *rev_nr)
 {
-    struct commit **rev;
-    int             i;
-    int             n = 0;
+	struct commit **rev;
+	size_t i, n = 0;
 
     ALLOC_ARRAY(rev, 1 + good_revs.nr);
     rev[n++] = get_commit_reference(r, current_bad_oid);
@@ -950,33 +934,29 @@ static struct commit **get_bad_and_good_commits(struct repository *r,
 
 static enum bisect_error handle_bad_merge_base(void)
 {
-    if (is_expected_rev(current_bad_oid))
-    {
-        char *bad_hex  = oid_to_hex(current_bad_oid);
-        char *good_hex = join_oid_array_hex(&good_revs, ' ');
-        if (!strcmp(term_bad, "bad") && !strcmp(term_good, "good"))
-        {
-            fprintf(stderr, _("The merge base %s is bad.\n"
-                              "This means the bug has been fixed "
-                              "between %s and [%s].\n"),
-                    bad_hex, bad_hex, good_hex);
-        }
-        else if (!strcmp(term_bad, "new") && !strcmp(term_good, "old"))
-        {
-            fprintf(stderr, _("The merge base %s is new.\n"
-                              "The property has changed "
-                              "between %s and [%s].\n"),
-                    bad_hex, bad_hex, good_hex);
-        }
-        else
-        {
-            fprintf(stderr, _("The merge base %s is %s.\n"
-                              "This means the first '%s' commit is "
-                              "between %s and [%s].\n"),
-                    bad_hex, term_bad, term_good, bad_hex, good_hex);
-        }
-        return BISECT_MERGE_BASE_CHECK;
-    }
+	if (is_expected_rev(current_bad_oid)) {
+		char *bad_hex = oid_to_hex(current_bad_oid);
+		char *good_hex = join_oid_array_hex(&good_revs, ' ');
+		if (!strcmp(term_bad, "bad") && !strcmp(term_good, "good")) {
+			fprintf(stderr, _("The merge base %s is bad.\n"
+				"This means the bug has been fixed "
+				"between %s and [%s].\n"),
+				bad_hex, bad_hex, good_hex);
+		} else if (!strcmp(term_bad, "new") && !strcmp(term_good, "old")) {
+			fprintf(stderr, _("The merge base %s is new.\n"
+				"The property has changed "
+				"between %s and [%s].\n"),
+				bad_hex, bad_hex, good_hex);
+		} else {
+			fprintf(stderr, _("The merge base %s is %s.\n"
+				"This means the first '%s' commit is "
+				"between %s and [%s].\n"),
+				bad_hex, term_bad, term_good, bad_hex, good_hex);
+		}
+
+		free(good_hex);
+		return BISECT_MERGE_BASE_CHECK;
+	}
 
     fprintf(stderr, _("Some %s revs are not ancestors of the %s rev.\n"
                       "git bisect cannot work properly in this case.\n"
@@ -1013,7 +993,7 @@ static void handle_skipped_merge_base(const struct object_id *mb)
  * for early success, this will be converted back to 0 in
  * check_good_are_ancestors_of_bad().
  */
-static enum bisect_error check_merge_bases(int rev_nr, struct commit **rev, int no_checkout)
+static enum bisect_error check_merge_bases(size_t rev_nr, struct commit **rev, int no_checkout)
 {
     enum bisect_error   res    = BISECT_OK;
     struct commit_list *result = NULL;
@@ -1025,41 +1005,31 @@ static enum bisect_error check_merge_bases(int rev_nr, struct commit **rev, int 
         exit(128);
     }
 
-    for (; result; result = result->next)
-    {
-        const struct object_id *mb = &result->item->object.oid;
-        if (oideq(mb, current_bad_oid))
-        {
-            res = handle_bad_merge_base();
-            break;
-        }
-        if (0 <= oid_array_lookup(&good_revs, mb))
-        {
-            continue;
-        }
-        if (0 <= oid_array_lookup(&skipped_revs, mb))
-        {
-            handle_skipped_merge_base(mb);
-        }
-        else
-        {
-            printf(_("Bisecting: a merge base must be tested\n"));
-            res = bisect_checkout(mb, no_checkout);
-            if (!res)
-            {
-                /* indicate early success */
-                res = BISECT_INTERNAL_SUCCESS_MERGE_BASE;
-            }
-            break;
-        }
-    }
+	for (struct commit_list *l = result; l; l = l->next) {
+		const struct object_id *mb = &l->item->object.oid;
+		if (oideq(mb, current_bad_oid)) {
+			res = handle_bad_merge_base();
+			break;
+		} else if (0 <= oid_array_lookup(&good_revs, mb)) {
+			continue;
+		} else if (0 <= oid_array_lookup(&skipped_revs, mb)) {
+			handle_skipped_merge_base(mb);
+		} else {
+			printf(_("Bisecting: a merge base must be tested\n"));
+			res = bisect_checkout(mb, no_checkout);
+			if (!res)
+				/* indicate early success */
+				res = BISECT_INTERNAL_SUCCESS_MERGE_BASE;
+			break;
+		}
+	}
 
     free_commit_list(result);
     return res;
 }
 
-static int check_ancestors(struct repository *r, int rev_nr,
-                           struct commit **rev, const char *prefix)
+static int check_ancestors(struct repository *r, size_t rev_nr,
+			   struct commit **rev, const char *prefix)
 {
     struct strvec   rev_argv = STRVEC_INIT;
     struct rev_info revs;
@@ -1091,12 +1061,12 @@ static enum bisect_error check_good_are_ancestors_of_bad(struct repository *r,
                                                          const char        *prefix,
                                                          int                no_checkout)
 {
-    char             *filename;
-    struct stat       st;
-    int               fd;
-    int               rev_nr;
-    enum bisect_error res = BISECT_OK;
-    struct commit   **rev;
+	char *filename;
+	struct stat st;
+	int fd;
+	size_t rev_nr;
+	enum bisect_error res = BISECT_OK;
+	struct commit **rev;
 
     if (!current_bad_oid)
     {
@@ -1188,32 +1158,32 @@ static void show_commit(struct commit *commit)
  * We read them and store them to adapt the messages accordingly.
  * Default is bad/good.
  */
-void read_bisect_terms(const char **read_bad, const char **read_good)
+void read_bisect_terms(char **read_bad, char **read_good)
 {
     struct strbuf str      = STRBUF_INIT;
     const char   *filename = git_path_bisect_terms();
     FILE         *fp       = fopen(filename, "r");
 
-    if (!fp)
-    {
-        if (errno == ENOENT)
-        {
-            *read_bad  = "bad";
-            *read_good = "good";
-            return;
-        }
-
-        die_errno(_("could not read file '%s'"), filename);
-    }
-    else
-    {
-        strbuf_getline_lf(&str, fp);
-        *read_bad = strbuf_detach(&str, NULL);
-        strbuf_getline_lf(&str, fp);
-        *read_good = strbuf_detach(&str, NULL);
-    }
-    strbuf_release(&str);
-    fclose(fp);
+	if (!fp) {
+		if (errno == ENOENT) {
+			free(*read_bad);
+			*read_bad = xstrdup("bad");
+			free(*read_good);
+			*read_good = xstrdup("good");
+			return;
+		} else {
+			die_errno(_("could not read file '%s'"), filename);
+		}
+	} else {
+		strbuf_getline_lf(&str, fp);
+		free(*read_bad);
+		*read_bad = strbuf_detach(&str, NULL);
+		strbuf_getline_lf(&str, fp);
+		free(*read_good);
+		*read_good = strbuf_detach(&str, NULL);
+	}
+	strbuf_release(&str);
+	fclose(fp);
 }
 
 /*
@@ -1229,23 +1199,20 @@ void read_bisect_terms(const char **read_bad, const char **read_good)
  */
 enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
 {
-    struct strvec       rev_argv = STRVEC_INIT;
-    struct rev_info     revs     = REV_INFO_INIT;
-    struct commit_list *tried;
-    int                 reaches = 0;
-    int                 all     = 0;
-    int                 nr;
-    int                 steps;
-    enum bisect_error   res = BISECT_OK;
-    struct object_id   *bisect_rev;
-    char               *steps_msg;
-    /*
-     * If no_checkout is non-zero, the bisection process does not
-     * checkout the trial commit but instead simply updates BISECT_HEAD.
-     */
-    int      no_checkout  = refs_ref_exists(get_main_ref_store(the_repository),
-                                            "BISECT_HEAD");
-    unsigned bisect_flags = 0;
+	struct strvec rev_argv = STRVEC_INIT;
+	struct rev_info revs = REV_INFO_INIT;
+	struct commit_list *tried = NULL;
+	int reaches = 0, all = 0, nr, steps;
+	enum bisect_error res = BISECT_OK;
+	struct object_id *bisect_rev;
+	char *steps_msg;
+	/*
+	 * If no_checkout is non-zero, the bisection process does not
+	 * checkout the trial commit but instead simply updates BISECT_HEAD.
+	 */
+	int no_checkout = refs_ref_exists(get_main_ref_store(the_repository),
+					  "BISECT_HEAD");
+	unsigned bisect_flags = 0;
 
     read_bisect_terms(&term_bad, &term_good);
     if (read_bisect_refs())
@@ -1310,15 +1277,12 @@ enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
 
     bisect_rev = &revs.commits->item->object.oid;
 
-    if (oideq(bisect_rev, current_bad_oid))
-    {
-        res = error_if_skipped_commits(tried, current_bad_oid);
-        if (res)
-        {
-            return res;
-        }
-        printf("%s is the first %s commit\n", oid_to_hex(bisect_rev),
-               term_bad);
+	if (oideq(bisect_rev, current_bad_oid)) {
+		res = error_if_skipped_commits(tried, current_bad_oid);
+		if (res)
+			goto cleanup;
+		printf("%s is the first %s commit\n", oid_to_hex(bisect_rev),
+			term_bad);
 
         show_commit(revs.commits->item);
         /*
@@ -1352,9 +1316,10 @@ enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
 
     res = bisect_checkout(bisect_rev, no_checkout);
 cleanup:
-    release_revisions(&revs);
-    strvec_clear(&rev_argv);
-    return res;
+	free_commit_list(tried);
+	release_revisions(&revs);
+	strvec_clear(&rev_argv);
+	return res;
 }
 
 static inline int exp2i(int n)

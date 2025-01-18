@@ -1,7 +1,9 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "environment.h"
+#include "ewah/ewok.h"
 #include "gettext.h"
 #include "name-hash.h"
 #include "read-cache-ll.h"
@@ -276,9 +278,10 @@ int convert_to_sparse(struct index_state *istate, int flags)
     cache_tree_free(&istate->cache_tree);
     cache_tree_update(istate, 0);
 
-    istate->fsmonitor_has_run_once = 0;
-    FREE_AND_NULL(istate->fsmonitor_dirty);
-    FREE_AND_NULL(istate->fsmonitor_last_update);
+	istate->fsmonitor_has_run_once = 0;
+	ewah_free(istate->fsmonitor_dirty);
+	istate->fsmonitor_dirty = NULL;
+	FREE_AND_NULL(istate->fsmonitor_last_update);
 
     istate->sparse_index = INDEX_COLLAPSED;
     trace2_region_leave("index", "convert_to_sparse", istate->repo);
@@ -480,17 +483,18 @@ void expand_index(struct index_state *istate, struct pattern_list *pl)
         discard_cache_entry(ce);
     }
 
-    /* Copy back into original index. */
-    memcpy(&istate->name_hash, &full->name_hash, sizeof(full->name_hash));
-    memcpy(&istate->dir_hash, &full->dir_hash, sizeof(full->dir_hash));
-    istate->sparse_index = pl ? INDEX_PARTIALLY_SPARSE : INDEX_EXPANDED;
-    free(istate->cache);
-    istate->cache                  = full->cache;
-    istate->cache_nr               = full->cache_nr;
-    istate->cache_alloc            = full->cache_alloc;
-    istate->fsmonitor_has_run_once = 0;
-    FREE_AND_NULL(istate->fsmonitor_dirty);
-    FREE_AND_NULL(istate->fsmonitor_last_update);
+	/* Copy back into original index. */
+	memcpy(&istate->name_hash, &full->name_hash, sizeof(full->name_hash));
+	memcpy(&istate->dir_hash, &full->dir_hash, sizeof(full->dir_hash));
+	istate->sparse_index = pl ? INDEX_PARTIALLY_SPARSE : INDEX_EXPANDED;
+	free(istate->cache);
+	istate->cache = full->cache;
+	istate->cache_nr = full->cache_nr;
+	istate->cache_alloc = full->cache_alloc;
+	istate->fsmonitor_has_run_once = 0;
+	ewah_free(istate->fsmonitor_dirty);
+	istate->fsmonitor_dirty = NULL;
+	FREE_AND_NULL(istate->fsmonitor_last_update);
 
     strbuf_release(&base);
     free(full);

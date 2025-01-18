@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "abspath.h"
@@ -1372,15 +1373,12 @@ static int push_submodule(const char               *path,
                              item->string);
         }
 
-        if (remote->origin != REMOTE_UNCONFIGURED)
-        {
-            int i;
-            strvec_push(&cp.args, remote->name);
-            for (i = 0; i < rs->raw_nr; i++)
-            {
-                strvec_push(&cp.args, rs->raw[i]);
-            }
-        }
+		if (remote->origin != REMOTE_UNCONFIGURED) {
+			int i;
+			strvec_push(&cp.args, remote->name);
+			for (i = 0; i < rs->nr; i++)
+				strvec_push(&cp.args, rs->items[i].raw);
+		}
 
         prepare_submodule_repo_env(&cp.env);
         cp.git_cmd  = 1;
@@ -1417,10 +1415,8 @@ static void submodule_push_check(const char *path, const char *head,
     strvec_push(&cp.args, head);
     strvec_push(&cp.args, remote->name);
 
-    for (i = 0; i < rs->raw_nr; i++)
-    {
-        strvec_push(&cp.args, rs->raw[i]);
-    }
+	for (i = 0; i < rs->nr; i++)
+		strvec_push(&cp.args, rs->items[i].raw);
 
     prepare_submodule_repo_env(&cp.env);
     cp.git_cmd   = 1;
@@ -1733,18 +1729,17 @@ struct fetch_task
  */
 static const struct submodule *get_non_gitmodules_submodule(const char *path)
 {
-    struct submodule *ret  = NULL;
-    const char       *name = default_name_or_path(path);
+	struct submodule *ret;
+	const char *name = default_name_or_path(path);
 
     if (!name)
     {
         return NULL;
     }
 
-    ret = xmalloc(sizeof(*ret));
-    memset(ret, 0, sizeof(*ret));
-    ret->path = name;
-    ret->name = name;
+	CALLOC_ARRAY(ret, 1);
+	ret->path = name;
+	ret->name = name;
 
     return (const struct submodule *)ret;
 }
@@ -1787,8 +1782,9 @@ static struct fetch_task *fetch_task_create(struct submodule_parallel_fetch *spf
                                             const char                      *path,
                                             const struct object_id          *treeish_name)
 {
-    struct fetch_task *task = xmalloc(sizeof(*task));
-    memset(task, 0, sizeof(*task));
+	struct fetch_task *task;
+
+	CALLOC_ARRAY(task, 1);
 
     if (validate_submodule_path(path) < 0)
     {

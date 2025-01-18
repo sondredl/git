@@ -1612,18 +1612,15 @@ static int fsck_blobs(struct oidset *blobs_found, struct oidset *blobs_done,
             continue;
         }
 
-        buf = repo_read_object_file(the_repository, oid, &type, &size);
-        if (!buf)
-        {
-            if (is_promisor_object(oid))
-            {
-                continue;
-            }
-            ret |= report(options,
-                          oid, OBJ_BLOB, msg_missing,
-                          "unable to read %s blob", blob_type);
-            continue;
-        }
+		buf = repo_read_object_file(the_repository, oid, &type, &size);
+		if (!buf) {
+			if (is_promisor_object(the_repository, oid))
+				continue;
+			ret |= report(options,
+				      oid, OBJ_BLOB, msg_missing,
+				      "unable to read %s blob", blob_type);
+			continue;
+		}
 
         if (type == OBJ_BLOB)
         {

@@ -1,4 +1,6 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "advice.h"
 #include "branch.h"
@@ -890,15 +892,14 @@ static void setup_branch_path(struct branch_info *branch)
         repo_get_oid_committish(the_repository, branch->name, &branch->oid);
     }
 
-    strbuf_branchname(&buf, branch->name, INTERPRET_BRANCH_LOCAL);
-    if (strcmp(buf.buf, branch->name) != 0)
-    {
-        free(branch->name);
-        branch->name = xstrdup(buf.buf);
-    }
-    strbuf_splice(&buf, 0, 0, "refs/heads/", 11);
-    free(branch->path);
-    branch->path = strbuf_detach(&buf, NULL);
+	copy_branchname(&buf, branch->name, INTERPRET_BRANCH_LOCAL);
+	if (strcmp(buf.buf, branch->name)) {
+		free(branch->name);
+		branch->name = xstrdup(buf.buf);
+	}
+	strbuf_splice(&buf, 0, 0, "refs/heads/", 11);
+	free(branch->path);
+	branch->path = strbuf_detach(&buf, NULL);
 }
 
 static void init_topts(struct unpack_trees_options *topts, int merge,

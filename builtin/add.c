@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2006 Linus Torvalds
  */
+
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
@@ -38,13 +39,11 @@ static int chmod_pathspec(struct repository *repo,
                           char               flip,
                           int                show_only)
 {
-    int i;
-    int ret = 0;
+	int ret = 0;
 
-    for (i = 0; i < repo->index->cache_nr; i++)
-    {
-        struct cache_entry *ce = repo->index->cache[i];
-        int                 err;
+	for (size_t i = 0; i < repo->index->cache_nr; i++) {
+		struct cache_entry *ce = repo->index->cache[i];
+		int err;
 
         if (!include_sparse && (ce_skip_worktree(ce) || !path_in_sparse_checkout(ce->name, repo->index)))
             continue;
@@ -70,12 +69,10 @@ static int renormalize_tracked_files(struct repository     *repo,
                                      const struct pathspec *pathspec,
                                      int                    flags)
 {
-    int i;
-    int retval = 0;
+	int retval = 0;
 
-    for (i = 0; i < repo->index->cache_nr; i++)
-    {
-        struct cache_entry *ce = repo->index->cache[i];
+	for (size_t i = 0; i < repo->index->cache_nr; i++) {
+		struct cache_entry *ce = repo->index->cache[i];
 
         if (!include_sparse && (ce_skip_worktree(ce) || !path_in_sparse_checkout(ce->name, repo->index)))
             continue;

@@ -807,10 +807,9 @@ static void cleanup_dir_rename_info(struct dir_rename_info *info,
                                     struct strintmap       *dirs_removed,
                                     int                     keep_dir_rename_count)
 {
-    struct hashmap_iter  iter;
-    struct strmap_entry *entry;
-    struct string_list   to_remove = STRING_LIST_INIT_NODUP;
-    int                  i;
+	struct hashmap_iter iter;
+	struct strmap_entry *entry;
+	struct string_list to_remove = STRING_LIST_INIT_NODUP;
 
     if (!info->setup)
     {
@@ -858,17 +857,13 @@ static void cleanup_dir_rename_info(struct dir_rename_info *info,
             continue;
         }
 
-        if (strintmap_contains(counts, UNKNOWN_DIR))
-        {
-            strintmap_remove(counts, UNKNOWN_DIR);
-        }
-    }
-    for (i = 0; i < to_remove.nr; ++i)
-    {
-        strmap_remove(info->dir_rename_count,
-                      to_remove.items[i].string, 1);
-    }
-    string_list_clear(&to_remove, 0);
+		if (strintmap_contains(counts, UNKNOWN_DIR))
+			strintmap_remove(counts, UNKNOWN_DIR);
+	}
+	for (size_t i = 0; i < to_remove.nr; ++i)
+		strmap_remove(info->dir_rename_count,
+			      to_remove.items[i].string, 1);
+	string_list_clear(&to_remove, 0);
 }
 
 static const char *get_basename(const char *filename)

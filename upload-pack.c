@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -158,16 +159,17 @@ static void upload_pack_data_init(struct upload_pack_data *data)
 
 static void upload_pack_data_clear(struct upload_pack_data *data)
 {
-    string_list_clear(&data->symref, 1);
-    strmap_clear(&data->wanted_refs, 1);
-    strvec_clear(&data->hidden_refs);
-    object_array_clear(&data->want_obj);
-    object_array_clear(&data->have_obj);
-    object_array_clear(&data->shallows);
-    oidset_clear(&data->deepen_not);
-    object_array_clear(&data->extra_edge_obj);
-    list_objects_filter_release(&data->filter_options);
-    string_list_clear(&data->allowed_filters, 0);
+	string_list_clear(&data->symref, 1);
+	strmap_clear(&data->wanted_refs, 1);
+	strvec_clear(&data->hidden_refs);
+	object_array_clear(&data->want_obj);
+	object_array_clear(&data->have_obj);
+	object_array_clear(&data->shallows);
+	oidset_clear(&data->deepen_not);
+	object_array_clear(&data->extra_edge_obj);
+	list_objects_filter_release(&data->filter_options);
+	string_list_clear(&data->allowed_filters, 0);
+	string_list_clear(&data->uri_protocols, 0);
 
     free((char *)data->pack_objects_hook);
 }
@@ -1230,21 +1232,22 @@ static int process_deepen_since(const char *line, timestamp_t *deepen_since, int
 
 static int process_deepen_not(const char *line, struct oidset *deepen_not, int *deepen_rev_list)
 {
-    const char *arg;
-    if (skip_prefix(line, "deepen-not ", &arg))
-    {
-        char            *ref = NULL;
-        struct object_id oid;
-        if (expand_ref(the_repository, arg, strlen(arg), &oid, &ref) != 1)
-        {
-            die("git upload-pack: ambiguous deepen-not: %s", line);
-        }
-        oidset_insert(deepen_not, &oid);
-        free(ref);
-        *deepen_rev_list = 1;
-        return 1;
-    }
-    return 0;
+	const char *arg;
+	if (skip_prefix(line, "deepen-not ", &arg)) {
+		int cnt;
+		char *ref = NULL;
+		struct object_id oid;
+		cnt = expand_ref(the_repository, arg, strlen(arg), &oid, &ref);
+		if (cnt > 1)
+			die("git upload-pack: ambiguous deepen-not: %s", line);
+		if (cnt < 1)
+			die("git upload-pack: deepen-not is not a ref: %s", line);
+		oidset_insert(deepen_not, &oid);
+		free(ref);
+		*deepen_rev_list = 1;
+		return 1;
+	}
+	return 0;
 }
 
 NORETURN __attribute__((format(printf, 2, 3))) static void send_err_and_die(struct upload_pack_data *data,

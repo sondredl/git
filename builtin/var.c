@@ -3,7 +3,9 @@
  *
  * Copyright (C) Eric Biederman, 2005
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 
 #include "attr.h"
@@ -184,29 +186,20 @@ static void list_vars(void)
     struct git_var *ptr;
     char           *val;
 
-    for (ptr = git_vars; ptr->read; ptr++)
-    {
-        if ((val = ptr->read(0)))
-        {
-            if (ptr->multivalued && *val)
-            {
-                struct string_list list = STRING_LIST_INIT_DUP;
-                int                i;
+	for (ptr = git_vars; ptr->read; ptr++)
+		if ((val = ptr->read(0))) {
+			if (ptr->multivalued && *val) {
+				struct string_list list = STRING_LIST_INIT_DUP;
 
-                string_list_split(&list, val, '\n', -1);
-                for (i = 0; i < list.nr; i++)
-                {
-                    printf("%s=%s\n", ptr->name, list.items[i].string);
-                }
-                string_list_clear(&list, 0);
-            }
-            else
-            {
-                printf("%s=%s\n", ptr->name, val);
-            }
-            free(val);
-        }
-    }
+				string_list_split(&list, val, '\n', -1);
+				for (size_t i = 0; i < list.nr; i++)
+					printf("%s=%s\n", ptr->name, list.items[i].string);
+				string_list_clear(&list, 0);
+			} else {
+				printf("%s=%s\n", ptr->name, val);
+			}
+			free(val);
+		}
 }
 
 static const struct git_var *get_git_var(const char *var)

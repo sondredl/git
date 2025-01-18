@@ -278,24 +278,19 @@ void parse_list_objects_filter(
     struct list_objects_filter_options *filter_options,
     const char                         *arg)
 {
-    struct strbuf errbuf = STRBUF_INIT;
-    int           parse_error;
+	struct strbuf errbuf = STRBUF_INIT;
 
     if (!filter_options->filter_spec.buf)
     {
         BUG("filter_options not properly initialized");
     }
 
-    if (!filter_options->choice)
-    {
-        strbuf_addstr(&filter_options->filter_spec, arg);
-
-        parse_error = gently_parse_list_objects_filter(
-            filter_options, arg, &errbuf);
-    }
-    else
-    {
-        struct list_objects_filter_options *sub;
+	if (!filter_options->choice) {
+		if (gently_parse_list_objects_filter(filter_options, arg, &errbuf))
+			die("%s", errbuf.buf);
+		strbuf_addstr(&filter_options->filter_spec, arg);
+	} else {
+		struct list_objects_filter_options *sub;
 
         /*
          * Make filter_options an LOFC_COMBINE spec so we can trivially
@@ -303,20 +298,17 @@ void parse_list_objects_filter(
          */
         transform_to_combine_type(filter_options);
 
-        strbuf_addch(&filter_options->filter_spec, '+');
-        filter_spec_append_urlencode(filter_options, arg);
-        ALLOC_GROW_BY(filter_options->sub, filter_options->sub_nr, 1,
-                      filter_options->sub_alloc);
-        sub = &filter_options->sub[filter_options->sub_nr - 1];
+		ALLOC_GROW_BY(filter_options->sub, filter_options->sub_nr, 1,
+			      filter_options->sub_alloc);
+		sub = &filter_options->sub[filter_options->sub_nr - 1];
 
-        list_objects_filter_init(sub);
-        parse_error = gently_parse_list_objects_filter(sub, arg,
-                                                       &errbuf);
-    }
-    if (parse_error)
-    {
-        die("%s", errbuf.buf);
-    }
+		list_objects_filter_init(sub);
+		if (gently_parse_list_objects_filter(sub, arg, &errbuf))
+			die("%s", errbuf.buf);
+
+		strbuf_addch(&filter_options->filter_spec, '+');
+		filter_spec_append_urlencode(filter_options, arg);
+	}
 }
 
 int opt_parse_list_objects_filter(const struct option *opt,
@@ -451,20 +443,16 @@ void list_objects_filter_copy(
     struct list_objects_filter_options       *dest,
     const struct list_objects_filter_options *src)
 {
-    int i;
-
-    /* Copy everything. We will overwrite the pointers shortly. */
-    memcpy(dest, src, sizeof(struct list_objects_filter_options));
+	/* Copy everything. We will overwrite the pointers shortly. */
+	memcpy(dest, src, sizeof(struct list_objects_filter_options));
 
     strbuf_init(&dest->filter_spec, 0);
     strbuf_addbuf(&dest->filter_spec, &src->filter_spec);
     dest->sparse_oid_name = xstrdup_or_null(src->sparse_oid_name);
 
-    ALLOC_ARRAY(dest->sub, dest->sub_alloc);
-    for (i = 0; i < src->sub_nr; i++)
-    {
-        list_objects_filter_copy(&dest->sub[i], &src->sub[i]);
-    }
+	ALLOC_ARRAY(dest->sub, dest->sub_alloc);
+	for (size_t i = 0; i < src->sub_nr; i++)
+		list_objects_filter_copy(&dest->sub[i], &src->sub[i]);
 }
 
 void list_objects_filter_init(struct list_objects_filter_options *filter_options)

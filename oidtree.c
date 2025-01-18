@@ -49,13 +49,13 @@ void oidtree_insert(struct oidtree *ot, const struct object_id *oid)
     oidcpy(&k, oid);
     memcpy(on->k, &k, sizeof(k));
 
-    /*
-     * n.b. Current callers won't get us duplicates, here.  If a
-     * future caller causes duplicates, there'll be a a small leak
-     * that won't be freed until oidtree_clear.  Currently it's not
-     * worth maintaining a free list
-     */
-    cb_insert(&ot->tree, on, sizeof(*oid));
+	/*
+	 * n.b. Current callers won't get us duplicates, here.  If a
+	 * future caller causes duplicates, there'll be a small leak
+	 * that won't be freed until oidtree_clear.  Currently it's not
+	 * worth maintaining a free list
+	 */
+	cb_insert(&ot->tree, on, sizeof(*oid));
 }
 
 int oidtree_contains(struct oidtree *ot, const struct object_id *oid)

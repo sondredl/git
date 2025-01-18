@@ -24,48 +24,45 @@ static void test_prio_queue(int *input, size_t input_size,
     struct prio_queue pq = {intcmp};
     int               j  = 0;
 
-    for (int i = 0; i < input_size; i++)
-    {
-        void *peek, *get;
-        switch (input[i])
-        {
-            case GET:
-                peek = prio_queue_peek(&pq);
-                get  = prio_queue_get(&pq);
-                if (!check(peek == get))
-                    return;
-                if (!check_uint(j, <, result_size))
-                    break;
-                if (!check_int(result[j], ==, show(get)))
-                    test_msg("      j: %d", j);
-                j++;
-                break;
-            case DUMP:
-                while ((peek = prio_queue_peek(&pq)))
-                {
-                    get = prio_queue_get(&pq);
-                    if (!check(peek == get))
-                        return;
-                    if (!check_uint(j, <, result_size))
-                        break;
-                    if (!check_int(result[j], ==, show(get)))
-                        test_msg("      j: %d", j);
-                    j++;
-                }
-                break;
-            case STACK:
-                pq.compare = NULL;
-                break;
-            case REVERSE:
-                prio_queue_reverse(&pq);
-                break;
-            default:
-                prio_queue_put(&pq, &input[i]);
-                break;
-        }
-    }
-    check_uint(j, ==, result_size);
-    clear_prio_queue(&pq);
+	for (size_t i = 0; i < input_size; i++) {
+		void *peek, *get;
+		switch(input[i]) {
+		case GET:
+			peek = prio_queue_peek(&pq);
+			get = prio_queue_get(&pq);
+			if (!check(peek == get))
+				return;
+			if (!check_uint(j, <, result_size))
+				break;
+			if (!check_int(result[j], ==, show(get)))
+				test_msg("      j: %d", j);
+			j++;
+			break;
+		case DUMP:
+			while ((peek = prio_queue_peek(&pq))) {
+				get = prio_queue_get(&pq);
+				if (!check(peek == get))
+					return;
+				if (!check_uint(j, <, result_size))
+					break;
+				if (!check_int(result[j], ==, show(get)))
+					test_msg("      j: %d", j);
+				j++;
+			}
+			break;
+		case STACK:
+			pq.compare = NULL;
+			break;
+		case REVERSE:
+			prio_queue_reverse(&pq);
+			break;
+		default:
+			prio_queue_put(&pq, &input[i]);
+			break;
+		}
+	}
+	check_uint(j, ==, result_size);
+	clear_prio_queue(&pq);
 }
 
 #define TEST_INPUT(input, result) \

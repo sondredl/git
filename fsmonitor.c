@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -275,17 +276,17 @@ static size_t handle_using_name_hash_icase(
                      "fsmonitor_refresh_callback MAP: '%s' '%s'",
                      name, ce->name);
 
-    /*
-     * NEEDSWORK: We used the name-hash to find the correct
-     * case-spelling of the pathname in the cache-entry[], so
-     * technically this is a tracked file or a sparse-directory.
-     * It should not have any entries in the untracked-cache, so
-     * we should not need to use the case-corrected spelling to
-     * invalidate the the untracked-cache.  So we may not need to
-     * do this.  For now, I'm going to be conservative and always
-     * do it; we can revisit this later.
-     */
-    untracked_cache_invalidate_trimmed_path(istate, ce->name, 0);
+	/*
+	 * NEEDSWORK: We used the name-hash to find the correct
+	 * case-spelling of the pathname in the cache-entry[], so
+	 * technically this is a tracked file or a sparse-directory.
+	 * It should not have any entries in the untracked-cache, so
+	 * we should not need to use the case-corrected spelling to
+	 * invalidate the untracked-cache.  So we may not need to
+	 * do this.  For now, I'm going to be conservative and always
+	 * do it; we can revisit this later.
+	 */
+	untracked_cache_invalidate_trimmed_path(istate, ce->name, 0);
 
     invalidate_ce_fsm(ce);
     return 1;

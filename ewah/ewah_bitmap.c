@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "git-compat-util.h"
 #include "ewok.h"
 #include "ewok_rlw.h"
@@ -275,16 +276,12 @@ void ewah_each_bit(struct ewah_bitmap *self, void (*callback)(size_t, void *), v
 
         ++pointer;
 
-        for (k = 0; k < rlw_get_literal_words(word); ++k)
-        {
-            int c;
-
-            /* todo: zero count optimization */
-            for (c = 0; c < BITS_IN_EWORD; ++c, ++pos)
-            {
-                if ((self->buffer[pointer] & ((eword_t)1 << c)) != 0)
-                    callback(pos, payload);
-            }
+		for (k = 0; k < rlw_get_literal_words(word); ++k) {
+			/* todo: zero count optimization */
+			for (size_t c = 0; c < BITS_IN_EWORD; ++c, ++pos) {
+				if ((self->buffer[pointer] & ((eword_t)1 << c)) != 0)
+					callback(pos, payload);
+			}
 
             ++pointer;
         }

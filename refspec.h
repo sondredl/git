@@ -25,8 +25,10 @@ struct refspec_item
     unsigned exact_sha1 : 1;
     unsigned negative : 1;
 
-    char *src;
-    char *dst;
+	char *src;
+	char *dst;
+
+	char *raw;
 };
 
 #define REFSPEC_FETCH 1
@@ -51,11 +53,7 @@ struct refspec
     int                  alloc;
     int                  nr;
 
-    char **raw;
-    int    raw_alloc;
-    int    raw_nr;
-
-    int fetch;
+	int fetch;
 };
 
 int                                        refspec_item_init(struct refspec_item *item, const char *refspec,

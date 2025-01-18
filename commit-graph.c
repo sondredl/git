@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -2238,39 +2239,35 @@ static int fill_oids_from_packs(struct write_commit_graph_context *ctx,
     int           dirlen;
     int           ret = 0;
 
-    strbuf_addf(&packname, "%s/pack/", ctx->odb->path);
-    dirlen = packname.len;
-    if (ctx->report_progress)
-    {
-        strbuf_addf(&progress_title,
-                    Q_("Finding commits for commit graph in %" PRIuMAX " pack",
-                       "Finding commits for commit graph in %" PRIuMAX " packs",
-                       pack_indexes->nr),
-                    (uintmax_t)pack_indexes->nr);
-        ctx->progress      = start_delayed_progress(progress_title.buf, 0);
-        ctx->progress_done = 0;
-    }
-    for (i = 0; i < pack_indexes->nr; i++)
-    {
-        struct packed_git *p;
-        strbuf_setlen(&packname, dirlen);
-        strbuf_addstr(&packname, pack_indexes->items[i].string);
-        p = add_packed_git(packname.buf, packname.len, 1);
-        if (!p)
-        {
-            ret = error(_("error adding pack %s"), packname.buf);
-            goto cleanup;
-        }
-        if (open_pack_index(p))
-        {
-            ret = error(_("error opening index for %s"), packname.buf);
-            goto cleanup;
-        }
-        for_each_object_in_pack(p, add_packed_commits, ctx,
-                                FOR_EACH_OBJECT_PACK_ORDER);
-        close_pack(p);
-        free(p);
-    }
+	strbuf_addf(&packname, "%s/pack/", ctx->odb->path);
+	dirlen = packname.len;
+	if (ctx->report_progress) {
+		strbuf_addf(&progress_title,
+			    Q_("Finding commits for commit graph in %"PRIuMAX" pack",
+			       "Finding commits for commit graph in %"PRIuMAX" packs",
+			       pack_indexes->nr),
+			    (uintmax_t)pack_indexes->nr);
+		ctx->progress = start_delayed_progress(progress_title.buf, 0);
+		ctx->progress_done = 0;
+	}
+	for (i = 0; i < pack_indexes->nr; i++) {
+		struct packed_git *p;
+		strbuf_setlen(&packname, dirlen);
+		strbuf_addstr(&packname, pack_indexes->items[i].string);
+		p = add_packed_git(ctx->r, packname.buf, packname.len, 1);
+		if (!p) {
+			ret = error(_("error adding pack %s"), packname.buf);
+			goto cleanup;
+		}
+		if (open_pack_index(p)) {
+			ret = error(_("error opening index for %s"), packname.buf);
+			goto cleanup;
+		}
+		for_each_object_in_pack(p, add_packed_commits, ctx,
+					FOR_EACH_OBJECT_PACK_ORDER);
+		close_pack(p);
+		free(p);
+	}
 
 cleanup:
     stop_progress(&ctx->progress);
@@ -2302,19 +2299,15 @@ static int fill_oids_from_commits(struct write_commit_graph_context *ctx,
 
 static void fill_oids_from_all_packs(struct write_commit_graph_context *ctx)
 {
-    if (ctx->report_progress)
-    {
-        ctx->progress = start_delayed_progress(
-            _("Finding commits for commit graph among packed objects"),
-            ctx->approx_nr_objects);
-    }
-    for_each_packed_object(add_packed_commits, ctx,
-                           FOR_EACH_OBJECT_PACK_ORDER);
-    if (ctx->progress_done < ctx->approx_nr_objects)
-    {
-        display_progress(ctx->progress, ctx->approx_nr_objects);
-    }
-    stop_progress(&ctx->progress);
+	if (ctx->report_progress)
+		ctx->progress = start_delayed_progress(
+			_("Finding commits for commit graph among packed objects"),
+			ctx->approx_nr_objects);
+	for_each_packed_object(ctx->r, add_packed_commits, ctx,
+			       FOR_EACH_OBJECT_PACK_ORDER);
+	if (ctx->progress_done < ctx->approx_nr_objects)
+		display_progress(ctx->progress, ctx->approx_nr_objects);
+	stop_progress(&ctx->progress);
 }
 
 static void copy_oids_to_commits(struct write_commit_graph_context *ctx)

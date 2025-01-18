@@ -4,6 +4,7 @@
 #include "abspath.h"
 #include "config.h"
 #include "environment.h"
+#include "gettext.h"
 #include "path.h"
 #include "pkt-line.h"
 #include "protocol.h"
@@ -151,11 +152,12 @@ static void NORETURN daemon_die(const char *err, va_list params)
 
 static const char *path_ok(const char *directory, struct hostinfo *hi)
 {
-    static char rpath[PATH_MAX];
-    static char interp_path[PATH_MAX];
-    size_t      rlen;
-    const char *path;
-    const char *dir;
+	static char rpath[PATH_MAX];
+	static char interp_path[PATH_MAX];
+	size_t rlen;
+	const char *path;
+	const char *dir;
+	unsigned enter_repo_flags;
 
     dir = directory;
 
@@ -275,16 +277,16 @@ static const char *path_ok(const char *directory, struct hostinfo *hi)
         dir = rpath;
     }
 
-    path = enter_repo(dir, strict_paths);
-    if (!path && base_path && base_path_relaxed)
-    {
-        /*
-         * if we fail and base_path_relaxed is enabled, try without
-         * prefixing the base path
-         */
-        dir  = directory;
-        path = enter_repo(dir, strict_paths);
-    }
+	enter_repo_flags = strict_paths ? ENTER_REPO_STRICT : 0;
+	path = enter_repo(dir, enter_repo_flags);
+	if (!path && base_path && base_path_relaxed) {
+		/*
+		 * if we fail and base_path_relaxed is enabled, try without
+		 * prefixing the base path
+		 */
+		dir = directory;
+		path = enter_repo(dir, enter_repo_flags);
+	}
 
     if (!path)
     {
@@ -566,30 +568,24 @@ static struct daemon_service daemon_service[] = {
 
 static void enable_service(const char *name, int ena)
 {
-    int i;
-    for (i = 0; i < ARRAY_SIZE(daemon_service); i++)
-    {
-        if (!strcmp(daemon_service[i].name, name))
-        {
-            daemon_service[i].enabled = ena;
-            return;
-        }
-    }
-    die("No such service %s", name);
+	for (size_t i = 0; i < ARRAY_SIZE(daemon_service); i++) {
+		if (!strcmp(daemon_service[i].name, name)) {
+			daemon_service[i].enabled = ena;
+			return;
+		}
+	}
+	die("No such service %s", name);
 }
 
 static void make_service_overridable(const char *name, int ena)
 {
-    int i;
-    for (i = 0; i < ARRAY_SIZE(daemon_service); i++)
-    {
-        if (!strcmp(daemon_service[i].name, name))
-        {
-            daemon_service[i].overridable = ena;
-            return;
-        }
-    }
-    die("No such service %s", name);
+	for (size_t i = 0; i < ARRAY_SIZE(daemon_service); i++) {
+		if (!strcmp(daemon_service[i].name, name)) {
+			daemon_service[i].overridable = ena;
+			return;
+		}
+	}
+	die("No such service %s", name);
 }
 
 static void parse_host_and_port(char *hostport, char **host,
@@ -844,14 +840,11 @@ static void set_keep_alive(int sockfd)
 
 static int execute(void)
 {
-    char           *line = packet_buffer;
-    int             pktlen;
-    int             len;
-    int             i;
-    char           *addr = getenv("REMOTE_ADDR");
-    char           *port = getenv("REMOTE_PORT");
-    struct hostinfo hi   = HOSTINFO_INIT;
-    struct strvec   env  = STRVEC_INIT;
+	char *line = packet_buffer;
+	int pktlen, len;
+	char *addr = getenv("REMOTE_ADDR"), *port = getenv("REMOTE_PORT");
+	struct hostinfo hi = HOSTINFO_INIT;
+	struct strvec env = STRVEC_INIT;
 
     if (addr)
     {
@@ -875,10 +868,9 @@ static int execute(void)
         parse_extra_args(&hi, &env, line + len + 1, pktlen - len - 1);
     }
 
-    for (i = 0; i < ARRAY_SIZE(daemon_service); i++)
-    {
-        struct daemon_service *s = &(daemon_service[i]);
-        const char            *arg;
+	for (size_t i = 0; i < ARRAY_SIZE(daemon_service); i++) {
+		struct daemon_service *s = &(daemon_service[i]);
+		const char *arg;
 
         if (skip_prefix(line, "git-", &arg) && skip_prefix(arg, s->name, &arg) && *arg++ == ' ')
         {
@@ -926,8 +918,7 @@ static int addrcmp(const struct sockaddr_storage *s1,
     return 0;
 }
 
-static int max_connections = 32;
-
+static unsigned int max_connections = 32;
 static unsigned int live_children;
 
 static struct child
@@ -1281,18 +1272,13 @@ static int setup_named_sock(char *listen_addr, int listen_port, struct socketlis
 
 static void socksetup(struct string_list *listen_addr, int listen_port, struct socketlist *socklist)
 {
-    if (!listen_addr->nr)
-    {
-        setup_named_sock(NULL, listen_port, socklist);
-    }
-    else
-    {
-        int i;
-        int socknum;
-        for (i = 0; i < listen_addr->nr; i++)
-        {
-            socknum = setup_named_sock(listen_addr->items[i].string,
-                                       listen_port, socklist);
+	if (!listen_addr->nr)
+		setup_named_sock(NULL, listen_port, socklist);
+	else {
+		int socknum;
+		for (size_t i = 0; i < listen_addr->nr; i++) {
+			socknum = setup_named_sock(listen_addr->items[i].string,
+						   listen_port, socklist);
 
             if (socknum == 0)
             {
@@ -1305,24 +1291,19 @@ static void socksetup(struct string_list *listen_addr, int listen_port, struct s
 
 static int service_loop(struct socketlist *socklist)
 {
-    struct pollfd *pfd;
-    int            i;
+	struct pollfd *pfd;
 
     CALLOC_ARRAY(pfd, socklist->nr);
 
-    for (i = 0; i < socklist->nr; i++)
-    {
-        pfd[i].fd     = socklist->list[i];
-        pfd[i].events = POLLIN;
-    }
+	for (size_t i = 0; i < socklist->nr; i++) {
+		pfd[i].fd = socklist->list[i];
+		pfd[i].events = POLLIN;
+	}
 
     signal(SIGCHLD, child_handler);
 
-    for (;;)
-    {
-        int i;
-
-        check_dead_children();
+	for (;;) {
+		check_dead_children();
 
         if (poll(pfd, socklist->nr, -1) < 0)
         {
@@ -1335,14 +1316,11 @@ static int service_loop(struct socketlist *socklist)
             continue;
         }
 
-        for (i = 0; i < socklist->nr; i++)
-        {
-            if (pfd[i].revents & POLLIN)
-            {
-                union
-                {
-                    struct sockaddr    sa;
-                    struct sockaddr_in sai;
+		for (size_t i = 0; i < socklist->nr; i++) {
+			if (pfd[i].revents & POLLIN) {
+				union {
+					struct sockaddr sa;
+					struct sockaddr_in sai;
 #ifndef NO_IPV6
                     struct sockaddr_in6 sai6;
 #endif
@@ -1466,185 +1444,149 @@ int cmd_main(int argc, const char **argv)
         const char *arg = argv[i];
         const char *v;
 
-        if (skip_prefix(arg, "--listen=", &v))
-        {
-            string_list_append_nodup(&listen_addr, xstrdup_tolower(v));
-            continue;
-        }
-        if (skip_prefix(arg, "--port=", &v))
-        {
-            char         *end;
-            unsigned long n;
-            n = strtoul(v, &end, 0);
-            if (*v && !*end)
-            {
-                listen_port = n;
-                continue;
-            }
-        }
-        if (!strcmp(arg, "--serve"))
-        {
-            serve_mode = 1;
-            continue;
-        }
-        if (!strcmp(arg, "--inetd"))
-        {
-            inetd_mode = 1;
-            continue;
-        }
-        if (!strcmp(arg, "--verbose"))
-        {
-            verbose = 1;
-            continue;
-        }
-        if (!strcmp(arg, "--syslog"))
-        {
-            log_destination = LOG_DESTINATION_SYSLOG;
-            continue;
-        }
-        if (skip_prefix(arg, "--log-destination=", &v))
-        {
-            if (!strcmp(v, "syslog"))
-            {
-                log_destination = LOG_DESTINATION_SYSLOG;
-                continue;
-            }
-            if (!strcmp(v, "stderr"))
-            {
-                log_destination = LOG_DESTINATION_STDERR;
-                continue;
-            }
-            if (!strcmp(v, "none"))
-            {
-                log_destination = LOG_DESTINATION_NONE;
-                continue;
-            }
-            die("unknown log destination '%s'", v);
-        }
-        if (!strcmp(arg, "--export-all"))
-        {
-            export_all_trees = 1;
-            continue;
-        }
-        if (skip_prefix(arg, "--access-hook=", &v))
-        {
-            access_hook = v;
-            continue;
-        }
-        if (skip_prefix(arg, "--timeout=", &v))
-        {
-            timeout = atoi(v);
-            continue;
-        }
-        if (skip_prefix(arg, "--init-timeout=", &v))
-        {
-            init_timeout = atoi(v);
-            continue;
-        }
-        if (skip_prefix(arg, "--max-connections=", &v))
-        {
-            max_connections = atoi(v);
-            if (max_connections < 0)
-            {
-                max_connections = 0; /* unlimited */
-            }
-            continue;
-        }
-        if (!strcmp(arg, "--strict-paths"))
-        {
-            strict_paths = 1;
-            continue;
-        }
-        if (skip_prefix(arg, "--base-path=", &v))
-        {
-            base_path = v;
-            continue;
-        }
-        if (!strcmp(arg, "--base-path-relaxed"))
-        {
-            base_path_relaxed = 1;
-            continue;
-        }
-        if (skip_prefix(arg, "--interpolated-path=", &v))
-        {
-            interpolated_path = v;
-            continue;
-        }
-        if (!strcmp(arg, "--reuseaddr"))
-        {
-            reuseaddr = 1;
-            continue;
-        }
-        if (!strcmp(arg, "--user-path"))
-        {
-            user_path = "";
-            continue;
-        }
-        if (skip_prefix(arg, "--user-path=", &v))
-        {
-            user_path = v;
-            continue;
-        }
-        if (skip_prefix(arg, "--pid-file=", &v))
-        {
-            pid_file = v;
-            continue;
-        }
-        if (!strcmp(arg, "--detach"))
-        {
-            detach = 1;
-            continue;
-        }
-        if (skip_prefix(arg, "--user=", &v))
-        {
-            user_name = v;
-            continue;
-        }
-        if (skip_prefix(arg, "--group=", &v))
-        {
-            group_name = v;
-            continue;
-        }
-        if (skip_prefix(arg, "--enable=", &v))
-        {
-            enable_service(v, 1);
-            continue;
-        }
-        if (skip_prefix(arg, "--disable=", &v))
-        {
-            enable_service(v, 0);
-            continue;
-        }
-        if (skip_prefix(arg, "--allow-override=", &v))
-        {
-            make_service_overridable(v, 1);
-            continue;
-        }
-        if (skip_prefix(arg, "--forbid-override=", &v))
-        {
-            make_service_overridable(v, 0);
-            continue;
-        }
-        if (!strcmp(arg, "--informative-errors"))
-        {
-            informative_errors = 1;
-            continue;
-        }
-        if (!strcmp(arg, "--no-informative-errors"))
-        {
-            informative_errors = 0;
-            continue;
-        }
-        if (!strcmp(arg, "--"))
-        {
-            ok_paths = &argv[i + 1];
-            break;
-        }
-        if (arg[0] != '-')
-        {
-            ok_paths = &argv[i];
-            break;
-        }
+		if (skip_prefix(arg, "--listen=", &v)) {
+			string_list_append_nodup(&listen_addr, xstrdup_tolower(v));
+			continue;
+		}
+		if (skip_prefix(arg, "--port=", &v)) {
+			char *end;
+			unsigned long n;
+			n = strtoul(v, &end, 0);
+			if (*v && !*end) {
+				listen_port = n;
+				continue;
+			}
+		}
+		if (!strcmp(arg, "--serve")) {
+			serve_mode = 1;
+			continue;
+		}
+		if (!strcmp(arg, "--inetd")) {
+			inetd_mode = 1;
+			continue;
+		}
+		if (!strcmp(arg, "--verbose")) {
+			verbose = 1;
+			continue;
+		}
+		if (!strcmp(arg, "--syslog")) {
+			log_destination = LOG_DESTINATION_SYSLOG;
+			continue;
+		}
+		if (skip_prefix(arg, "--log-destination=", &v)) {
+			if (!strcmp(v, "syslog")) {
+				log_destination = LOG_DESTINATION_SYSLOG;
+				continue;
+			} else if (!strcmp(v, "stderr")) {
+				log_destination = LOG_DESTINATION_STDERR;
+				continue;
+			} else if (!strcmp(v, "none")) {
+				log_destination = LOG_DESTINATION_NONE;
+				continue;
+			} else
+				die("unknown log destination '%s'", v);
+		}
+		if (!strcmp(arg, "--export-all")) {
+			export_all_trees = 1;
+			continue;
+		}
+		if (skip_prefix(arg, "--access-hook=", &v)) {
+			access_hook = v;
+			continue;
+		}
+		if (skip_prefix(arg, "--timeout=", &v)) {
+			if (strtoul_ui(v, 10, &timeout))
+				die(_("invalid timeout '%s', expecting a non-negative integer"), v);
+			continue;
+		}
+		if (skip_prefix(arg, "--init-timeout=", &v)) {
+			if (strtoul_ui(v, 10, &init_timeout))
+				die(_("invalid init-timeout '%s', expecting a non-negative integer"), v);
+			continue;
+		}
+		if (skip_prefix(arg, "--max-connections=", &v)) {
+			int parsed_value;
+			if (strtol_i(v, 10, &parsed_value))
+				die(_("invalid max-connections '%s', expecting an integer"), v);
+			/* A negative value indicates unlimited children. */
+			max_connections = parsed_value < 0 ? 0 : parsed_value;
+			continue;
+		}
+		if (!strcmp(arg, "--strict-paths")) {
+			strict_paths = 1;
+			continue;
+		}
+		if (skip_prefix(arg, "--base-path=", &v)) {
+			base_path = v;
+			continue;
+		}
+		if (!strcmp(arg, "--base-path-relaxed")) {
+			base_path_relaxed = 1;
+			continue;
+		}
+		if (skip_prefix(arg, "--interpolated-path=", &v)) {
+			interpolated_path = v;
+			continue;
+		}
+		if (!strcmp(arg, "--reuseaddr")) {
+			reuseaddr = 1;
+			continue;
+		}
+		if (!strcmp(arg, "--user-path")) {
+			user_path = "";
+			continue;
+		}
+		if (skip_prefix(arg, "--user-path=", &v)) {
+			user_path = v;
+			continue;
+		}
+		if (skip_prefix(arg, "--pid-file=", &v)) {
+			pid_file = v;
+			continue;
+		}
+		if (!strcmp(arg, "--detach")) {
+			detach = 1;
+			continue;
+		}
+		if (skip_prefix(arg, "--user=", &v)) {
+			user_name = v;
+			continue;
+		}
+		if (skip_prefix(arg, "--group=", &v)) {
+			group_name = v;
+			continue;
+		}
+		if (skip_prefix(arg, "--enable=", &v)) {
+			enable_service(v, 1);
+			continue;
+		}
+		if (skip_prefix(arg, "--disable=", &v)) {
+			enable_service(v, 0);
+			continue;
+		}
+		if (skip_prefix(arg, "--allow-override=", &v)) {
+			make_service_overridable(v, 1);
+			continue;
+		}
+		if (skip_prefix(arg, "--forbid-override=", &v)) {
+			make_service_overridable(v, 0);
+			continue;
+		}
+		if (!strcmp(arg, "--informative-errors")) {
+			informative_errors = 1;
+			continue;
+		}
+		if (!strcmp(arg, "--no-informative-errors")) {
+			informative_errors = 0;
+			continue;
+		}
+		if (!strcmp(arg, "--")) {
+			ok_paths = &argv[i+1];
+			break;
+		} else if (arg[0] != '-') {
+			ok_paths = &argv[i];
+			break;
+		}
 
         usage(daemon_usage);
     }

@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "../git-compat-util.h"
 #include "../config.h"
@@ -13,6 +14,7 @@
 #include "../lockfile.h"
 #include "../chdir-notify.h"
 #include "../statinfo.h"
+#include "../worktree.h"
 #include "../wrapper.h"
 #include "../write-or-die.h"
 #include "../trace2.h"
@@ -1977,15 +1979,8 @@ cleanup:
     return ret;
 }
 
-static int packed_initial_transaction_commit(struct ref_store *ref_store UNUSED,
-                                             struct ref_transaction     *transaction,
-                                             struct strbuf              *err)
-{
-    return ref_transaction_commit(transaction, err);
-}
-
-static int packed_pack_refs(struct ref_store *ref_store      UNUSED,
-                            struct pack_refs_opts *pack_opts UNUSED)
+static int packed_pack_refs(struct ref_store *ref_store UNUSED,
+			    struct pack_refs_opts *pack_opts UNUSED)
 {
     /*
      * Packed refs are already packed. It might be that loose refs
@@ -2001,9 +1996,14 @@ static struct ref_iterator *packed_reflog_iterator_begin(struct ref_store *ref_s
 }
 
 static int packed_fsck(struct ref_store *ref_store UNUSED,
-                       struct fsck_options *o      UNUSED)
+		       struct fsck_options *o UNUSED,
+		       struct worktree *wt)
 {
-    return 0;
+
+	if (!is_main_worktree(wt))
+		return 0;
+
+	return 0;
 }
 
 struct ref_storage_be refs_be_packed = {
@@ -2013,10 +2013,9 @@ struct ref_storage_be refs_be_packed = {
     .create_on_disk = packed_ref_store_create_on_disk,
     .remove_on_disk = packed_ref_store_remove_on_disk,
 
-    .transaction_prepare        = packed_transaction_prepare,
-    .transaction_finish         = packed_transaction_finish,
-    .transaction_abort          = packed_transaction_abort,
-    .initial_transaction_commit = packed_initial_transaction_commit,
+	.transaction_prepare = packed_transaction_prepare,
+	.transaction_finish = packed_transaction_finish,
+	.transaction_abort = packed_transaction_abort,
 
     .pack_refs  = packed_pack_refs,
     .rename_ref = NULL,

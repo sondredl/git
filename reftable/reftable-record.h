@@ -9,7 +9,7 @@ https://developers.google.com/open-source/licenses/bsd
 #ifndef REFTABLE_RECORD_H
 #define REFTABLE_RECORD_H
 
-#include "hash.h"
+#include "reftable-basics.h"
 #include <stdint.h>
 
 /*
@@ -40,17 +40,15 @@ struct reftable_ref_record
         /* a symbolic reference */
         REFTABLE_REF_SYMREF = 0x3,
 #define REFTABLE_NR_REF_VALUETYPES 4
-    } value_type;
-    union
-    {
-        unsigned char val1[GIT_MAX_RAWSZ];
-        struct
-        {
-            unsigned char value[GIT_MAX_RAWSZ];        /* first hash  */
-            unsigned char target_value[GIT_MAX_RAWSZ]; /* second hash */
-        } val2;
-        char *symref; /* referent, malloced 0-terminated string */
-    } value;
+	} value_type;
+	union {
+		unsigned char val1[REFTABLE_HASH_SIZE_MAX];
+		struct {
+			unsigned char value[REFTABLE_HASH_SIZE_MAX]; /* first hash  */
+			unsigned char target_value[REFTABLE_HASH_SIZE_MAX]; /* second hash */
+		} val2;
+		char *symref; /* referent, malloced 0-terminated string */
+	} value;
 };
 
 /* Returns the first hash, or NULL if `rec` is not of type
@@ -89,20 +87,18 @@ struct reftable_log_record
 #define REFTABLE_NR_LOG_VALUETYPES 2
     } value_type;
 
-    union
-    {
-        struct
-        {
-            unsigned char new_hash[GIT_MAX_RAWSZ];
-            unsigned char old_hash[GIT_MAX_RAWSZ];
-            char         *name;
-            char         *email;
-            uint64_t      time;
-            int16_t       tz_offset;
-            char         *message;
-            size_t        message_cap;
-        } update;
-    } value;
+	union {
+		struct {
+			unsigned char new_hash[REFTABLE_HASH_SIZE_MAX];
+			unsigned char old_hash[REFTABLE_HASH_SIZE_MAX];
+			char *name;
+			char *email;
+			uint64_t time;
+			int16_t tz_offset;
+			char *message;
+			size_t message_cap;
+		} update;
+	} value;
 };
 
 /* returns whether 'ref' represents the deletion of a log record. */

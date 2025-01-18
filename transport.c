@@ -19,6 +19,7 @@
 #include "branch.h"
 #include "url.h"
 #include "submodule.h"
+#include "strbuf.h"
 #include "string-list.h"
 #include "oid-array.h"
 #include "sigchain.h"
@@ -43,13 +44,12 @@ enum color_transport
 
 static int transport_color_config(void)
 {
-    const char *keys[] = {
-        "color.transport.reset",
-        "color.transport.rejected"};
-    const char *key = "color.transport";
-    char       *value;
-    int         i;
-    static int  initialized;
+	const char *keys[] = {
+		"color.transport.reset",
+		"color.transport.rejected"
+	}, *key = "color.transport";
+	char *value;
+	static int initialized;
 
     if (initialized)
     {
@@ -67,20 +67,13 @@ static int transport_color_config(void)
         return 0;
     }
 
-    for (i = 0; i < ARRAY_SIZE(keys); i++)
-    {
-        if (!git_config_get_string(keys[i], &value))
-        {
-            if (!value)
-            {
-                return config_error_nonbool(keys[i]);
-            }
-            if (color_parse(value, transport_colors[i]) < 0)
-            {
-                return -1;
-            }
-        }
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(keys); i++)
+		if (!git_config_get_string(keys[i], &value)) {
+			if (!value)
+				return config_error_nonbool(keys[i]);
+			if (color_parse(value, transport_colors[i]) < 0)
+				return -1;
+		}
 
     return 0;
 }
@@ -187,9 +180,8 @@ static struct ref *get_refs_from_bundle(struct transport                        
                                         int                                                 for_push,
                                         struct transport_ls_refs_options *transport_options UNUSED)
 {
-    struct bundle_transport_data *data   = transport->data;
-    struct ref                   *result = NULL;
-    int                           i;
+	struct bundle_transport_data *data = transport->data;
+	struct ref *result = NULL;
 
     if (for_push)
     {
@@ -198,41 +190,61 @@ static struct ref *get_refs_from_bundle(struct transport                        
 
     get_refs_from_bundle_inner(transport);
 
-    for (i = 0; i < data->header.references.nr; i++)
-    {
-        struct string_list_item *e    = data->header.references.items + i;
-        const char              *name = e->string;
-        struct ref              *ref  = alloc_ref(name);
-        struct object_id        *oid  = e->util;
-        oidcpy(&ref->old_oid, oid);
-        ref->next = result;
-        result    = ref;
-    }
-    return result;
+	for (size_t i = 0; i < data->header.references.nr; i++) {
+		struct string_list_item *e = data->header.references.items + i;
+		const char *name = e->string;
+		struct ref *ref = alloc_ref(name);
+		struct object_id *oid = e->util;
+		oidcpy(&ref->old_oid, oid);
+		ref->next = result;
+		result = ref;
+	}
+	return result;
 }
 
-static int fetch_refs_from_bundle(struct transport     *transport,
-                                  int nr_heads          UNUSED,
-                                  struct ref **to_fetch UNUSED)
+static int fetch_fsck_config_cb(const char *var, const char *value,
+				const struct config_context *ctx UNUSED, void *cb)
 {
-    struct bundle_transport_data *data                  = transport->data;
-    struct strvec                 extra_index_pack_args = STRVEC_INIT;
-    int                           ret;
+	struct strbuf *msg_types = cb;
+	int ret;
+
+	ret = fetch_pack_fsck_config(var, value, msg_types);
+	if (ret > 0)
+		return 0;
+
+	return ret;
+}
+
+static int fetch_refs_from_bundle(struct transport *transport,
+				  int nr_heads UNUSED,
+				  struct ref **to_fetch UNUSED)
+{
+	struct unbundle_opts opts = {
+		.flags = fetch_pack_fsck_objects() ? VERIFY_BUNDLE_FSCK : 0,
+	};
+	struct bundle_transport_data *data = transport->data;
+	struct strvec extra_index_pack_args = STRVEC_INIT;
+	struct strbuf msg_types = STRBUF_INIT;
+	int ret;
 
     if (transport->progress)
     {
         strvec_push(&extra_index_pack_args, "-v");
     }
 
-    if (!data->get_refs_from_bundle_called)
-        get_refs_from_bundle_inner(transport);
-    ret                  = unbundle(the_repository, &data->header, data->fd,
-                                    &extra_index_pack_args,
-                   fetch_pack_fsck_objects() ? VERIFY_BUNDLE_FSCK : 0);
-    transport->hash_algo = data->header.hash_algo;
+	if (!data->get_refs_from_bundle_called)
+		get_refs_from_bundle_inner(transport);
 
-    strvec_clear(&extra_index_pack_args);
-    return ret;
+	git_config(fetch_fsck_config_cb, &msg_types);
+	opts.fsck_msg_types = msg_types.buf;
+
+	ret = unbundle(the_repository, &data->header, data->fd,
+		       &extra_index_pack_args, &opts);
+	transport->hash_algo = data->header.hash_algo;
+
+	strvec_clear(&extra_index_pack_args);
+	strbuf_release(&msg_types);
+	return ret;
 }
 
 static int close_bundle(struct transport *transport)
@@ -1570,19 +1582,15 @@ void transport_set_verbosity(struct transport *transport, int verbosity,
 
 static void die_with_unpushed_submodules(struct string_list *needs_pushing)
 {
-    int i;
-
-    fprintf(stderr, _("The following submodule paths contain changes that can\n"
-                      "not be found on any remote:\n"));
-    for (i = 0; i < needs_pushing->nr; i++)
-    {
-        fprintf(stderr, "  %s\n", needs_pushing->items[i].string);
-    }
-    fprintf(stderr, _("\nPlease try\n\n"
-                      "	git push --recurse-submodules=on-demand\n\n"
-                      "or cd to the path and use\n\n"
-                      "	git push\n\n"
-                      "to push them to a remote.\n\n"));
+	fprintf(stderr, _("The following submodule paths contain changes that can\n"
+			"not be found on any remote:\n"));
+	for (size_t i = 0; i < needs_pushing->nr; i++)
+		fprintf(stderr, "  %s\n", needs_pushing->items[i].string);
+	fprintf(stderr, _("\nPlease try\n\n"
+			  "	git push --recurse-submodules=on-demand\n\n"
+			  "or cd to the path and use\n\n"
+			  "	git push\n\n"
+			  "to push them to a remote.\n\n"));
 
     string_list_clear(needs_pushing, 0);
 
@@ -1977,24 +1985,15 @@ int transport_get_remote_bundle_uri(struct transport *transport)
 
 void transport_unlock_pack(struct transport *transport, unsigned int flags)
 {
-    int in_signal_handler = !!(flags & TRANSPORT_UNLOCK_PACK_IN_SIGNAL_HANDLER);
-    int i;
+	int in_signal_handler = !!(flags & TRANSPORT_UNLOCK_PACK_IN_SIGNAL_HANDLER);
 
-    for (i = 0; i < transport->pack_lockfiles.nr; i++)
-    {
-        if (in_signal_handler)
-        {
-            unlink(transport->pack_lockfiles.items[i].string);
-        }
-        else
-        {
-            unlink_or_warn(transport->pack_lockfiles.items[i].string);
-        }
-    }
-    if (!in_signal_handler)
-    {
-        string_list_clear(&transport->pack_lockfiles, 0);
-    }
+	for (size_t i = 0; i < transport->pack_lockfiles.nr; i++)
+		if (in_signal_handler)
+			unlink(transport->pack_lockfiles.items[i].string);
+		else
+			unlink_or_warn(transport->pack_lockfiles.items[i].string);
+	if (!in_signal_handler)
+		string_list_clear(&transport->pack_lockfiles, 0);
 }
 
 int transport_connect(struct transport *transport, const char *name,

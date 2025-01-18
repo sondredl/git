@@ -72,7 +72,7 @@ static int reader_get_block(struct reftable_reader *r,
     return block_source_read_block(&r->source, dest, off, sz);
 }
 
-uint32_t reftable_reader_hash_id(struct reftable_reader *r)
+enum reftable_hash reftable_reader_hash_id(struct reftable_reader *r)
 {
     return r->hash_id;
 }
@@ -113,25 +113,23 @@ static int parse_footer(struct reftable_reader *r, uint8_t *footer,
     r->max_update_index = get_be64(f);
     f += 8;
 
-    if (r->version == 1)
-    {
-        r->hash_id = GIT_SHA1_FORMAT_ID;
-    }
-    else
-    {
-        r->hash_id = get_be32(f);
-        switch (r->hash_id)
-        {
-            case GIT_SHA1_FORMAT_ID:
-                break;
-            case GIT_SHA256_FORMAT_ID:
-                break;
-            default:
-                err = REFTABLE_FORMAT_ERROR;
-                goto done;
-        }
-        f += 4;
-    }
+	if (r->version == 1) {
+		r->hash_id = REFTABLE_HASH_SHA1;
+	} else {
+		switch (get_be32(f)) {
+		case REFTABLE_FORMAT_ID_SHA1:
+			r->hash_id = REFTABLE_HASH_SHA1;
+			break;
+		case REFTABLE_FORMAT_ID_SHA256:
+			r->hash_id = REFTABLE_HASH_SHA256;
+			break;
+		default:
+			err = REFTABLE_FORMAT_ERROR;
+			goto done;
+		}
+
+		f += 4;
+	}
 
     r->ref_offsets.index_offset = get_be64(f);
     f += 8;

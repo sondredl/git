@@ -42,10 +42,8 @@ static int packet_trace_pack(const char *buf, unsigned int len, int sideband)
 
 static void packet_trace(const char *buf, unsigned int len, int write)
 {
-    int           i;
-    struct strbuf out;
-    static int    in_pack;
-    static int    sideband;
+	struct strbuf out;
+	static int in_pack, sideband;
 
     if (!trace_want(&trace_packet) && !trace_want(&trace_pack))
     {
@@ -84,23 +82,16 @@ static void packet_trace(const char *buf, unsigned int len, int write)
     strbuf_addf(&out, "packet: %12s%c ",
                 get_trace_prefix(), write ? '>' : '<');
 
-    /* XXX we should really handle printable utf8 */
-    for (i = 0; i < len; i++)
-    {
-        /* suppress newlines */
-        if (buf[i] == '\n')
-        {
-            continue;
-        }
-        if (buf[i] >= 0x20 && buf[i] <= 0x7e)
-        {
-            strbuf_addch(&out, buf[i]);
-        }
-        else
-        {
-            strbuf_addf(&out, "\\%o", buf[i]);
-        }
-    }
+	/* XXX we should really handle printable utf8 */
+	for (unsigned int i = 0; i < len; i++) {
+		/* suppress newlines */
+		if (buf[i] == '\n')
+			continue;
+		if (buf[i] >= 0x20 && buf[i] <= 0x7e)
+			strbuf_addch(&out, buf[i]);
+		else
+			strbuf_addf(&out, "\\%o", buf[i]);
+	}
 
     strbuf_addch(&out, '\n');
     trace_strbuf(&trace_packet, &out);
@@ -390,43 +381,36 @@ int write_packetized_from_buf_no_flush_count(const char *src_in, size_t len,
 }
 
 static int get_packet_data(int fd, char **src_buf, size_t *src_size,
-                           void *dst, unsigned size, int options)
+			   void *dst, size_t size, int options)
 {
-    ssize_t ret;
+	size_t bytes_read;
 
     if (fd >= 0 && src_buf && *src_buf)
     {
         BUG("multiple sources given to packet_read");
     }
 
-    /* Read up to "size" bytes from our source, whatever it is. */
-    if (src_buf && *src_buf)
-    {
-        ret = size < *src_size ? size : *src_size;
-        memcpy(dst, *src_buf, ret);
-        *src_buf += ret;
-        *src_size -= ret;
-    }
-    else
-    {
-        ret = read_in_full(fd, dst, size);
-        if (ret < 0)
-        {
-            if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
-            {
-                return error_errno(_("read error"));
-            }
-            die_errno(_("read error"));
-        }
-    }
+	/* Read up to "size" bytes from our source, whatever it is. */
+	if (src_buf && *src_buf) {
+		bytes_read = size < *src_size ? size : *src_size;
+		memcpy(dst, *src_buf, bytes_read);
+		*src_buf += bytes_read;
+		*src_size -= bytes_read;
+	} else {
+		ssize_t ret = read_in_full(fd, dst, size);
+		if (ret < 0) {
+			if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
+				return error_errno(_("read error"));
+			die_errno(_("read error"));
+		}
 
-    /* And complain if we didn't get enough bytes to satisfy the read. */
-    if (ret != size)
-    {
-        if (options & PACKET_READ_GENTLE_ON_EOF)
-        {
-            return -1;
-        }
+		bytes_read = (size_t) ret;
+	}
+
+	/* And complain if we didn't get enough bytes to satisfy the read. */
+	if (bytes_read != size) {
+		if (options & PACKET_READ_GENTLE_ON_EOF)
+			return -1;
 
         if (options & PACKET_READ_GENTLE_ON_READ_ERROR)
         {
@@ -435,7 +419,7 @@ static int get_packet_data(int fd, char **src_buf, size_t *src_size,
         die(_("the remote end hung up unexpectedly"));
     }
 
-    return ret;
+	return 0;
 }
 
 int packet_length(const char lenbuf_hex[4], size_t size)

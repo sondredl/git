@@ -427,13 +427,12 @@ int read_branch_desc(struct strbuf *buf, const char *branch_name)
  */
 int validate_branchname(const char *name, struct strbuf *ref)
 {
-    if (strbuf_check_branch_ref(ref, name))
-    {
-        int code = die_message(_("'%s' is not a valid branch name"), name);
-        advise_if_enabled(ADVICE_REF_SYNTAX,
-                          _("See `man git check-ref-format`"));
-        exit(code);
-    }
+	if (check_branch_ref(ref, name)) {
+		int code = die_message(_("'%s' is not a valid branch name"), name);
+		advise_if_enabled(ADVICE_REF_SYNTAX,
+				  _("See `man git check-ref-format`"));
+		exit(code);
+	}
 
     return refs_ref_exists(get_main_ref_store(the_repository), ref->buf);
 }
@@ -712,17 +711,21 @@ void create_branch(struct repository *r,
     if (reflog)
         flags |= REF_FORCE_CREATE_REFLOG;
 
-    if (forcing)
-        msg = xstrfmt("branch: Reset to %s", start_name);
-    else
-        msg = xstrfmt("branch: Created from %s", start_name);
-    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                              &err);
-    if (!transaction || ref_transaction_update(transaction, ref.buf, &oid, forcing ? NULL : null_oid(), NULL, NULL, flags, msg, &err) || ref_transaction_commit(transaction, &err))
-        die("%s", err.buf);
-    ref_transaction_free(transaction);
-    strbuf_release(&err);
-    free(msg);
+	if (forcing)
+		msg = xstrfmt("branch: Reset to %s", start_name);
+	else
+		msg = xstrfmt("branch: Created from %s", start_name);
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  0, &err);
+	if (!transaction ||
+		ref_transaction_update(transaction, ref.buf,
+					&oid, forcing ? NULL : null_oid(),
+					NULL, NULL, flags, msg, &err) ||
+		ref_transaction_commit(transaction, &err))
+		die("%s", err.buf);
+	ref_transaction_free(transaction);
+	strbuf_release(&err);
+	free(msg);
 
     if (real_ref && track)
     {

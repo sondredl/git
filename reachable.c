@@ -269,11 +269,10 @@ static void add_recent_object(const struct object_id *oid,
 static int want_recent_object(struct recent_data     *data,
                               const struct object_id *oid)
 {
-    if (data->ignore_in_core_kept_packs && has_object_kept_pack(oid, IN_CORE_KEEP_PACKS))
-    {
-        return 0;
-    }
-    return 1;
+	if (data->ignore_in_core_kept_packs &&
+	    has_object_kept_pack(data->revs->repo, oid, IN_CORE_KEEP_PACKS))
+		return 0;
+	return 1;
 }
 
 static int add_recent_loose(const struct object_id *oid,
@@ -374,7 +373,7 @@ int add_unseen_recent_objects_to_traversal(struct rev_info         *revs,
         flags |= FOR_EACH_OBJECT_SKIP_IN_CORE_KEPT_PACKS;
     }
 
-    r = for_each_packed_object(add_recent_packed, &data, flags);
+	r = for_each_packed_object(revs->repo, add_recent_packed, &data, flags);
 
 done:
     oidset_clear(&data.extra_recent_oids);

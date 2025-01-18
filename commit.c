@@ -307,40 +307,31 @@ bad_graft_data:
 
 static int read_graft_file(struct repository *r, const char *graft_file)
 {
-    FILE         *fp  = fopen_or_warn(graft_file, "r");
-    struct strbuf buf = STRBUF_INIT;
-    if (!fp)
-    {
-        return -1;
-    }
-    if (!no_graft_file_deprecated_advice && advice_enabled(ADVICE_GRAFT_FILE_DEPRECATED))
-    {
-        advise(_(
-            "Support for <GIT_DIR>/info/grafts is deprecated\n"
-            "and will be removed in a future Git version.\n"
-            "\n"
-            "Please use \"git replace --convert-graft-file\"\n"
-            "to convert the grafts into replace refs.\n"
-            "\n"
-            "Turn this message off by running\n"
-            "\"git config advice.graftFileDeprecated false\""));
-    }
-    while (!strbuf_getwholeline(&buf, fp, '\n'))
-    {
-        /* The format is just "Commit Parent1 Parent2 ...\n" */
-        struct commit_graft *graft = read_graft_line(&buf);
-        if (!graft)
-        {
-            continue;
-        }
-        if (register_commit_graft(r, graft, 1))
-        {
-            error("duplicate graft data: %s", buf.buf);
-        }
-    }
-    fclose(fp);
-    strbuf_release(&buf);
-    return 0;
+	FILE *fp = fopen_or_warn(graft_file, "r");
+	struct strbuf buf = STRBUF_INIT;
+	if (!fp)
+		return -1;
+	if (!no_graft_file_deprecated_advice &&
+	    advice_enabled(ADVICE_GRAFT_FILE_DEPRECATED))
+		advise(_("Support for <GIT_DIR>/info/grafts is deprecated\n"
+			 "and will be removed in a future Git version.\n"
+			 "\n"
+			 "Please use \"git replace --convert-graft-file\"\n"
+			 "to convert the grafts into replace refs.\n"
+			 "\n"
+			 "Turn this message off by running\n"
+			 "\"git config set advice.graftFileDeprecated false\""));
+	while (!strbuf_getwholeline(&buf, fp, '\n')) {
+		/* The format is just "Commit Parent1 Parent2 ...\n" */
+		struct commit_graft *graft = read_graft_line(&buf);
+		if (!graft)
+			continue;
+		if (register_commit_graft(r, graft, 1))
+			error("duplicate graft data: %s", buf.buf);
+	}
+	fclose(fp);
+	strbuf_release(&buf);
+	return 0;
 }
 
 void prepare_commit_graft(struct repository *r)
@@ -931,19 +922,16 @@ static void clear_commit_marks_1(struct commit_list **plist,
     }
 }
 
-void clear_commit_marks_many(int nr, struct commit **commit, unsigned int mark)
+void clear_commit_marks_many(size_t nr, struct commit **commit, unsigned int mark)
 {
     struct commit_list *list = NULL;
 
-    while (nr--)
-    {
-        clear_commit_marks_1(&list, *commit, mark);
-        commit++;
-    }
-    while (list)
-    {
-        clear_commit_marks_1(&list, pop_commit(&list), mark);
-    }
+	for (size_t i = 0; i < nr; i++) {
+		clear_commit_marks_1(&list, *commit, mark);
+		commit++;
+	}
+	while (list)
+		clear_commit_marks_1(&list, pop_commit(&list), mark);
 }
 
 void clear_commit_marks(struct commit *commit, unsigned int mark)
@@ -2122,17 +2110,14 @@ int commit_tree_extended(const char *msg, size_t msg_len,
         }
     }
 
-    if (sign_commit)
-    {
-        struct sig_pairs
-        {
-            struct strbuf              *sig;
-            const struct git_hash_algo *algo;
-        } bufs[2] = {
-            {&compat_sig, r->compat_hash_algo},
-            {&sig, r->hash_algo},
-        };
-        int i;
+	if (sign_commit) {
+		struct sig_pairs {
+			struct strbuf *sig;
+			const struct git_hash_algo *algo;
+		} bufs [2] = {
+			{ &compat_sig, r->compat_hash_algo },
+			{ &sig, r->hash_algo },
+		};
 
         /*
          * We write algorithms in the order they were implemented in
@@ -2144,23 +2129,18 @@ int commit_tree_extended(const char *msg, size_t msg_len,
             SWAP(bufs[0], bufs[1]);
         }
 
-        /*
-         * We traverse each algorithm in order, and apply the signature
-         * to each buffer.
-         */
-        for (i = 0; i < ARRAY_SIZE(bufs); i++)
-        {
-            if (!bufs[i].algo)
-            {
-                continue;
-            }
-            add_header_signature(&buffer, bufs[i].sig, bufs[i].algo);
-            if (r->compat_hash_algo)
-            {
-                add_header_signature(&compat_buffer, bufs[i].sig, bufs[i].algo);
-            }
-        }
-    }
+		/*
+		 * We traverse each algorithm in order, and apply the signature
+		 * to each buffer.
+		 */
+		for (size_t i = 0; i < ARRAY_SIZE(bufs); i++) {
+			if (!bufs[i].algo)
+				continue;
+			add_header_signature(&buffer, bufs[i].sig, bufs[i].algo);
+			if (r->compat_hash_algo)
+				add_header_signature(&compat_buffer, bufs[i].sig, bufs[i].algo);
+		}
+	}
 
     /* And check the encoding. */
     if (encoding_is_utf8 && (!verify_utf8(&buffer) || !verify_utf8(&compat_buffer)))

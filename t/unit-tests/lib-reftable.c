@@ -1,9 +1,12 @@
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "lib-reftable.h"
 #include "test-lib.h"
 #include "reftable/constants.h"
 #include "reftable/writer.h"
+#include "strbuf.h"
 
-void t_reftable_set_hash(uint8_t *p, int i, uint32_t id)
+void t_reftable_set_hash(uint8_t *p, int i, enum reftable_hash id)
 {
     memset(p, (uint8_t)i, hash_size(id));
 }
@@ -81,14 +84,14 @@ void t_reftable_write_to_buf(struct reftable_buf           *buf,
     ret = reftable_writer_close(writer);
     check_int(ret, ==, 0);
 
-    stats = reftable_writer_stats(writer);
-    for (size_t i = 0; i < stats->ref_stats.blocks; i++)
-    {
-        size_t off = i * (opts.block_size ? opts.block_size : DEFAULT_BLOCK_SIZE);
-        if (!off)
-            off = header_size(opts.hash_id == GIT_SHA256_FORMAT_ID ? 2 : 1);
-        check_char(buf->buf[off], ==, 'r');
-    }
+	stats = reftable_writer_stats(writer);
+	for (size_t i = 0; i < stats->ref_stats.blocks; i++) {
+		size_t off = i * (opts.block_size ? opts.block_size
+						  : DEFAULT_BLOCK_SIZE);
+		if (!off)
+			off = header_size(opts.hash_id == REFTABLE_HASH_SHA256 ? 2 : 1);
+		check_char(buf->buf[off], ==, 'r');
+	}
 
     if (nrefs)
         check_int(stats->ref_stats.blocks, >, 0);

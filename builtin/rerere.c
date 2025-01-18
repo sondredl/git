@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
@@ -61,10 +62,8 @@ int cmd_rerere(int                     argc,
                const char             *prefix,
                struct repository *repo UNUSED)
 {
-    struct string_list merge_rr = STRING_LIST_INIT_DUP;
-    int                i;
-    int                autoupdate = -1;
-    int                flags      = 0;
+	struct string_list merge_rr = STRING_LIST_INIT_DUP;
+	int autoupdate = -1, flags = 0;
 
     struct option options[] = {
         OPT_SET_INT(0, "rerere-autoupdate", &autoupdate,
@@ -108,66 +107,38 @@ int cmd_rerere(int                     argc,
         return ret;
     }
 
-    if (!strcmp(argv[0], "clear"))
-    {
-        rerere_clear(the_repository, &merge_rr);
-    }
-    else if (!strcmp(argv[0], "gc"))
-    {
-        rerere_gc(the_repository, &merge_rr);
-    }
-    else if (!strcmp(argv[0], "status"))
-    {
-        if (setup_rerere(the_repository, &merge_rr,
-                         flags | RERERE_READONLY)
-            < 0)
-        {
-            return 0;
-        }
-        for (i = 0; i < merge_rr.nr; i++)
-        {
-            printf("%s\n", merge_rr.items[i].string);
-        }
-    }
-    else if (!strcmp(argv[0], "remaining"))
-    {
-        rerere_remaining(the_repository, &merge_rr);
-        for (i = 0; i < merge_rr.nr; i++)
-        {
-            if (merge_rr.items[i].util != RERERE_RESOLVED)
-            {
-                printf("%s\n", merge_rr.items[i].string);
-            }
-            else
-            {
-                /* prepare for later call to
-                 * string_list_clear() */
-                merge_rr.items[i].util = NULL;
-            }
-        }
-    }
-    else if (!strcmp(argv[0], "diff"))
-    {
-        if (setup_rerere(the_repository, &merge_rr,
-                         flags | RERERE_READONLY)
-            < 0)
-        {
-            return 0;
-        }
-        for (i = 0; i < merge_rr.nr; i++)
-        {
-            const char             *path = merge_rr.items[i].string;
-            const struct rerere_id *id   = merge_rr.items[i].util;
-            if (diff_two(rerere_path(id, "preimage"), path, path, path))
-            {
-                die(_("unable to generate diff for '%s'"), rerere_path(id, NULL));
-            }
-        }
-    }
-    else
-    {
-        usage_with_options(rerere_usage, options);
-    }
+	if (!strcmp(argv[0], "clear")) {
+		rerere_clear(the_repository, &merge_rr);
+	} else if (!strcmp(argv[0], "gc"))
+		rerere_gc(the_repository, &merge_rr);
+	else if (!strcmp(argv[0], "status")) {
+		if (setup_rerere(the_repository, &merge_rr,
+				 flags | RERERE_READONLY) < 0)
+			return 0;
+		for (size_t i = 0; i < merge_rr.nr; i++)
+			printf("%s\n", merge_rr.items[i].string);
+	} else if (!strcmp(argv[0], "remaining")) {
+		rerere_remaining(the_repository, &merge_rr);
+		for (size_t i = 0; i < merge_rr.nr; i++) {
+			if (merge_rr.items[i].util != RERERE_RESOLVED)
+				printf("%s\n", merge_rr.items[i].string);
+			else
+				/* prepare for later call to
+				 * string_list_clear() */
+				merge_rr.items[i].util = NULL;
+		}
+	} else if (!strcmp(argv[0], "diff")) {
+		if (setup_rerere(the_repository, &merge_rr,
+				 flags | RERERE_READONLY) < 0)
+			return 0;
+		for (size_t i = 0; i < merge_rr.nr; i++) {
+			const char *path = merge_rr.items[i].string;
+			const struct rerere_id *id = merge_rr.items[i].util;
+			if (diff_two(rerere_path(id, "preimage"), path, path, path))
+				die(_("unable to generate diff for '%s'"), rerere_path(id, NULL));
+		}
+	} else
+		usage_with_options(rerere_usage, options);
 
     string_list_clear(&merge_rr, 1);
     return 0;

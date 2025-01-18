@@ -21,18 +21,12 @@ static void verify_buffer_or_die(struct hashfile *f,
 {
     ssize_t ret = read_in_full(f->check_fd, f->check_buffer, count);
 
-    if (ret < 0)
-    {
-        die_errno("%s: sha1 file read error", f->name);
-    }
-    if (ret != count)
-    {
-        die("%s: sha1 file truncated", f->name);
-    }
-    if (memcmp(buf, f->check_buffer, count) != 0)
-    {
-        die("sha1 file '%s' validation error", f->name);
-    }
+	if (ret < 0)
+		die_errno("%s: sha1 file read error", f->name);
+	if ((size_t)ret != count)
+		die("%s: sha1 file truncated", f->name);
+	if (memcmp(buf, f->check_buffer, count))
+		die("sha1 file '%s' validation error", f->name);
 }
 
 static void flush(struct hashfile *f, const void *buf, unsigned int count)

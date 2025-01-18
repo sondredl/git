@@ -42,14 +42,11 @@ static void show_object(struct traversal_context *ctx,
                         struct object            *object,
                         const char               *name)
 {
-    if (!ctx->show_object)
-    {
-        return;
-    }
-    if (ctx->revs->unpacked && has_object_pack(&object->oid))
-    {
-        return;
-    }
+	if (!ctx->show_object)
+		return;
+	if (ctx->revs->unpacked && has_object_pack(ctx->revs->repo,
+						   &object->oid))
+		return;
 
     ctx->show_object(object, name, ctx->show_data);
 }
@@ -76,19 +73,19 @@ static void process_blob(struct traversal_context *ctx,
         return;
     }
 
-    /*
-     * Pre-filter known-missing objects when explicitly requested.
-     * Otherwise, a missing object error message may be reported
-     * later (depending on other filtering criteria).
-     *
-     * Note that this "--exclude-promisor-objects" pre-filtering
-     * may cause the actual filter to report an incomplete list
-     * of missing objects.
-     */
-    if (ctx->revs->exclude_promisor_objects && !repo_has_object_file(the_repository, &obj->oid) && is_promisor_object(&obj->oid))
-    {
-        return;
-    }
+	/*
+	 * Pre-filter known-missing objects when explicitly requested.
+	 * Otherwise, a missing object error message may be reported
+	 * later (depending on other filtering criteria).
+	 *
+	 * Note that this "--exclude-promisor-objects" pre-filtering
+	 * may cause the actual filter to report an incomplete list
+	 * of missing objects.
+	 */
+	if (ctx->revs->exclude_promisor_objects &&
+	    !repo_has_object_file(the_repository, &obj->oid) &&
+	    is_promisor_object(ctx->revs->repo, &obj->oid))
+		return;
 
     pathlen = path->len;
     strbuf_addstr(path, name);
@@ -213,15 +210,14 @@ static void process_tree(struct traversal_context *ctx,
             return;
         }
 
-        /*
-         * Pre-filter known-missing tree objects when explicitly
-         * requested.  This may cause the actual filter to report
-         * an incomplete list of missing objects.
-         */
-        if (revs->exclude_promisor_objects && is_promisor_object(&obj->oid))
-        {
-            return;
-        }
+		/*
+		 * Pre-filter known-missing tree objects when explicitly
+		 * requested.  This may cause the actual filter to report
+		 * an incomplete list of missing objects.
+		 */
+		if (revs->exclude_promisor_objects &&
+		    is_promisor_object(revs->repo, &obj->oid))
+			return;
 
         if (!revs->do_not_die_on_missing_objects)
         {
@@ -353,8 +349,7 @@ void mark_edges_uninteresting(struct rev_info *revs,
                               show_edge_fn     show_edge,
                               int              sparse)
 {
-    struct commit_list *list;
-    int                 i;
+	struct commit_list *list;
 
     if (sparse)
     {
@@ -399,25 +394,20 @@ void mark_edges_uninteresting(struct rev_info *revs,
         }
     }
 
-    if (revs->edge_hint_aggressive)
-    {
-        for (i = 0; i < revs->cmdline.nr; i++)
-        {
-            struct object *obj    = revs->cmdline.rev[i].item;
-            struct commit *commit = (struct commit *)obj;
-            if (obj->type != OBJ_COMMIT || !(obj->flags & UNINTERESTING))
-            {
-                continue;
-            }
-            mark_tree_uninteresting(revs->repo,
-                                    repo_get_commit_tree(the_repository, commit));
-            if (!(obj->flags & SHOWN))
-            {
-                obj->flags |= SHOWN;
-                show_edge(commit);
-            }
-        }
-    }
+	if (revs->edge_hint_aggressive) {
+		for (size_t i = 0; i < revs->cmdline.nr; i++) {
+			struct object *obj = revs->cmdline.rev[i].item;
+			struct commit *commit = (struct commit *)obj;
+			if (obj->type != OBJ_COMMIT || !(obj->flags & UNINTERESTING))
+				continue;
+			mark_tree_uninteresting(revs->repo,
+						repo_get_commit_tree(the_repository, commit));
+			if (!(obj->flags & SHOWN)) {
+				obj->flags |= SHOWN;
+				show_edge(commit);
+			}
+		}
+	}
 }
 
 static void add_pending_tree(struct rev_info *revs, struct tree *tree)
@@ -428,44 +418,34 @@ static void add_pending_tree(struct rev_info *revs, struct tree *tree)
 static void traverse_non_commits(struct traversal_context *ctx,
                                  struct strbuf            *base)
 {
-    int i;
+	assert(base->len == 0);
 
-    assert(base->len == 0);
-
-    for (i = 0; i < ctx->revs->pending.nr; i++)
-    {
-        struct object_array_entry *pending = ctx->revs->pending.objects + i;
-        struct object             *obj     = pending->item;
-        const char                *name    = pending->name;
-        const char                *path    = pending->path;
-        if (obj->flags & (UNINTERESTING | SEEN))
-        {
-            continue;
-        }
-        if (obj->type == OBJ_TAG)
-        {
-            process_tag(ctx, (struct tag *)obj, name);
-            continue;
-        }
-        if (!path)
-        {
-            path = "";
-        }
-        if (obj->type == OBJ_TREE)
-        {
-            ctx->depth = 0;
-            process_tree(ctx, (struct tree *)obj, base, path);
-            continue;
-        }
-        if (obj->type == OBJ_BLOB)
-        {
-            process_blob(ctx, (struct blob *)obj, base, path);
-            continue;
-        }
-        die("unknown pending object %s (%s)",
-            oid_to_hex(&obj->oid), name);
-    }
-    object_array_clear(&ctx->revs->pending);
+	for (size_t i = 0; i < ctx->revs->pending.nr; i++) {
+		struct object_array_entry *pending = ctx->revs->pending.objects + i;
+		struct object *obj = pending->item;
+		const char *name = pending->name;
+		const char *path = pending->path;
+		if (obj->flags & (UNINTERESTING | SEEN))
+			continue;
+		if (obj->type == OBJ_TAG) {
+			process_tag(ctx, (struct tag *)obj, name);
+			continue;
+		}
+		if (!path)
+			path = "";
+		if (obj->type == OBJ_TREE) {
+			ctx->depth = 0;
+			process_tree(ctx, (struct tree *)obj, base, path);
+			continue;
+		}
+		if (obj->type == OBJ_BLOB) {
+			process_blob(ctx, (struct blob *)obj, base, path);
+			continue;
+		}
+		die("unknown pending object %s (%s)",
+		    oid_to_hex(&obj->oid), name);
+	}
+	object_array_clear(&ctx->revs->pending);
 }
 
 static void do_traverse(struct traversal_context *ctx)

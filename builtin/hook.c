@@ -17,7 +17,8 @@ static const char *const builtin_hook_run_usage[] = {
     BUILTIN_HOOK_RUN_USAGE,
     NULL};
 
-static int run(int argc, const char **argv, const char *prefix)
+static int run(int argc, const char **argv, const char *prefix,
+	       struct repository *repo UNUSED)
 {
     int                  i;
     struct run_hooks_opt opt            = RUN_HOOKS_OPT_INIT;
@@ -74,10 +75,10 @@ usage:
     usage_with_options(builtin_hook_run_usage, run_options);
 }
 
-int cmd_hook(int                     argc,
-             const char            **argv,
-             const char             *prefix,
-             struct repository *repo UNUSED)
+int cmd_hook(int argc,
+	     const char **argv,
+	     const char *prefix,
+	     struct repository *repo)
 {
     parse_opt_subcommand_fn *fn                     = NULL;
     struct option            builtin_hook_options[] = {
@@ -88,5 +89,5 @@ int cmd_hook(int                     argc,
     argc = parse_options(argc, argv, NULL, builtin_hook_options,
                          builtin_hook_usage, 0);
 
-    return fn(argc, argv, prefix);
+	return fn(argc, argv, prefix, repo);
 }

@@ -191,19 +191,15 @@ static int process(struct walker *walker, struct object *obj)
     }
     obj->flags |= SEEN;
 
-    if (repo_has_object_file(the_repository, &obj->oid))
-    {
-        /* We already have it, so we should scan it now. */
-        obj->flags |= TO_SCAN;
-    }
-    else
-    {
-        if (obj->flags & COMPLETE)
-        {
-            return 0;
-        }
-        walker->prefetch(walker, obj->oid.hash);
-    }
+	if (repo_has_object_file(the_repository, &obj->oid)) {
+		/* We already have it, so we should scan it now. */
+		obj->flags |= TO_SCAN;
+	}
+	else {
+		if (obj->flags & COMPLETE)
+			return 0;
+		walker->prefetch(walker, &obj->oid);
+	}
 
     object_list_insert(obj, process_queue_end);
     process_queue_end = &(*process_queue_end)->next;
@@ -232,31 +228,26 @@ static int loop(struct walker *walker)
             process_queue_end = &process_queue;
         }
 
-        /* If we are not scanning this object, we placed it in
-         * the queue because we needed to fetch it first.
-         */
-        if (!(obj->flags & TO_SCAN))
-        {
-            if (walker->fetch(walker, obj->oid.hash))
-            {
-                stop_progress(&progress);
-                report_missing(obj);
-                return -1;
-            }
-        }
-        if (!obj->type)
-        {
-            parse_object(the_repository, &obj->oid);
-        }
-        if (process_object(walker, obj))
-        {
-            stop_progress(&progress);
-            return -1;
-        }
-        display_progress(progress, ++nr);
-    }
-    stop_progress(&progress);
-    return 0;
+		/* If we are not scanning this object, we placed it in
+		 * the queue because we needed to fetch it first.
+		 */
+		if (! (obj->flags & TO_SCAN)) {
+			if (walker->fetch(walker, &obj->oid)) {
+				stop_progress(&progress);
+				report_missing(obj);
+				return -1;
+			}
+		}
+		if (!obj->type)
+			parse_object(the_repository, &obj->oid);
+		if (process_object(walker, obj)) {
+			stop_progress(&progress);
+			return -1;
+		}
+		display_progress(progress, ++nr);
+	}
+	stop_progress(&progress);
+	return 0;
 }
 
 static int interpret_target(struct walker *walker, char *target, struct object_id *oid)
@@ -360,16 +351,14 @@ int walker_fetch(struct walker *walker, int targets, char **target,
 
     ALLOC_ARRAY(oids, targets);
 
-    if (write_ref)
-    {
-        transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                                  &err);
-        if (!transaction)
-        {
-            error("%s", err.buf);
-            goto done;
-        }
-    }
+	if (write_ref) {
+		transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+							  0, &err);
+		if (!transaction) {
+			error("%s", err.buf);
+			goto done;
+		}
+	}
 
     if (!walker->get_recover)
     {

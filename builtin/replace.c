@@ -238,12 +238,13 @@ static int replace_object_oid(const char       *object_ref,
         return -1;
     }
 
-    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                              &err);
-    if (!transaction || ref_transaction_update(transaction, ref.buf, repl, &prev, NULL, NULL, 0, NULL, &err) || ref_transaction_commit(transaction, &err))
-    {
-        res = error("%s", err.buf);
-    }
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  0, &err);
+	if (!transaction ||
+	    ref_transaction_update(transaction, ref.buf, repl, &prev,
+				   NULL, NULL, 0, NULL, &err) ||
+	    ref_transaction_commit(transaction, &err))
+		res = error("%s", err.buf);
 
     ref_transaction_free(transaction);
     strbuf_release(&ref);

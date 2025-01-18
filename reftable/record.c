@@ -275,13 +275,12 @@ static int reftable_ref_record_copy_from(void *rec, const void *src_rec,
     {
         size_t refname_len = strlen(src->refname);
 
-        REFTABLE_ALLOC_GROW(ref->refname, refname_len + 1,
-                            ref->refname_cap);
-        if (!ref->refname)
-        {
-            err = REFTABLE_OUT_OF_MEMORY_ERROR;
-            goto out;
-        }
+		REFTABLE_ALLOC_GROW_OR_NULL(ref->refname, refname_len + 1,
+					    ref->refname_cap);
+		if (!ref->refname) {
+			err = REFTABLE_OUT_OF_MEMORY_ERROR;
+			goto out;
+		}
 
         memcpy(ref->refname, src->refname, refname_len);
         ref->refname[refname_len] = 0;
@@ -426,14 +425,13 @@ static int reftable_ref_record_decode(void *rec, struct reftable_buf key,
     SWAP(r->refname, refname);
     SWAP(r->refname_cap, refname_cap);
 
-    REFTABLE_ALLOC_GROW(r->refname, key.len + 1, r->refname_cap);
-    if (!r->refname)
-    {
-        err = REFTABLE_OUT_OF_MEMORY_ERROR;
-        goto done;
-    }
-    memcpy(r->refname, key.buf, key.len);
-    r->refname[key.len] = 0;
+	REFTABLE_ALLOC_GROW_OR_NULL(r->refname, key.len + 1, r->refname_cap);
+	if (!r->refname) {
+		err = REFTABLE_OUT_OF_MEMORY_ERROR;
+		goto done;
+	}
+	memcpy(r->refname, key.buf, key.len);
+	r->refname[key.len] = 0;
 
     r->update_index = update_index;
     r->value_type   = val_type;
@@ -929,12 +927,11 @@ static int reftable_log_record_decode(void *rec, struct reftable_buf key,
         return REFTABLE_FORMAT_ERROR;
     }
 
-    REFTABLE_ALLOC_GROW(r->refname, key.len - 8, r->refname_cap);
-    if (!r->refname)
-    {
-        err = REFTABLE_OUT_OF_MEMORY_ERROR;
-        goto done;
-    }
+	REFTABLE_ALLOC_GROW_OR_NULL(r->refname, key.len - 8, r->refname_cap);
+	if (!r->refname) {
+		err = REFTABLE_OUT_OF_MEMORY_ERROR;
+		goto done;
+	}
 
     memcpy(r->refname, key.buf, key.len - 8);
     ts = get_be64(key.buf + key.len - 8);
@@ -1050,13 +1047,12 @@ static int reftable_log_record_decode(void *rec, struct reftable_buf key,
     }
     string_view_consume(&in, n);
 
-    REFTABLE_ALLOC_GROW(r->value.update.message, scratch->len + 1,
-                        r->value.update.message_cap);
-    if (!r->value.update.message)
-    {
-        err = REFTABLE_OUT_OF_MEMORY_ERROR;
-        goto done;
-    }
+	REFTABLE_ALLOC_GROW_OR_NULL(r->value.update.message, scratch->len + 1,
+				    r->value.update.message_cap);
+	if (!r->value.update.message) {
+		err = REFTABLE_OUT_OF_MEMORY_ERROR;
+		goto done;
+	}
 
     memcpy(r->value.update.message, scratch->buf, scratch->len);
     r->value.update.message[scratch->len] = 0;

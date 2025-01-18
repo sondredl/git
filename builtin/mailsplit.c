@@ -4,6 +4,9 @@
  * It just splits a mbox into a list of files: "0001" "0002" ..
  * so you can process them further from there.
  */
+
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "gettext.h"
 #include "string-list.h"
@@ -203,11 +206,10 @@ static int maildir_filename_cmp(const char *a, const char *b)
 static int split_maildir(const char *maildir, const char *dir,
                          int nr_prec, int skip)
 {
-    char              *file = NULL;
-    FILE              *f    = NULL;
-    int                ret  = -1;
-    int                i;
-    struct string_list list = STRING_LIST_INIT_DUP;
+	char *file = NULL;
+	FILE *f = NULL;
+	int ret = -1;
+	struct string_list list = STRING_LIST_INIT_DUP;
 
     list.cmp = maildir_filename_cmp;
 
@@ -216,9 +218,8 @@ static int split_maildir(const char *maildir, const char *dir,
         goto out;
     }
 
-    for (i = 0; i < list.nr; i++)
-    {
-        char *name;
+	for (size_t i = 0; i < list.nr; i++) {
+		char *name;
 
         free(file);
         file = xstrfmt("%s/%s", maildir, list.items[i].string);

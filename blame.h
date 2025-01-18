@@ -114,13 +114,13 @@ struct blame_scoreboard
     struct rev_info   *revs;
     const char        *path;
 
-    /*
-     * The contents in the final image.
-     * Used by many functions to obtain contents of the nth line,
-     * indexed with scoreboard.lineno[blame_entry.lno].
-     */
-    const char   *final_buf;
-    unsigned long final_buf_size;
+	/*
+	 * The contents in the final image.
+	 * Used by many functions to obtain contents of the nth line,
+	 * indexed with scoreboard.lineno[blame_entry.lno].
+	 */
+	char *final_buf;
+	unsigned long final_buf_size;
 
     /* linked list of blames */
     struct blame_entry *ent;

@@ -5,7 +5,10 @@
  *                    Carlos Rica <jasampler@gmail.com>
  * Based on git-tag.sh and mktag.c by Linus Torvalds.
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
@@ -186,10 +189,8 @@ static int do_sign(struct strbuf *buffer, struct object_id **compat_oid,
     char                       *keyid      = get_signing_key();
     int                         ret        = -1;
 
-    if (sign_buffer(buffer, &sig, keyid))
-    {
-        return -1;
-    }
+	if (sign_buffer(buffer, &sig, keyid))
+		goto out;
 
     if (compat)
     {
@@ -545,23 +546,10 @@ static int parse_msg_arg(const struct option *opt, const char *arg, int unset)
     return 0;
 }
 
-static int strbuf_check_tag_ref(struct strbuf *sb, const char *name)
-{
-    if (name[0] == '-')
-    {
-        return -1;
-    }
-
-    strbuf_reset(sb);
-    strbuf_addf(sb, "refs/tags/%s", name);
-
-    return check_refname_format(sb->buf, 0);
-}
-
-int cmd_tag(int                     argc,
-            const char            **argv,
-            const char             *prefix,
-            struct repository *repo UNUSED)
+int cmd_tag(int argc,
+	    const char **argv,
+	    const char *prefix,
+	    struct repository *repo UNUSED)
 {
     struct strbuf             buf        = STRBUF_INIT;
     struct strbuf             ref        = STRBUF_INIT;
@@ -806,10 +794,8 @@ int cmd_tag(int                     argc,
         die(_("Failed to resolve '%s' as a valid ref."), object_ref);
     }
 
-    if (strbuf_check_tag_ref(&ref, tag))
-    {
-        die(_("'%s' is not a valid tag name."), tag);
-    }
+	if (check_tag_ref(&ref, tag))
+		die(_("'%s' is not a valid tag name."), tag);
 
     if (refs_read_ref(get_main_ref_store(the_repository), ref.buf, &prev))
     {
@@ -853,29 +839,28 @@ int cmd_tag(int                     argc,
                    &trailer_args, path);
     }
 
-    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-                                              &err);
-    if (!transaction || ref_transaction_update(transaction, ref.buf, &object, &prev, NULL, NULL, create_reflog ? REF_FORCE_CREATE_REFLOG : 0, reflog_msg.buf, &err) || ref_transaction_commit(transaction, &err))
-    {
-        if (path)
-        {
-            fprintf(stderr,
-                    _("The tag message has been left in %s\n"),
-                    path);
-        }
-        die("%s", err.buf);
-    }
-    if (path)
-    {
-        unlink_or_warn(path);
-        free(path);
-    }
-    ref_transaction_free(transaction);
-    if (force && !is_null_oid(&prev) && !oideq(&prev, &object))
-    {
-        printf(_("Updated tag '%s' (was %s)\n"), tag,
-               repo_find_unique_abbrev(the_repository, &prev, DEFAULT_ABBREV));
-    }
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  0, &err);
+	if (!transaction ||
+	    ref_transaction_update(transaction, ref.buf, &object, &prev,
+				   NULL, NULL,
+				   create_reflog ? REF_FORCE_CREATE_REFLOG : 0,
+				   reflog_msg.buf, &err) ||
+	    ref_transaction_commit(transaction, &err)) {
+		if (path)
+			fprintf(stderr,
+				_("The tag message has been left in %s\n"),
+				path);
+		die("%s", err.buf);
+	}
+	if (path) {
+		unlink_or_warn(path);
+		free(path);
+	}
+	ref_transaction_free(transaction);
+	if (force && !is_null_oid(&prev) && !oideq(&prev, &object))
+		printf(_("Updated tag '%s' (was %s)\n"), tag,
+		       repo_find_unique_abbrev(the_repository, &prev, DEFAULT_ABBREV));
 
 cleanup:
     ref_sorting_release(sorting);

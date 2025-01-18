@@ -3,6 +3,7 @@
  */
 
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "abspath.h"
@@ -4845,19 +4846,18 @@ static int reuse_worktree_file(struct index_state     *istate,
         return 0;
     }
 
-    /* We want to avoid the working directory if our caller
-     * doesn't need the data in a normal file, this system
-     * is rather slow with its stat/open/mmap/close syscalls,
-     * and the object is contained in a pack file.  The pack
-     * is probably already open and will be faster to obtain
-     * the data through than the working directory.  Loose
-     * objects however would tend to be slower as they need
-     * to be individually opened and inflated.
-     */
-    if (!FAST_WORKING_DIRECTORY && !want_file && has_object_pack(oid))
-    {
-        return 0;
-    }
+	/* We want to avoid the working directory if our caller
+	 * doesn't need the data in a normal file, this system
+	 * is rather slow with its stat/open/mmap/close syscalls,
+	 * and the object is contained in a pack file.  The pack
+	 * is probably already open and will be faster to obtain
+	 * the data through than the working directory.  Loose
+	 * objects however would tend to be slower as they need
+	 * to be individually opened and inflated.
+	 */
+	if (!FAST_WORKING_DIRECTORY && !want_file &&
+	    has_object_pack(istate->repo, oid))
+		return 0;
 
     /*
      * Similarly, if we'd have to convert the file contents anyway, that

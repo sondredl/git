@@ -1,3 +1,5 @@
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "git-compat-util.h"
 #include "config.h"
 #include "gettext.h"
@@ -874,17 +876,17 @@ static struct grep_expr *grep_splice_or(struct grep_expr *x, struct grep_expr *y
 {
     struct grep_expr *z = x;
 
-    while (x)
-    {
-        assert(x->node == GREP_NODE_OR);
-        if (x->u.binary.right && x->u.binary.right->node == GREP_NODE_TRUE)
-        {
-            x->u.binary.right = y;
-            break;
-        }
-        x = x->u.binary.right;
-    }
-    return z;
+	while (x) {
+		assert(x->node == GREP_NODE_OR);
+		if (x->u.binary.right &&
+		    x->u.binary.right->node == GREP_NODE_TRUE) {
+			free(x->u.binary.right);
+			x->u.binary.right = y;
+			break;
+		}
+		x = x->u.binary.right;
+	}
+	return z;
 }
 
 void compile_grep_patterns(struct grep_opt *opt)
@@ -1064,19 +1066,17 @@ static int patmatch(struct grep_pat *p,
                     const char *line, const char *eol,
                     regmatch_t *match, int eflags)
 {
-    int hit;
+	if (p->pcre2_pattern)
+		return !pcre2match(p, line, eol, match, eflags);
 
-    if (p->pcre2_pattern)
-    {
-        hit = !pcre2match(p, line, eol, match, eflags);
-    }
-    else
-    {
-        hit = !regexec_buf(&p->regexp, line, eol - line, 1, match,
-                           eflags);
-    }
-
-    return hit;
+	switch (regexec_buf(&p->regexp, line, eol - line, 1, match, eflags)) {
+	case 0:
+		return 1;
+	case REG_NOMATCH:
+		return 0;
+	default:
+		return -1;
+	}
 }
 
 static void strip_timestamp(const char *bol, const char **eol_p)
@@ -1117,8 +1117,10 @@ static int headerless_match_one_pattern(struct grep_pat *p,
         return 0;
     }
 
-again:
-    hit = patmatch(p, bol, eol, pmatch, eflags);
+ again:
+	hit = patmatch(p, bol, eol, pmatch, eflags);
+	if (hit < 0)
+		hit = 0;
 
     if (hit && p->word_regexp)
     {
@@ -1764,16 +1766,14 @@ static int look_ahead(struct grep_opt *opt,
         int        hit;
         regmatch_t m;
 
-        hit = patmatch(p, bol, bol + *left_p, &m, 0);
-        if (!hit || m.rm_so < 0 || m.rm_eo < 0)
-        {
-            continue;
-        }
-        if (earliest < 0 || m.rm_so < earliest)
-        {
-            earliest = m.rm_so;
-        }
-    }
+		hit = patmatch(p, bol, bol + *left_p, &m, 0);
+		if (hit < 0)
+			return -1;
+		if (!hit || m.rm_so < 0 || m.rm_eo < 0)
+			continue;
+		if (earliest < 0 || m.rm_so < earliest)
+			earliest = m.rm_so;
+	}
 
     if (earliest < 0)
     {
@@ -1981,23 +1981,26 @@ static int grep_source_1(struct grep_opt *opt, struct grep_source *gs, int colle
         ssize_t     col  = -1;
         ssize_t     icol = -1;
 
-        /*
-         * look_ahead() skips quickly to the line that possibly
-         * has the next hit; don't call it if we need to do
-         * something more than just skipping the current line
-         * in response to an unmatch for the current line.  E.g.
-         * inside a post-context window, we will show the current
-         * line as a context around the previous hit when it
-         * doesn't hit.
-         */
-        if (try_lookahead
-            && !(last_hit
-                 && (show_function || lno <= last_hit + opt->post_context))
-            && look_ahead(opt, &left, &lno, &bol))
-        {
-            break;
-        }
-        eol = end_of_line(bol, &left);
+		/*
+		 * look_ahead() skips quickly to the line that possibly
+		 * has the next hit; don't call it if we need to do
+		 * something more than just skipping the current line
+		 * in response to an unmatch for the current line.  E.g.
+		 * inside a post-context window, we will show the current
+		 * line as a context around the previous hit when it
+		 * doesn't hit.
+		 */
+		if (try_lookahead
+		    && !(last_hit
+			 && (show_function ||
+			     lno <= last_hit + opt->post_context))) {
+			hit = look_ahead(opt, &left, &lno, &bol);
+			if (hit < 0)
+				try_lookahead = 0;
+			else if (hit)
+				break;
+		}
+		eol = end_of_line(bol, &left);
 
         if ((ctx == GREP_CONTEXT_HEAD) && (eol == bol))
         {

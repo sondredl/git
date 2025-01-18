@@ -127,20 +127,20 @@ int  daemonize(void);
  * You _have_ to initialize a `struct repository_format` using
  * `= REPOSITORY_FORMAT_INIT` before calling `read_repository_format()`.
  */
-struct repository_format
-{
-    int                     version;
-    int                     precious_objects;
-    char                   *partial_clone; /* value of extensions.partialclone */
-    int                     worktree_config;
-    int                     is_bare;
-    int                     hash_algo;
-    int                     compat_hash_algo;
-    enum ref_storage_format ref_storage_format;
-    int                     sparse_index;
-    char                   *work_tree;
-    struct string_list      unknown_extensions;
-    struct string_list      v1_only_extensions;
+struct repository_format {
+	int version;
+	int precious_objects;
+	char *partial_clone; /* value of extensions.partialclone */
+	int worktree_config;
+	int relative_worktrees;
+	int is_bare;
+	int hash_algo;
+	int compat_hash_algo;
+	enum ref_storage_format ref_storage_format;
+	int sparse_index;
+	char *work_tree;
+	struct string_list unknown_extensions;
+	struct string_list v1_only_extensions;
 };
 
 /*

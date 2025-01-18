@@ -325,16 +325,15 @@ static void start_fetch_packed(struct transfer_request *request)
     struct transfer_request  *check_request = request_queue_head;
     struct http_pack_request *preq;
 
-    target = find_sha1_pack(request->obj->oid.hash, repo->packs);
-    if (!target)
-    {
-        fprintf(stderr, "Unable to fetch %s, will not be able to update server info refs\n", oid_to_hex(&request->obj->oid));
-        repo->can_update_info_refs = 0;
-        release_request(request);
-        return;
-    }
-    close_pack_index(target);
-    request->target = target;
+	target = find_oid_pack(&request->obj->oid, repo->packs);
+	if (!target) {
+		fprintf(stderr, "Unable to fetch %s, will not be able to update server info refs\n", oid_to_hex(&request->obj->oid));
+		repo->can_update_info_refs = 0;
+		release_request(request);
+		return;
+	}
+	close_pack_index(target);
+	request->target = target;
 
     fprintf(stderr, "Fetching pack %s\n",
             hash_to_hex(target->hash));
@@ -754,24 +753,19 @@ static int add_send_request(struct object *obj, struct remote_lock *lock)
     /* Keep locks active */
     check_locks();
 
-    /*
-     * Don't push the object if it's known to exist on the remote
-     * or is already in the request queue
-     */
-    if (remote_dir_exists[obj->oid.hash[0]] == -1)
-    {
-        get_remote_object_list(obj->oid.hash[0]);
-    }
-    if (obj->flags & (REMOTE | PUSHING))
-    {
-        return 0;
-    }
-    target = find_sha1_pack(obj->oid.hash, repo->packs);
-    if (target)
-    {
-        obj->flags |= REMOTE;
-        return 0;
-    }
+	/*
+	 * Don't push the object if it's known to exist on the remote
+	 * or is already in the request queue
+	 */
+	if (remote_dir_exists[obj->oid.hash[0]] == -1)
+		get_remote_object_list(obj->oid.hash[0]);
+	if (obj->flags & (REMOTE | PUSHING))
+		return 0;
+	target = find_oid_pack(&obj->oid, repo->packs);
+	if (target) {
+		obj->flags |= REMOTE;
+		return 0;
+	}
 
     obj->flags |= PUSHING;
     CALLOC_ARRAY(request, 1);
@@ -1537,10 +1531,9 @@ static struct object_list **process_tree(struct tree         *tree,
 
 static int get_delta(struct rev_info *revs, struct remote_lock *lock)
 {
-    int                  i;
-    struct commit       *commit;
-    struct object_list **p     = &objects;
-    int                  count = 0;
+	struct commit *commit;
+	struct object_list **p = &objects;
+	int count = 0;
 
     while ((commit = get_revision(revs)) != NULL)
     {
@@ -1553,11 +1546,10 @@ static int get_delta(struct rev_info *revs, struct remote_lock *lock)
         }
     }
 
-    for (i = 0; i < revs->pending.nr; i++)
-    {
-        struct object_array_entry *entry = revs->pending.objects + i;
-        struct object             *obj   = entry->item;
-        const char                *name  = entry->name;
+	for (size_t i = 0; i < revs->pending.nr; i++) {
+		struct object_array_entry *entry = revs->pending.objects + i;
+		struct object *obj = entry->item;
+		const char *name = entry->name;
 
         if (obj->flags & (UNINTERESTING | SEEN))
         {

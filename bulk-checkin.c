@@ -3,6 +3,7 @@
  */
 
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "bulk-checkin.h"
@@ -303,11 +304,11 @@ static int deflate_blob_to_pack(struct bulk_checkin_packfile *state,
         return error("cannot find the current offset");
     }
 
-    header_len = format_object_header((char *)obuf, sizeof(obuf),
-                                      OBJ_BLOB, size);
-    the_hash_algo->init_fn(&ctx);
-    the_hash_algo->update_fn(&ctx, obuf, header_len);
-    the_hash_algo->init_fn(&checkpoint.ctx);
+	header_len = format_object_header((char *)obuf, sizeof(obuf),
+					  OBJ_BLOB, size);
+	the_hash_algo->init_fn(&ctx);
+	the_hash_algo->update_fn(&ctx, obuf, header_len);
+	the_hash_algo->unsafe_init_fn(&checkpoint.ctx);
 
     /* Note: idx is non-NULL when we are writing */
     if ((flags & HASH_WRITE_OBJECT) != 0)

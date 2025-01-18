@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "tree-walk.h"
 #include "xdiff-interface.h"
@@ -592,50 +593,38 @@ static int real_merge(struct merge_tree_options *o,
         show_messages = !result.clean;
     }
 
-    if (o->use_stdin)
-    {
-        printf("%d%c", result.clean, line_termination);
-    }
-    printf("%s%c", oid_to_hex(&result.tree->object.oid), line_termination);
-    if (!result.clean)
-    {
-        struct string_list conflicted_files = STRING_LIST_INIT_NODUP;
-        const char        *last             = NULL;
-        int                i;
+	if (o->use_stdin)
+		printf("%d%c", result.clean, line_termination);
+	printf("%s%c", oid_to_hex(&result.tree->object.oid), line_termination);
+	if (!result.clean) {
+		struct string_list conflicted_files = STRING_LIST_INIT_NODUP;
+		const char *last = NULL;
 
-        merge_get_conflicted_files(&result, &conflicted_files);
-        for (i = 0; i < conflicted_files.nr; i++)
-        {
-            const char        *name = conflicted_files.items[i].string;
-            struct stage_info *c    = conflicted_files.items[i].util;
-            if (!o->name_only)
-            {
-                printf("%06o %s %d\t",
-                       c->mode, oid_to_hex(&c->oid), c->stage);
-            }
-            else if (last && !strcmp(last, name))
-            {
-                continue;
-            }
-            write_name_quoted_relative(
-                name, prefix, stdout, line_termination);
-            last = name;
-        }
-        string_list_clear(&conflicted_files, 1);
-    }
-    if (show_messages)
-    {
-        putchar(line_termination);
-        merge_display_update_messages(&opt, line_termination == '\0',
-                                      &result);
-    }
-    if (o->use_stdin)
-    {
-        putchar(line_termination);
-    }
-    merge_finalize(&opt, &result);
-    clear_merge_options(&opt);
-    return !result.clean; /* result.clean < 0 handled above */
+		merge_get_conflicted_files(&result, &conflicted_files);
+		for (size_t i = 0; i < conflicted_files.nr; i++) {
+			const char *name = conflicted_files.items[i].string;
+			struct stage_info *c = conflicted_files.items[i].util;
+			if (!o->name_only)
+				printf("%06o %s %d\t",
+				       c->mode, oid_to_hex(&c->oid), c->stage);
+			else if (last && !strcmp(last, name))
+				continue;
+			write_name_quoted_relative(
+				name, prefix, stdout, line_termination);
+			last = name;
+		}
+		string_list_clear(&conflicted_files, 1);
+	}
+	if (show_messages) {
+		putchar(line_termination);
+		merge_display_update_messages(&opt, line_termination == '\0',
+					      &result);
+	}
+	if (o->use_stdin)
+		putchar(line_termination);
+	merge_finalize(&opt, &result);
+	clear_merge_options(&opt);
+	return !result.clean; /* result.clean < 0 handled above */
 }
 
 int cmd_merge_tree(int                     argc,
@@ -692,17 +681,11 @@ int cmd_merge_tree(int                     argc,
     argc          = parse_options(argc, argv, prefix, mt_options,
                                   merge_tree_usage, PARSE_OPT_STOP_AT_NON_OPTION);
 
-    if (xopts.nr && o.mode == MODE_TRIVIAL)
-    {
-        die(_("--trivial-merge is incompatible with all other options"));
-    }
-    for (int x = 0; x < xopts.nr; x++)
-    {
-        if (parse_merge_opt(&o.merge_options, xopts.v[x]))
-        {
-            die(_("unknown strategy option: -X%s"), xopts.v[x]);
-        }
-    }
+	if (xopts.nr && o.mode == MODE_TRIVIAL)
+		die(_("--trivial-merge is incompatible with all other options"));
+	for (size_t x = 0; x < xopts.nr; x++)
+		if (parse_merge_opt(&o.merge_options, xopts.v[x]))
+			die(_("unknown strategy option: -X%s"), xopts.v[x]);
 
     /* Handle --stdin */
     if (o.use_stdin)

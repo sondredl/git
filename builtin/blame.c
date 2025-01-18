@@ -4,7 +4,9 @@
  * Copyright (c) 2006, 2014 by its authors
  * See COPYING for licensing conditions
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "config.h"
 #include "color.h"
@@ -523,10 +525,14 @@ static void emit_other(struct blame_scoreboard *sb, struct blame_entry *ent, int
         reset = GIT_COLOR_RESET;
     }
 
-    for (cnt = 0; cnt < ent->num_lines; cnt++)
-    {
-        char ch;
-        int  length = (opt & OUTPUT_LONG_OBJECT_NAME) ? the_hash_algo->hexsz : abbrev;
+	if (abbrev < MINIMUM_ABBREV)
+		BUG("abbreviation is smaller than minimum length: %d < %d",
+		    abbrev, MINIMUM_ABBREV);
+
+	for (cnt = 0; cnt < ent->num_lines; cnt++) {
+		char ch;
+		size_t length = (opt & OUTPUT_LONG_OBJECT_NAME) ?
+			the_hash_algo->hexsz : (size_t) abbrev;
 
         if (opt & OUTPUT_COLOR_LINE)
         {
@@ -546,64 +552,46 @@ static void emit_other(struct blame_scoreboard *sb, struct blame_entry *ent, int
             fputs(color, stdout);
         }
 
-        if (suspect->commit->object.flags & UNINTERESTING)
-        {
-            if (blank_boundary)
-            {
-                memset(hex, ' ', length);
-            }
-            else if (!(opt & OUTPUT_ANNOTATE_COMPAT))
-            {
-                length--;
-                putchar('^');
-            }
-        }
+		if (suspect->commit->object.flags & UNINTERESTING) {
+			if (blank_boundary) {
+				memset(hex, ' ', strlen(hex));
+			} else if (!(opt & OUTPUT_ANNOTATE_COMPAT)) {
+				length--;
+				putchar('^');
+			}
+		}
 
-        if (mark_unblamable_lines && ent->unblamable)
-        {
-            length--;
-            putchar('*');
-        }
-        if (mark_ignored_lines && ent->ignored)
-        {
-            length--;
-            putchar('?');
-        }
-        printf("%.*s", length, hex);
-        if (opt & OUTPUT_ANNOTATE_COMPAT)
-        {
-            const char *name;
-            if (opt & OUTPUT_SHOW_EMAIL)
-            {
-                name = ci.author_mail.buf;
-            }
-            else
-            {
-                name = ci.author.buf;
-            }
-            printf("\t(%10s\t%10s\t%d)", name,
-                   format_time(ci.author_time, ci.author_tz.buf,
-                               show_raw_time),
-                   ent->lno + 1 + cnt);
-        }
-        else
-        {
-            if (opt & OUTPUT_SHOW_SCORE)
-            {
-                printf(" %*d %02d",
-                       max_score_digits, ent->score,
-                       ent->suspect->refcnt);
-            }
-            if (opt & OUTPUT_SHOW_NAME)
-            {
-                printf(" %-*.*s", longest_file, longest_file,
-                       suspect->path);
-            }
-            if (opt & OUTPUT_SHOW_NUMBER)
-            {
-                printf(" %*d", max_orig_digits,
-                       ent->s_lno + 1 + cnt);
-            }
+		if (mark_unblamable_lines && ent->unblamable) {
+			length--;
+			putchar('*');
+		}
+		if (mark_ignored_lines && ent->ignored) {
+			length--;
+			putchar('?');
+		}
+
+		printf("%.*s", (int)(length < GIT_MAX_HEXSZ ? length : GIT_MAX_HEXSZ), hex);
+		if (opt & OUTPUT_ANNOTATE_COMPAT) {
+			const char *name;
+			if (opt & OUTPUT_SHOW_EMAIL)
+				name = ci.author_mail.buf;
+			else
+				name = ci.author.buf;
+			printf("\t(%10s\t%10s\t%d)", name,
+			       format_time(ci.author_time, ci.author_tz.buf,
+					   show_raw_time),
+			       ent->lno + 1 + cnt);
+		} else {
+			if (opt & OUTPUT_SHOW_SCORE)
+				printf(" %*d %02d",
+				       max_score_digits, ent->score,
+				       ent->suspect->refcnt);
+			if (opt & OUTPUT_SHOW_NAME)
+				printf(" %-*.*s", longest_file, longest_file,
+				       suspect->path);
+			if (opt & OUTPUT_SHOW_NUMBER)
+				printf(" %*d", max_orig_digits,
+				       ent->s_lno + 1 + cnt);
 
             if (!(opt & OUTPUT_NO_AUTHOR))
             {
@@ -1471,14 +1459,7 @@ parse_done:
         output_option &= ~(OUTPUT_COLOR_LINE | OUTPUT_SHOW_AGE_WITH_COLOR);
     }
 
-    output(&sb, output_option);
-    free((void *)sb.final_buf);
-    for (ent = sb.ent; ent;)
-    {
-        struct blame_entry *e = ent->next;
-        free(ent);
-        ent = e;
-    }
+	output(&sb, output_option);
 
     if (show_stats)
     {
@@ -1488,8 +1469,14 @@ parse_done:
     }
 
 cleanup:
-    free(path);
-    cleanup_scoreboard(&sb);
-    release_revisions(&revs);
-    return 0;
+	for (ent = sb.ent; ent; ) {
+		struct blame_entry *e = ent->next;
+		free(ent);
+		ent = e;
+	}
+
+	free(path);
+	cleanup_scoreboard(&sb);
+	release_revisions(&revs);
+	return 0;
 }

@@ -111,9 +111,17 @@ struct ref_update
      */
     unsigned int flags;
 
-    void        *backend_data;
-    unsigned int type;
-    char        *msg;
+	void *backend_data;
+	unsigned int type;
+	char *msg;
+	char *committer_info;
+
+	/*
+	 * The index overrides the default sort algorithm. This is needed
+	 * when migrating reflogs and we want to ensure we carry over the
+	 * same order.
+	 */
+	unsigned int index;
 
     /*
      * If this ref_update was split off of a symref update via
@@ -150,12 +158,13 @@ int ref_update_reject_duplicates(struct string_list *refnames,
  * respectively, are set in flags.
  */
 struct ref_update *ref_transaction_add_update(
-    struct ref_transaction *transaction,
-    const char *refname, unsigned int flags,
-    const struct object_id *new_oid,
-    const struct object_id *old_oid,
-    const char *new_target, const char *old_target,
-    const char *msg);
+		struct ref_transaction *transaction,
+		const char *refname, unsigned int flags,
+		const struct object_id *new_oid,
+		const struct object_id *old_oid,
+		const char *new_target, const char *old_target,
+		const char *committer_info,
+		const char *msg);
 
 /*
  * Transaction states.
@@ -188,14 +197,14 @@ enum ref_transaction_state
  * consist of checks and updates to multiple references, carried out
  * as atomically as possible.  This structure is opaque to callers.
  */
-struct ref_transaction
-{
-    struct ref_store          *ref_store;
-    struct ref_update        **updates;
-    size_t                     alloc;
-    size_t                     nr;
-    enum ref_transaction_state state;
-    void                      *backend_data;
+struct ref_transaction {
+	struct ref_store *ref_store;
+	struct ref_update **updates;
+	size_t alloc;
+	size_t nr;
+	enum ref_transaction_state state;
+	void *backend_data;
+	unsigned int flags;
 };
 
 /*
@@ -655,8 +664,9 @@ typedef int read_raw_ref_fn(struct ref_store *ref_store, const char *refname,
 typedef int read_symbolic_ref_fn(struct ref_store *ref_store, const char *refname,
                                  struct strbuf *referent);
 
-typedef int fsck_fn(struct ref_store    *ref_store,
-                    struct fsck_options *o);
+typedef int fsck_fn(struct ref_store *ref_store,
+		    struct fsck_options *o,
+		    struct worktree *wt);
 
 struct ref_storage_be
 {
@@ -666,18 +676,22 @@ struct ref_storage_be
     ref_store_create_on_disk_fn *create_on_disk;
     ref_store_remove_on_disk_fn *remove_on_disk;
 
-    ref_transaction_prepare_fn *transaction_prepare;
-    ref_transaction_finish_fn  *transaction_finish;
-    ref_transaction_abort_fn   *transaction_abort;
-    ref_transaction_commit_fn  *initial_transaction_commit;
+	ref_transaction_prepare_fn *transaction_prepare;
+	ref_transaction_finish_fn *transaction_finish;
+	ref_transaction_abort_fn *transaction_abort;
 
     pack_refs_fn  *pack_refs;
     rename_ref_fn *rename_ref;
     copy_ref_fn   *copy_ref;
 
-    ref_iterator_begin_fn *iterator_begin;
-    read_raw_ref_fn       *read_raw_ref;
-    read_symbolic_ref_fn  *read_symbolic_ref;
+	ref_iterator_begin_fn *iterator_begin;
+	read_raw_ref_fn *read_raw_ref;
+
+	/*
+	 * Please refer to `refs_read_symbolic_ref()` for the expected
+	 * behaviour.
+	 */
+	read_symbolic_ref_fn *read_symbolic_ref;
 
     reflog_iterator_begin_fn       *reflog_iterator_begin;
     for_each_reflog_ent_fn         *for_each_reflog_ent;
@@ -718,9 +732,9 @@ struct ref_store
  * invalid contents.
  */
 int parse_loose_ref_contents(const struct git_hash_algo *algop,
-                             const char *buf, struct object_id *oid,
-                             struct strbuf *referent, unsigned int *type,
-                             int *failure_errno);
+			     const char *buf, struct object_id *oid,
+			     struct strbuf *referent, unsigned int *type,
+			     const char **trailing, int *failure_errno);
 
 /*
  * Fill in the generic part of refs and add it to our collection of

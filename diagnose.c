@@ -33,8 +33,7 @@ static struct diagnose_option diagnose_options[] = {
 
 int option_parse_diagnose(const struct option *opt, const char *arg, int unset)
 {
-    int                 i;
-    enum diagnose_mode *diagnose = opt->value;
+	enum diagnose_mode *diagnose = opt->value;
 
     if (!arg)
     {
@@ -42,14 +41,12 @@ int option_parse_diagnose(const struct option *opt, const char *arg, int unset)
         return 0;
     }
 
-    for (i = 0; i < ARRAY_SIZE(diagnose_options); i++)
-    {
-        if (!strcmp(arg, diagnose_options[i].option_name))
-        {
-            *diagnose = diagnose_options[i].mode;
-            return 0;
-        }
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(diagnose_options); i++) {
+		if (!strcmp(arg, diagnose_options[i].option_name)) {
+			*diagnose = diagnose_options[i].mode;
+			return 0;
+		}
+	}
 
     return error(_("invalid --%s value '%s'"), opt->long_name, arg);
 }
@@ -208,19 +205,18 @@ static int add_directory_to_archiver(struct strvec *archiver_args,
 
 int create_diagnostics_archive(struct strbuf *zip_path, enum diagnose_mode mode)
 {
-    struct strvec      archiver_args = STRVEC_INIT;
-    char             **argv_copy     = NULL;
-    int                stdout_fd     = -1;
-    int                archiver_fd   = -1;
-    struct strbuf      buf           = STRBUF_INIT;
-    int                res;
-    int                i;
-    struct archive_dir archive_dirs[] = {
-        {".git", 0},
-        {".git/hooks", 0},
-        {".git/info", 0},
-        {".git/logs", 1},
-        {".git/objects/info", 0}};
+	struct strvec archiver_args = STRVEC_INIT;
+	char **argv_copy = NULL;
+	int stdout_fd = -1, archiver_fd = -1;
+	struct strbuf buf = STRBUF_INIT;
+	int res;
+	struct archive_dir archive_dirs[] = {
+		{ ".git", 0 },
+		{ ".git/hooks", 0 },
+		{ ".git/info", 0 },
+		{ ".git/logs", 1 },
+		{ ".git/objects/info", 0 }
+	};
 
     if (mode == DIAGNOSE_NONE)
     {
@@ -267,21 +263,18 @@ int create_diagnostics_archive(struct strbuf *zip_path, enum diagnose_mode mode)
     loose_objs_stats(&buf, ".git/objects");
     strvec_push(&archiver_args, buf.buf);
 
-    /* Only include this if explicitly requested */
-    if (mode == DIAGNOSE_ALL)
-    {
-        for (i = 0; i < ARRAY_SIZE(archive_dirs); i++)
-        {
-            if (add_directory_to_archiver(&archiver_args,
-                                          archive_dirs[i].path,
-                                          archive_dirs[i].recursive))
-            {
-                res = error_errno(_("could not add directory '%s' to archiver"),
-                                  archive_dirs[i].path);
-                goto diagnose_cleanup;
-            }
-        }
-    }
+	/* Only include this if explicitly requested */
+	if (mode == DIAGNOSE_ALL) {
+		for (size_t i = 0; i < ARRAY_SIZE(archive_dirs); i++) {
+			if (add_directory_to_archiver(&archiver_args,
+						      archive_dirs[i].path,
+						      archive_dirs[i].recursive)) {
+				res = error_errno(_("could not add directory '%s' to archiver"),
+						  archive_dirs[i].path);
+				goto diagnose_cleanup;
+			}
+		}
+	}
 
     strvec_pushl(&archiver_args, "--prefix=",
                  oid_to_hex(the_hash_algo->empty_tree), "--", NULL);

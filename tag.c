@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "environment.h"
@@ -79,33 +80,23 @@ int gpg_verify_tag(const struct object_id *oid, const char *name_to_report,
 
 struct object *deref_tag(struct repository *r, struct object *o, const char *warn, int warnlen)
 {
-    struct object_id *last_oid = NULL;
-    while (o && o->type == OBJ_TAG)
-    {
-        if (((struct tag *)o)->tagged)
-        {
-            last_oid = &((struct tag *)o)->tagged->oid;
-            o        = parse_object(r, last_oid);
-        }
-        else
-        {
-            last_oid = NULL;
-            o        = NULL;
-        }
-    }
-    if (!o && warn)
-    {
-        if (last_oid && is_promisor_object(last_oid))
-        {
-            return NULL;
-        }
-        if (!warnlen)
-        {
-            warnlen = strlen(warn);
-        }
-        error("missing object referenced by '%.*s'", warnlen, warn);
-    }
-    return o;
+	struct object_id *last_oid = NULL;
+	while (o && o->type == OBJ_TAG)
+		if (((struct tag *)o)->tagged) {
+			last_oid = &((struct tag *)o)->tagged->oid;
+			o = parse_object(r, last_oid);
+		} else {
+			last_oid = NULL;
+			o = NULL;
+		}
+	if (!o && warn) {
+		if (last_oid && is_promisor_object(r, last_oid))
+			return NULL;
+		if (!warnlen)
+			warnlen = strlen(warn);
+		error("missing object referenced by '%.*s'", warnlen, warn);
+	}
+	return o;
 }
 
 struct object *deref_tag_noverify(struct repository *r, struct object *o)

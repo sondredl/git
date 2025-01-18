@@ -157,29 +157,28 @@ done:
 
 int cmd__dump_reftable(int argc, const char **argv)
 {
-    int         err             = 0;
-    int         opt_dump_blocks = 0;
-    int         opt_dump_table  = 0;
-    int         opt_dump_stack  = 0;
-    uint32_t    opt_hash_id     = GIT_SHA1_FORMAT_ID;
-    const char *arg = NULL, *argv0 = argv[0];
+	int err = 0;
+	int opt_dump_blocks = 0;
+	int opt_dump_table = 0;
+	int opt_dump_stack = 0;
+	uint32_t opt_hash_id = REFTABLE_HASH_SHA1;
+	const char *arg = NULL, *argv0 = argv[0];
 
-    for (; argc > 1; argv++, argc--)
-        if (*argv[1] != '-')
-            break;
-        else if (!strcmp("-b", argv[1]))
-            opt_dump_blocks = 1;
-        else if (!strcmp("-t", argv[1]))
-            opt_dump_table = 1;
-        else if (!strcmp("-6", argv[1]))
-            opt_hash_id = GIT_SHA256_FORMAT_ID;
-        else if (!strcmp("-s", argv[1]))
-            opt_dump_stack = 1;
-        else if (!strcmp("-?", argv[1]) || !strcmp("-h", argv[1]))
-        {
-            print_help();
-            return 2;
-        }
+	for (; argc > 1; argv++, argc--)
+		if (*argv[1] != '-')
+			break;
+		else if (!strcmp("-b", argv[1]))
+			opt_dump_blocks = 1;
+		else if (!strcmp("-t", argv[1]))
+			opt_dump_table = 1;
+		else if (!strcmp("-6", argv[1]))
+			opt_hash_id = REFTABLE_HASH_SHA256;
+		else if (!strcmp("-s", argv[1]))
+			opt_dump_stack = 1;
+		else if (!strcmp("-?", argv[1]) || !strcmp("-h", argv[1])) {
+			print_help();
+			return 2;
+		}
 
     if (argc != 2)
     {

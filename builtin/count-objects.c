@@ -69,20 +69,15 @@ static int count_loose(const struct object_id *oid, const char *path,
 {
     struct stat st;
 
-    if (lstat(path, &st) || !S_ISREG(st.st_mode))
-    {
-        loose_garbage(path);
-    }
-    else
-    {
-        loose_size += on_disk_bytes(st);
-        loose++;
-        if (verbose && has_object_pack(oid))
-        {
-            packed_loose++;
-        }
-    }
-    return 0;
+	if (lstat(path, &st) || !S_ISREG(st.st_mode))
+		loose_garbage(path);
+	else {
+		loose_size += on_disk_bytes(st);
+		loose++;
+		if (verbose && has_object_pack(the_repository, oid))
+			packed_loose++;
+	}
+	return 0;
 }
 
 static int count_cruft(const char *basename UNUSED, const char *path,

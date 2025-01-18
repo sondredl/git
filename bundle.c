@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "lockfile.h"
@@ -489,53 +490,20 @@ static int write_bundle_refs(int bundle_fd, struct rev_info *revs)
             goto skip_write_ref;
         }
 
-        /*
-         * Make sure the refs we wrote out is correct; --max-count and
-         * other limiting options could have prevented all the tips
-         * from getting output.
-         *
-         * Non commit objects such as tags and blobs do not have
-         * this issue as they are not affected by those extra
-         * constraints.
-         */
-        if (!(e->item->flags & SHOWN) && e->item->type == OBJ_COMMIT)
-        {
-            warning(_("ref '%s' is excluded by the rev-list options"),
-                    e->name);
-            goto skip_write_ref;
-        }
-        /*
-         * If you run "git bundle create bndl v1.0..v2.0", the
-         * name of the positive ref is "v2.0" but that is the
-         * commit that is referenced by the tag, and not the tag
-         * itself.
-         */
-        if (!oideq(&oid, &e->item->oid))
-        {
-            /*
-             * Is this the positive end of a range expressed
-             * in terms of a tag (e.g. v2.0 from the range
-             * "v1.0..v2.0")?
-             */
-            struct commit *one = lookup_commit_reference(revs->repo, &oid);
-            struct object *obj;
-
-            if (e->item == &(one->object))
-            {
-                /*
-                 * Need to include e->name as an
-                 * independent ref to the pack-objects
-                 * input, so that the tag is included
-                 * in the output; otherwise we would
-                 * end up triggering "empty bundle"
-                 * error.
-                 */
-                obj = parse_object_or_die(&oid, e->name);
-                obj->flags |= SHOWN;
-                add_pending_object(revs, obj, e->name);
-            }
-            goto skip_write_ref;
-        }
+		/*
+		 * Make sure the refs we wrote out is correct; --max-count and
+		 * other limiting options could have prevented all the tips
+		 * from getting output.
+		 *
+		 * Non commit objects such as tags and blobs do not have
+		 * this issue as they are not affected by those extra
+		 * constraints.
+		 */
+		if (!(e->item->flags & SHOWN) && e->item->type == OBJ_COMMIT) {
+			warning(_("ref '%s' is excluded by the rev-list options"),
+				e->name);
+			goto skip_write_ref;
+		}
 
         ref_count++;
         write_or_die(bundle_fd, oid_to_hex(&e->item->oid), the_hash_algo->hexsz);
@@ -746,15 +714,17 @@ out:
 }
 
 int unbundle(struct repository *r, struct bundle_header *header,
-             int bundle_fd, struct strvec *extra_index_pack_args,
-             enum verify_bundle_flags flags)
+	     int bundle_fd, struct strvec *extra_index_pack_args,
+	     struct unbundle_opts *opts)
 {
-    struct child_process ip = CHILD_PROCESS_INIT;
+	struct child_process ip = CHILD_PROCESS_INIT;
+	struct unbundle_opts opts_fallback = { 0 };
 
-    if (verify_bundle(r, header, flags))
-    {
-        return -1;
-    }
+	if (!opts)
+		opts = &opts_fallback;
+
+	if (verify_bundle(r, header, opts->flags))
+		return -1;
 
     strvec_pushl(&ip.args, "index-pack", "--fix-thin", "--stdin", NULL);
 
@@ -764,10 +734,9 @@ int unbundle(struct repository *r, struct bundle_header *header,
         strvec_push(&ip.args, "--promisor=from-bundle");
     }
 
-    if (flags & VERIFY_BUNDLE_FSCK)
-    {
-        strvec_push(&ip.args, "--fsck-objects");
-    }
+	if (opts->flags & VERIFY_BUNDLE_FSCK)
+		strvec_pushf(&ip.args, "--fsck-objects%s",
+			     opts->fsck_msg_types ? opts->fsck_msg_types : "");
 
     if (extra_index_pack_args)
         strvec_pushv(&ip.args, extra_index_pack_args->v);

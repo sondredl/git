@@ -389,15 +389,13 @@ static int string_list_set_helper_option(struct helper_data *data,
                                          const char         *name,
                                          struct string_list *list)
 {
-    struct strbuf buf = STRBUF_INIT;
-    int           i;
-    int           ret = 0;
+	struct strbuf buf = STRBUF_INIT;
+	int ret = 0;
 
-    for (i = 0; i < list->nr; i++)
-    {
-        strbuf_addf(&buf, "option %s ", name);
-        quote_c_style(list->items[i].string, &buf, NULL, 0);
-        strbuf_addch(&buf, '\n');
+	for (size_t i = 0; i < list->nr; i++) {
+		strbuf_addf(&buf, "option %s ", name);
+		quote_c_style(list->items[i].string, &buf, NULL, 0);
+		strbuf_addch(&buf, '\n');
 
         if ((ret = strbuf_set_helper_option(data, &buf)))
         {
@@ -412,11 +410,9 @@ static int string_list_set_helper_option(struct helper_data *data,
 static int set_helper_option(struct transport *transport,
                              const char *name, const char *value)
 {
-    struct helper_data *data = transport->data;
-    struct strbuf       buf  = STRBUF_INIT;
-    int                 i;
-    int                 ret;
-    int                 is_bool = 0;
+	struct helper_data *data = transport->data;
+	struct strbuf buf = STRBUF_INIT;
+	int ret, is_bool = 0;
 
     get_helper(transport);
 
@@ -431,22 +427,17 @@ static int set_helper_option(struct transport *transport,
                                              (struct string_list *)value);
     }
 
-    for (i = 0; i < ARRAY_SIZE(unsupported_options); i++)
-    {
-        if (!strcmp(name, unsupported_options[i]))
-        {
-            return 1;
-        }
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(unsupported_options); i++) {
+		if (!strcmp(name, unsupported_options[i]))
+			return 1;
+	}
 
-    for (i = 0; i < ARRAY_SIZE(boolean_options); i++)
-    {
-        if (!strcmp(name, boolean_options[i]))
-        {
-            is_bool = 1;
-            break;
-        }
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(boolean_options); i++) {
+		if (!strcmp(name, boolean_options[i])) {
+			is_bool = 1;
+			break;
+		}
+	}
 
     strbuf_addf(&buf, "option %s ", name);
     if (is_bool)
@@ -493,12 +484,14 @@ static void standard_options(struct transport *t)
 
 static int release_helper(struct transport *transport)
 {
-    int                 res  = 0;
-    struct helper_data *data = transport->data;
-    refspec_clear(&data->rs);
-    res = disconnect_helper(transport);
-    free(transport->data);
-    return res;
+	int res = 0;
+	struct helper_data *data = transport->data;
+	refspec_clear(&data->rs);
+	free(data->import_marks);
+	free(data->export_marks);
+	res = disconnect_helper(transport);
+	free(transport->data);
+	return res;
 }
 
 static int fetch_with_fetch(struct transport *transport,
@@ -591,9 +584,8 @@ static int get_exporter(struct transport     *transport,
                         struct child_process *fastexport,
                         struct string_list   *revlist_args)
 {
-    struct helper_data   *data   = transport->data;
-    struct child_process *helper = get_helper(transport);
-    int                   i;
+	struct helper_data *data = transport->data;
+	struct child_process *helper = get_helper(transport);
 
     child_process_init(fastexport);
 
@@ -612,10 +604,8 @@ static int get_exporter(struct transport     *transport,
         strvec_pushf(&fastexport->args, "--import-marks=%s", data->import_marks);
     }
 
-    for (i = 0; i < revlist_args->nr; i++)
-    {
-        strvec_push(&fastexport->args, revlist_args->items[i].string);
-    }
+	for (size_t i = 0; i < revlist_args->nr; i++)
+		strvec_push(&fastexport->args, revlist_args->items[i].string);
 
     fastexport->git_cmd = 1;
     return start_command(fastexport);

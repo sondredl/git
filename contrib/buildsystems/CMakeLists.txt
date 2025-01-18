@@ -97,24 +97,12 @@ if(NOT SH_EXE)
   )
 endif()
 
-# Create GIT-VERSION-FILE using GIT-VERSION-GEN
-if(NOT EXISTS ${CMAKE_SOURCE_DIR}/GIT-VERSION-FILE)
-  message("Generating GIT-VERSION-FILE")
-  execute_process(COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN
-                  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-endif()
-
-# Parse GIT-VERSION-FILE to get the version
-file(STRINGS ${CMAKE_SOURCE_DIR}/GIT-VERSION-FILE git_version
-     REGEX "GIT_VERSION = (.*)")
-string(REPLACE "GIT_VERSION = " "" git_version ${git_version})
-string(FIND ${git_version} "GIT" location)
-if(location EQUAL -1)
-  string(REGEX MATCH "[0-9]*\\.[0-9]*\\.[0-9]*" git_version ${git_version})
-else()
-  string(REGEX MATCH "[0-9]*\\.[0-9]*" git_version ${git_version})
-  string(APPEND git_version ".0") # for building from a snapshot
-endif()
+message("Generating Git version")
+execute_process(COMMAND ${SH_EXE} "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+		"${CMAKE_SOURCE_DIR}"
+		"${CMAKE_SOURCE_DIR}/contrib/buildsystems/git-version.in"
+		"${CMAKE_BINARY_DIR}/git-version")
+file(STRINGS "${CMAKE_BINARY_DIR}/git-version" git_version)
 
 project(
   git
@@ -123,20 +111,18 @@ project(
 
 # TODO gitk git-gui gitweb TODO Enable NLS on windows natively
 
-# macros for parsing the Makefile for sources and scripts
-macro(parse_makefile_for_sources list_var regex)
-  file(STRINGS ${CMAKE_SOURCE_DIR}/Makefile ${list_var}
-       REGEX "^${regex} \\+=(.*)")
-  string(REPLACE "${regex} +=" "" ${list_var} ${${list_var}})
-  string(REPLACE "$(COMPAT_OBJS)" "" ${list_var} ${${list_var}}
-  )# remove "$(COMPAT_OBJS)" This is only for libgit.
-  string(STRIP ${${list_var}} ${list_var}) # remove trailing/leading whitespaces
-  string(REPLACE ".o" ".c;" ${list_var} ${${list_var}}) # change .o to .c, ; is
-                                                        # for converting the
-                                                        # string into a list
-  list(TRANSFORM ${list_var} STRIP) # remove trailing/leading whitespaces for
-                                    # each element in list
-  list(REMOVE_ITEM ${list_var} "") # remove empty list elements
+#TODO gitk git-gui gitweb
+#TODO Enable NLS on windows natively
+
+#macros for parsing the Makefile for sources and scripts
+macro(parse_makefile_for_sources list_var makefile regex)
+	file(STRINGS ${makefile} ${list_var} REGEX "^${regex} \\+=(.*)")
+	string(REPLACE "${regex} +=" "" ${list_var} ${${list_var}})
+	string(REPLACE "$(COMPAT_OBJS)" "" ${list_var} ${${list_var}}) #remove "$(COMPAT_OBJS)" This is only for libgit.
+	string(STRIP ${${list_var}} ${list_var}) #remove trailing/leading whitespaces
+	string(REPLACE ".o" ".c;" ${list_var} ${${list_var}}) #change .o to .c, ; is for converting the string into a list
+	list(TRANSFORM ${list_var} STRIP) #remove trailing/leading whitespaces for each element in list
+	list(REMOVE_ITEM ${list_var} "") #remove empty list elements
 endmacro()
 
 macro(parse_makefile_for_scripts list_var regex lang)
@@ -268,19 +254,16 @@ list(
   sha256/block/sha256.c
   compat/qsort_s.c)
 
-add_compile_definitions(
-  PAGER_ENV="LESS=FRX LV=-c"
-  GIT_EXEC_PATH="libexec/git-core"
-  GIT_LOCALE_PATH="share/locale"
-  GIT_MAN_PATH="share/man"
-  GIT_INFO_PATH="share/info"
-  GIT_HTML_PATH="share/doc/git-doc"
-  DEFAULT_HELP_FORMAT="html"
-  DEFAULT_GIT_TEMPLATE_DIR="share/git-core/templates"
-  GIT_VERSION="${PROJECT_VERSION}.GIT"
-  GIT_USER_AGENT="git/${PROJECT_VERSION}.GIT"
-  BINDIR="bin"
-  GIT_BUILT_FROM_COMMIT="")
+
+add_compile_definitions(PAGER_ENV="LESS=FRX LV=-c"
+			GIT_EXEC_PATH="libexec/git-core"
+			GIT_LOCALE_PATH="share/locale"
+			GIT_MAN_PATH="share/man"
+			GIT_INFO_PATH="share/info"
+			GIT_HTML_PATH="share/doc/git-doc"
+			DEFAULT_HELP_FORMAT="html"
+			DEFAULT_GIT_TEMPLATE_DIR="share/git-core/templates"
+			BINDIR="bin")
 
 if(WIN32)
   set(FALLBACK_RUNTIME_PREFIX /mingw64)
@@ -725,77 +708,86 @@ set(EXCLUSION_PROGS_CACHE
     ${EXCLUSION_PROGS}
     CACHE STRING "Programs not built" FORCE)
 
-if(NOT EXISTS ${CMAKE_BINARY_DIR}/command-list.h OR NOT EXCLUSION_PROGS_CACHE
-                                                    STREQUAL EXCLUSION_PROGS)
-  list(REMOVE_ITEM EXCLUSION_PROGS empty)
-  message("Generating command-list.h")
-  execute_process(
-    COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/generate-cmdlist.sh ${EXCLUSION_PROGS}
-            command-list.txt
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_FILE ${CMAKE_BINARY_DIR}/command-list.h)
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/command-list.h OR NOT EXCLUSION_PROGS_CACHE STREQUAL EXCLUSION_PROGS)
+	list(REMOVE_ITEM EXCLUSION_PROGS empty)
+	message("Generating command-list.h")
+	execute_process(COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/generate-cmdlist.sh"
+				${EXCLUSION_PROGS}
+				"${CMAKE_SOURCE_DIR}"
+				"${CMAKE_BINARY_DIR}/command-list.h")
 endif()
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/config-list.h)
-  message("Generating config-list.h")
-  execute_process(
-    COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/generate-configlist.sh
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_FILE ${CMAKE_BINARY_DIR}/config-list.h)
+	message("Generating config-list.h")
+	execute_process(COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/generate-configlist.sh"
+				"${CMAKE_SOURCE_DIR}"
+				"${CMAKE_BINARY_DIR}/config-list.h")
 endif()
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/hook-list.h)
-  message("Generating hook-list.h")
-  execute_process(
-    COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/generate-hooklist.sh
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_FILE ${CMAKE_BINARY_DIR}/hook-list.h)
+	message("Generating hook-list.h")
+	execute_process(COMMAND "${SH_EXE}" ${CMAKE_SOURCE_DIR}/generate-hooklist.sh
+				"${CMAKE_SOURCE_DIR}"
+				"${CMAKE_BINARY_DIR}/hook-list.h")
 endif()
 
 include_directories(${CMAKE_BINARY_DIR})
 
-# build libgit
-parse_makefile_for_sources(libgit_SOURCES "LIB_OBJS")
+#build
+#libgit
+parse_makefile_for_sources(libgit_SOURCES ${CMAKE_SOURCE_DIR}/Makefile "LIB_OBJS")
 
 list(TRANSFORM libgit_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
 list(TRANSFORM compat_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
+
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/version-def.h"
+	COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+		"${CMAKE_SOURCE_DIR}"
+		"${CMAKE_SOURCE_DIR}/version-def.h.in"
+		"${CMAKE_BINARY_DIR}/version-def.h"
+	DEPENDS "${SH_EXE}" "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+		"${CMAKE_SOURCE_DIR}/version-def.h.in"
+	VERBATIM)
+list(APPEND libgit_SOURCES "${CMAKE_BINARY_DIR}/version-def.h")
+
 add_library(libgit ${libgit_SOURCES} ${compat_SOURCES})
 
-# libxdiff
-parse_makefile_for_sources(libxdiff_SOURCES "XDIFF_OBJS")
+#libxdiff
+parse_makefile_for_sources(libxdiff_SOURCES ${CMAKE_SOURCE_DIR}/Makefile "XDIFF_OBJS")
 
 list(TRANSFORM libxdiff_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
 add_library(xdiff STATIC ${libxdiff_SOURCES})
 
-# reftable
-parse_makefile_for_sources(reftable_SOURCES "REFTABLE_OBJS")
+#reftable
+parse_makefile_for_sources(reftable_SOURCES ${CMAKE_SOURCE_DIR}/Makefile "REFTABLE_OBJS")
 
 list(TRANSFORM reftable_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
 add_library(reftable STATIC ${reftable_SOURCES})
 
 if(WIN32)
-  if(NOT MSVC) # use windres when compiling with gcc and clang
-    add_custom_command(
-      OUTPUT ${CMAKE_BINARY_DIR}/git.res
-      COMMAND
-        ${WINDRES_EXE} -O coff -DMAJOR=${PROJECT_VERSION_MAJOR}
-        -DMINOR=${PROJECT_VERSION_MINOR} -DMICRO=${PROJECT_VERSION_PATCH}
-        -DPATCHLEVEL=0 -DGIT_VERSION="\\\"${PROJECT_VERSION}.GIT\\\"" -i
-        ${CMAKE_SOURCE_DIR}/git.rc -o ${CMAKE_BINARY_DIR}/git.res
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-      VERBATIM)
-  else() # MSVC use rc
-    add_custom_command(
-      OUTPUT ${CMAKE_BINARY_DIR}/git.res
-      COMMAND
-        ${CMAKE_RC_COMPILER} /d MAJOR=${PROJECT_VERSION_MAJOR} /d
-        MINOR=${PROJECT_VERSION_MINOR} /d MICRO=${PROJECT_VERSION_PATCH} /d
-        PATCHLEVEL=0 /d GIT_VERSION="${PROJECT_VERSION}.GIT" /fo
-        ${CMAKE_BINARY_DIR}/git.res ${CMAKE_SOURCE_DIR}/git.rc
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-      VERBATIM)
-  endif()
-  add_custom_target(git-rc DEPENDS ${CMAKE_BINARY_DIR}/git.res)
+	add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/git.rc
+			COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+				"${CMAKE_SOURCE_DIR}"
+				"${CMAKE_SOURCE_DIR}/git.rc.in"
+				"${CMAKE_BINARY_DIR}/git.rc"
+			DEPENDS "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+				"${CMAKE_SOURCE_DIR}/git.rc.in"
+			VERBATIM)
+
+	if(NOT MSVC)#use windres when compiling with gcc and clang
+		add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/git.res
+				COMMAND ${WINDRES_EXE} -O coff -i ${CMAKE_BINARY_DIR}/git.rc -o ${CMAKE_BINARY_DIR}/git.res
+				DEPENDS "${CMAKE_BINARY_DIR}/git.rc"
+				WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+				VERBATIM)
+	else()#MSVC use rc
+		add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/git.res
+				COMMAND ${CMAKE_RC_COMPILER} /fo ${CMAKE_BINARY_DIR}/git.res ${CMAKE_BINARY_DIR}/git.rc
+				DEPENDS "${CMAKE_BINARY_DIR}/git.rc"
+				WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+				VERBATIM)
+	endif()
+	add_custom_target(git-rc DEPENDS ${CMAKE_BINARY_DIR}/git.res)
 endif()
 
 # link all required libraries to common-main
@@ -855,8 +847,8 @@ elseif(UNIX)
   target_link_libraries(common-main pthread rt)
 endif()
 
-# git
-parse_makefile_for_sources(git_SOURCES "BUILTIN_OBJS")
+#git
+parse_makefile_for_sources(git_SOURCES ${CMAKE_SOURCE_DIR}/Makefile "BUILTIN_OBJS")
 
 list(TRANSFORM git_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
 add_executable(git ${CMAKE_SOURCE_DIR}/git.c ${git_SOURCES})
@@ -944,75 +936,92 @@ parse_makefile_for_scripts(git_shlib_scripts "SCRIPT_LIB" "")
 set(git_shell_scripts ${git_sh_scripts} ${git_shlib_scripts} git-instaweb)
 
 foreach(script ${git_shell_scripts})
-  file(STRINGS ${CMAKE_SOURCE_DIR}/${script}.sh content NEWLINE_CONSUME)
-  string(REPLACE "@SHELL_PATH@" "${SHELL_PATH}" content "${content}")
-  string(REPLACE "@@DIFF@@" "diff" content "${content}")
-  string(REPLACE "@LOCALEDIR@" "${LOCALEDIR}" content "${content}")
-  string(REPLACE "@GITWEBDIR@" "${GITWEBDIR}" content "${content}")
-  string(REPLACE "@@NO_CURL@@" "" content "${content}")
-  string(REPLACE "@@USE_GETTEXT_SCHEME@@" "" content "${content}")
-  string(REPLACE "# @@BROKEN_PATH_FIX@@" "" content "${content}")
-  string(REPLACE "@@PERL@@" "${PERL_PATH}" content "${content}")
-  string(REPLACE "@@PAGER_ENV@@" "LESS=FRX LV=-c" content "${content}")
-  file(WRITE ${CMAKE_BINARY_DIR}/${script} ${content})
+	if ("${script}" IN_LIST git_sh_scripts)
+		string(REPLACE ".sh" "" shell_gen_path "${script}")
+	else()
+		set(shell_gen_path "${script}")
+	endif()
+
+	add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/${shell_gen_path}"
+		COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/generate-script.sh"
+			"${CMAKE_SOURCE_DIR}/${script}.sh"
+			"${CMAKE_BINARY_DIR}/${shell_gen_path}"
+			"${CMAKE_BINARY_DIR}/GIT-BUILD-OPTIONS"
+		DEPENDS "${CMAKE_SOURCE_DIR}/generate-script.sh"
+			"${CMAKE_SOURCE_DIR}/${script}.sh"
+		VERBATIM)
+	list(APPEND shell_gen ${CMAKE_BINARY_DIR}/${shell_gen_path})
 endforeach()
+add_custom_target(shell-gen ALL DEPENDS ${shell_gen})
 
-# perl scripts
-parse_makefile_for_scripts(git_perl_scripts "SCRIPT_PERL" ".perl")
-
-# create perl header
-file(STRINGS ${CMAKE_SOURCE_DIR}/perl/header_templates/fixed_prefix.template.pl
-     perl_header)
-string(REPLACE "@@PATHSEP@@" ":" perl_header "${perl_header}")
-string(REPLACE "@@INSTLIBDIR@@" "${INSTLIBDIR}" perl_header "${perl_header}")
-
-foreach(script ${git_perl_scripts})
-  file(STRINGS ${CMAKE_SOURCE_DIR}/${script}.perl content NEWLINE_CONSUME)
-  string(REPLACE "#!/usr/bin/perl" "#!/usr/bin/perl\n${perl_header}\n" content
-                 "${content}")
-  string(REPLACE "@@GIT_VERSION@@" "${PROJECT_VERSION}" content "${content}")
-  file(WRITE ${CMAKE_BINARY_DIR}/${script} ${content})
-endforeach()
-
-# python script
-file(STRINGS ${CMAKE_SOURCE_DIR}/git-p4.py content NEWLINE_CONSUME)
-string(REPLACE "#!/usr/bin/env python" "#!/usr/bin/python" content "${content}")
-file(WRITE ${CMAKE_BINARY_DIR}/git-p4 ${content})
-
-# perl modules
+#perl scripts
+parse_makefile_for_scripts(git_perl_scripts "SCRIPT_PERL" "")
+#perl modules
 file(GLOB_RECURSE perl_modules "${CMAKE_SOURCE_DIR}/perl/*.pm")
+list(TRANSFORM perl_modules REPLACE "${CMAKE_SOURCE_DIR}/" "")
 
-foreach(pm ${perl_modules})
-  string(REPLACE "${CMAKE_SOURCE_DIR}/perl/" "" file_path ${pm})
-  file(STRINGS ${pm} content NEWLINE_CONSUME)
-  string(REPLACE "@@LOCALEDIR@@" "${LOCALEDIR}" content "${content}")
-  string(REPLACE "@@NO_PERL_CPAN_FALLBACKS@@" "" content "${content}")
-  file(WRITE ${CMAKE_BINARY_DIR}/perl/build/lib/${file_path} ${content})
-  # test-lib.sh requires perl/build/lib to be the build directory of perl
-  # modules
+#create perl header
+file(STRINGS ${CMAKE_SOURCE_DIR}/perl/header_templates/fixed_prefix.template.pl perl_header )
+string(REPLACE "@PATHSEP@" ":" perl_header "${perl_header}")
+string(REPLACE "@INSTLIBDIR@" "${INSTLIBDIR}" perl_header "${perl_header}")
+file(WRITE ${CMAKE_BINARY_DIR}/GIT-PERL-HEADER ${perl_header})
+
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/GIT-VERSION-FILE"
+	COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+		"${CMAKE_SOURCE_DIR}"
+		"${CMAKE_SOURCE_DIR}/GIT-VERSION-FILE.in"
+		"${CMAKE_BINARY_DIR}/GIT-VERSION-FILE"
+	DEPENDS ${SH_EXE} "${CMAKE_SOURCE_DIR}/GIT-VERSION-GEN"
+		"${CMAKE_SOURCE_DIR}/GIT-VERSION-FILE.in"
+	VERBATIM)
+
+foreach(script ${git_perl_scripts} ${perl_modules})
+	string(REPLACE ".perl" "" perl_gen_path "${script}")
+
+	get_filename_component(perl_gen_dir "${perl_gen_path}" DIRECTORY)
+	if(script MATCHES "\.pm$")
+		string(REGEX REPLACE "^perl" "perl/build/lib" perl_gen_dir "${perl_gen_dir}")
+		string(REGEX REPLACE "^perl" "perl/build/lib" perl_gen_path "${perl_gen_path}")
+	endif()
+	file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/${perl_gen_dir}")
+
+	add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/${perl_gen_path}"
+		COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/generate-perl.sh"
+			"${CMAKE_BINARY_DIR}/GIT-BUILD-OPTIONS"
+			"${CMAKE_BINARY_DIR}/GIT-VERSION-FILE"
+			"${CMAKE_BINARY_DIR}/GIT-PERL-HEADER"
+			"${CMAKE_SOURCE_DIR}/${script}"
+			"${CMAKE_BINARY_DIR}/${perl_gen_path}"
+		DEPENDS "${CMAKE_SOURCE_DIR}/generate-perl.sh"
+			"${CMAKE_SOURCE_DIR}/${script}"
+			"${CMAKE_BINARY_DIR}/GIT-BUILD-OPTIONS"
+			"${CMAKE_BINARY_DIR}/GIT-VERSION-FILE"
+		VERBATIM)
+	list(APPEND perl_gen ${CMAKE_BINARY_DIR}/${perl_gen_path})
 endforeach()
+add_custom_target(perl-gen ALL DEPENDS ${perl_gen})
 
-# templates
-file(GLOB templates "${CMAKE_SOURCE_DIR}/templates/*")
-list(TRANSFORM templates REPLACE "${CMAKE_SOURCE_DIR}/templates/" "")
-list(REMOVE_ITEM templates ".gitignore")
-list(REMOVE_ITEM templates "Makefile")
-list(REMOVE_ITEM templates "blt") # Prevents an error when reconfiguring for in
-                                  # source builds
+# Python script
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/git-p4"
+	COMMAND "${SH_EXE}" "${CMAKE_SOURCE_DIR}/generate-python.sh"
+		"${CMAKE_BINARY_DIR}/GIT-BUILD-OPTIONS"
+		"${CMAKE_SOURCE_DIR}/git-p4.py"
+		"${CMAKE_BINARY_DIR}/git-p4"
+	DEPENDS "${CMAKE_SOURCE_DIR}/generate-python.sh"
+		"${CMAKE_SOURCE_DIR}/git-p4.py"
+		"${CMAKE_BINARY_DIR}/GIT-BUILD-OPTIONS"
+	VERBATIM)
+add_custom_target(python-gen ALL DEPENDS "${CMAKE_BINARY_DIR}/git-p4")
 
-list(REMOVE_ITEM templates "branches--")
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/templates/blt/branches) # create
-                                                                # branches
-
-# templates have @.*@ replacement so use configure_file instead
+#${CMAKE_SOURCE_DIR}/Makefile templates
+parse_makefile_for_sources(templates ${CMAKE_SOURCE_DIR}/templates/Makefile "TEMPLATES")
+string(REPLACE " " ";" templates ${templates})
+#templates have @.*@ replacement so use configure_file instead
 foreach(tm ${templates})
-  string(REPLACE "--" "/" blt_tm ${tm})
-  string(REPLACE "this" "" blt_tm ${blt_tm}) # for this--
-  configure_file(${CMAKE_SOURCE_DIR}/templates/${tm}
-                 ${CMAKE_BINARY_DIR}/templates/blt/${blt_tm} @ONLY)
+	configure_file(${CMAKE_SOURCE_DIR}/templates/${tm} ${CMAKE_BINARY_DIR}/templates/blt/${tm} @ONLY)
 endforeach()
 
-# translations
+#translations
 if(MSGFMT_EXE)
   file(GLOB po_files "${CMAKE_SOURCE_DIR}/po/*.po")
   list(TRANSFORM po_files REPLACE "${CMAKE_SOURCE_DIR}/po/" "")
@@ -1097,11 +1106,10 @@ if(BUILD_TESTING)
   add_executable(test-fake-ssh ${CMAKE_SOURCE_DIR}/t/helper/test-fake-ssh.c)
   target_link_libraries(test-fake-ssh common-main)
 
-  # unit-tests
-  parse_makefile_for_sources(unit-test_SOURCES "UNIT_TEST_OBJS")
-  list(TRANSFORM unit-test_SOURCES REPLACE "\\$\\(UNIT_TEST_DIR\\)/"
-                                           "${CMAKE_SOURCE_DIR}/t/unit-tests/")
-  add_library(unit-test-lib STATIC ${unit-test_SOURCES})
+#unit-tests
+parse_makefile_for_sources(unit-test_SOURCES ${CMAKE_SOURCE_DIR}/Makefile "UNIT_TEST_OBJS")
+list(TRANSFORM unit-test_SOURCES REPLACE "\\$\\(UNIT_TEST_DIR\\)/" "${CMAKE_SOURCE_DIR}/t/unit-tests/")
+add_library(unit-test-lib STATIC ${unit-test_SOURCES})
 
   parse_makefile_for_scripts(unit_test_PROGRAMS "UNIT_TEST_PROGRAMS" "")
   foreach(unit_test ${unit_test_PROGRAMS})
@@ -1134,69 +1142,44 @@ if(BUILD_TESTING)
     endif()
   endforeach()
 
-  parse_makefile_for_scripts(clar_test_SUITES "CLAR_TEST_SUITES" "")
+parse_makefile_for_scripts(clar_test_SUITES "CLAR_TEST_SUITES" "")
+list(TRANSFORM clar_test_SUITES PREPEND "${CMAKE_SOURCE_DIR}/t/unit-tests/")
+list(TRANSFORM clar_test_SUITES APPEND ".c")
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/t/unit-tests/clar-decls.h"
+	COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/t/unit-tests/generate-clar-decls.sh
+		"${CMAKE_BINARY_DIR}/t/unit-tests/clar-decls.h"
+		${clar_test_SUITES}
+	DEPENDS ${CMAKE_SOURCE_DIR}/t/unit-tests/generate-clar-decls.sh
+		${clar_test_SUITES}
+	VERBATIM)
+add_custom_command(OUTPUT "${CMAKE_BINARY_DIR}/t/unit-tests/clar.suite"
+	COMMAND ${SH_EXE} "${CMAKE_SOURCE_DIR}/t/unit-tests/generate-clar-suites.sh"
+		"${CMAKE_BINARY_DIR}/t/unit-tests/clar-decls.h"
+		"${CMAKE_BINARY_DIR}/t/unit-tests/clar.suite"
+	DEPENDS "${CMAKE_SOURCE_DIR}/t/unit-tests/generate-clar-suites.sh"
+		"${CMAKE_BINARY_DIR}/t/unit-tests/clar-decls.h"
+	VERBATIM)
 
-  set(clar_decls "")
-  set(clar_cbs "")
-  set(clar_cbs_count 0)
-  set(clar_suites "static struct clar_suite _clar_suites[] = {\n")
-  list(LENGTH clar_test_SUITES clar_suites_count)
-  foreach(suite ${clar_test_SUITES})
-    file(STRINGS "${CMAKE_SOURCE_DIR}/t/unit-tests/${suite}.c" decls
-         REGEX "^void test_${suite}__[a-zA-Z_0-9][a-zA-Z_0-9]*\\(void\\)$")
+add_library(unit-tests-lib ${clar_test_SUITES}
+	"${CMAKE_SOURCE_DIR}/t/unit-tests/clar/clar.c"
+	"${CMAKE_BINARY_DIR}/t/unit-tests/clar-decls.h"
+	"${CMAKE_BINARY_DIR}/t/unit-tests/clar.suite"
+)
+target_include_directories(unit-tests-lib PUBLIC "${CMAKE_BINARY_DIR}/t/unit-tests")
+add_executable(unit-tests "${CMAKE_SOURCE_DIR}/t/unit-tests/unit-test.c")
+target_link_libraries(unit-tests unit-tests-lib common-main)
+set_target_properties(unit-tests
+	PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/t/unit-tests/bin)
+if(MSVC)
+	set_target_properties(unit-tests
+		PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/t/unit-tests/bin)
+	set_target_properties(unit-tests
+		PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/t/unit-tests/bin)
+endif()
 
-    list(LENGTH decls decls_count)
-    string(REGEX REPLACE "void (test_${suite}__([a-zA-Z_0-9]*))\\(void\\)"
-                         "    { \"\\2\", &\\1 },\n" cbs ${decls})
-    string(JOIN "" cbs ${cbs})
-    list(TRANSFORM decls PREPEND "extern ")
-    string(JOIN ";\n" decls ${decls})
-
-    string(APPEND clar_decls "${decls};\n")
-    string(APPEND clar_cbs
-           "static const struct clar_func _clar_cb_${suite}[] = {\n" ${cbs}
-           "};\n")
-    string(
-      APPEND
-      clar_suites
-      "    {\n"
-      "        \"${suite}\",\n"
-      "        { NULL, NULL },\n"
-      "        { NULL, NULL },\n"
-      "        _clar_cb_${suite}, ${decls_count}, 1\n"
-      "    },\n")
-    math(EXPR clar_cbs_count "${clar_cbs_count}+${decls_count}")
-  endforeach()
-  string(APPEND clar_suites "};\n"
-         "static const size_t _clar_suite_count = ${clar_suites_count};\n"
-         "static const size_t _clar_callback_count = ${clar_cbs_count};\n")
-  file(WRITE "${CMAKE_BINARY_DIR}/t/unit-tests/clar-decls.h" "${clar_decls}")
-  file(WRITE "${CMAKE_BINARY_DIR}/t/unit-tests/clar.suite"
-       "${clar_decls}" "${clar_cbs}" "${clar_suites}")
-
-  list(TRANSFORM clar_test_SUITES PREPEND "${CMAKE_SOURCE_DIR}/t/unit-tests/")
-  list(TRANSFORM clar_test_SUITES APPEND ".c")
-  add_library(unit-tests-lib ${clar_test_SUITES}
-                             "${CMAKE_SOURCE_DIR}/t/unit-tests/clar/clar.c")
-  target_include_directories(unit-tests-lib
-                             PRIVATE "${CMAKE_SOURCE_DIR}/t/unit-tests")
-  add_executable(unit-tests "${CMAKE_SOURCE_DIR}/t/unit-tests/unit-test.c")
-  target_link_libraries(unit-tests unit-tests-lib common-main)
-  set_target_properties(
-    unit-tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                          ${CMAKE_BINARY_DIR}/t/unit-tests/bin)
-  if(MSVC)
-    set_target_properties(
-      unit-tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG
-                            ${CMAKE_BINARY_DIR}/t/unit-tests/bin)
-    set_target_properties(
-      unit-tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE
-                            ${CMAKE_BINARY_DIR}/t/unit-tests/bin)
-  endif()
-
-  # test-tool
-  parse_makefile_for_sources(test-tool_SOURCES "TEST_BUILTINS_OBJS")
-  add_library(test-lib OBJECT ${CMAKE_SOURCE_DIR}/t/unit-tests/test-lib.c)
+#test-tool
+parse_makefile_for_sources(test-tool_SOURCES ${CMAKE_SOURCE_DIR}/Makefile "TEST_BUILTINS_OBJS")
+add_library(test-lib OBJECT ${CMAKE_SOURCE_DIR}/t/unit-tests/test-lib.c)
 
   list(TRANSFORM test-tool_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/t/helper/")
   add_executable(test-tool ${CMAKE_SOURCE_DIR}/t/helper/test-tool.c
@@ -1216,15 +1199,9 @@ if(BUILD_TESTING)
                                          ${CMAKE_BINARY_DIR}/t/helper)
   endif()
 
-  # wrapper scripts
-  set(wrapper_scripts
-      git
-      git-upload-pack
-      git-receive-pack
-      git-upload-archive
-      git-shell
-      git-remote-ext
-      scalar)
+#wrapper scripts
+set(wrapper_scripts
+	git git-upload-pack git-receive-pack git-upload-archive git-shell scalar)
 
   set(wrapper_test_scripts test-fake-ssh test-tool)
 
@@ -1235,22 +1212,30 @@ if(BUILD_TESTING)
     file(WRITE ${CMAKE_BINARY_DIR}/bin-wrappers/${script} ${content})
   endforeach()
 
-  foreach(script ${wrapper_test_scripts})
-    file(STRINGS ${CMAKE_SOURCE_DIR}/wrap-for-bin.sh content NEWLINE_CONSUME)
-    string(REPLACE "@@BUILD_DIR@@" "${CMAKE_BINARY_DIR}" content "${content}")
-    string(REPLACE "@@PROG@@" "t/helper/${script}${EXE_EXTENSION}" content
-                   "${content}")
-    file(WRITE ${CMAKE_BINARY_DIR}/bin-wrappers/${script} ${content})
-  endforeach()
+foreach(script ${wrapper_scripts})
+	file(STRINGS ${CMAKE_SOURCE_DIR}/bin-wrappers/wrap-for-bin.sh content NEWLINE_CONSUME)
+	string(REPLACE "@BUILD_DIR@" "${CMAKE_BINARY_DIR}" content "${content}")
+	string(REPLACE "@TEMPLATE_DIR@" "'${CMAKE_BINARY_DIR}/templates/blt'" content "${content}")
+	string(REPLACE "@PROG@" "${CMAKE_BINARY_DIR}/${script}${EXE_EXTENSION}" content "${content}")
+	file(WRITE ${CMAKE_BINARY_DIR}/bin-wrappers/${script} ${content})
+endforeach()
 
-  file(STRINGS ${CMAKE_SOURCE_DIR}/wrap-for-bin.sh content NEWLINE_CONSUME)
-  string(REPLACE "@@BUILD_DIR@@" "${CMAKE_BINARY_DIR}" content "${content}")
-  string(REPLACE "@@PROG@@" "git-cvsserver" content "${content}")
-  file(WRITE ${CMAKE_BINARY_DIR}/bin-wrappers/git-cvsserver ${content})
+foreach(script ${wrapper_test_scripts})
+	file(STRINGS ${CMAKE_SOURCE_DIR}/bin-wrappers/wrap-for-bin.sh content NEWLINE_CONSUME)
+	string(REPLACE "@BUILD_DIR@" "${CMAKE_BINARY_DIR}" content "${content}")
+	string(REPLACE "@TEMPLATE_DIR@" "'${CMAKE_BINARY_DIR}/templates/blt'" content "${content}")
+	string(REPLACE "@PROG@" "${CMAKE_BINARY_DIR}/t/helper/${script}${EXE_EXTENSION}" content "${content}")
+	file(WRITE ${CMAKE_BINARY_DIR}/bin-wrappers/${script} ${content})
+endforeach()
 
-  # options for configuring test options
-  option(PERL_TESTS "Perform tests that use perl" ON)
-  option(PYTHON_TESTS "Perform tests that use python" ON)
+file(STRINGS ${CMAKE_SOURCE_DIR}/bin-wrappers/wrap-for-bin.sh content NEWLINE_CONSUME)
+string(REPLACE "@BUILD_DIR@" "${CMAKE_BINARY_DIR}" content "${content}")
+string(REPLACE "@TEMPLATE_DIR@" "'${CMAKE_BINARY_DIR}/templates/blt'" content "${content}")
+string(REPLACE "@GIT_TEXTDOMAINDIR@" "${CMAKE_BINARY_DIR}/po/build/locale" content "${content}")
+string(REPLACE "@GITPERLLIB@" "${CMAKE_BINARY_DIR}/perl/build/lib" content "${content}")
+string(REPLACE "@MERGE_TOOLS_DIR@" "${CMAKE_SOURCE_DIR}/mergetools" content "${content}")
+string(REPLACE "@PROG@" "${CMAKE_BINARY_DIR}/git-cvsserver" content "${content}")
+file(WRITE ${CMAKE_BINARY_DIR}/bin-wrappers/git-cvsserver ${content})
 
   # GIT-BUILD-OPTIONS
   set(TEST_SHELL_PATH ${SHELL_PATH})
@@ -1267,17 +1252,33 @@ if(BUILD_TESTING)
   set(RUNTIME_PREFIX true)
   set(NO_GETTEXT)
 
-  if(NOT CURL_FOUND)
-    set(NO_CURL 1)
-  endif()
+#GIT-BUILD-OPTIONS
+set(TEST_SHELL_PATH ${SHELL_PATH})
+set(DIFF diff)
+set(PYTHON_PATH /usr/bin/python)
+set(TAR tar)
+set(NO_CURL )
+set(NO_ICONV )
+set(NO_EXPAT )
+set(USE_LIBPCRE2 )
+set(NO_PERL )
+set(NO_PTHREADS )
+set(NO_PYTHON )
+set(PAGER_ENV "LESS=FRX LV=-c")
+set(RUNTIME_PREFIX true)
+set(NO_GETTEXT )
 
   if(NOT EXPAT_FOUND)
     set(NO_EXPAT 1)
   endif()
 
-  if(NOT Intl_FOUND)
-    set(NO_GETTEXT 1)
-  endif()
+if(NOT Iconv_FOUND)
+	SET(NO_ICONV 1)
+endif()
+
+if(NOT EXPAT_FOUND)
+	set(NO_EXPAT 1)
+endif()
 
   if(NOT PERL_TESTS)
     set(NO_PERL 1)
@@ -1322,25 +1323,59 @@ if(BUILD_TESTING)
     )
   endif()
 
-  # Make the tests work when building out of the source tree
-  get_filename_component(
-    CACHE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../CMakeCache.txt ABSOLUTE)
-  if(NOT ${CMAKE_BINARY_DIR}/CMakeCache.txt STREQUAL ${CACHE_PATH})
-    # Setting the build directory in test-lib.sh before running tests
-    file(
-      WRITE ${CMAKE_BINARY_DIR}/CTestCustom.cmake
-      "file(WRITE ${CMAKE_SOURCE_DIR}/GIT-BUILD-DIR \"${CMAKE_BINARY_DIR}\")")
-    # misc copies
-    file(COPY ${CMAKE_SOURCE_DIR}/t/chainlint.pl
-         DESTINATION ${CMAKE_BINARY_DIR}/t/)
-    file(COPY ${CMAKE_SOURCE_DIR}/po/is.po DESTINATION ${CMAKE_BINARY_DIR}/po/)
-    file(GLOB mergetools "${CMAKE_SOURCE_DIR}/mergetools/*")
-    file(COPY ${mergetools} DESTINATION ${CMAKE_BINARY_DIR}/mergetools/)
-    file(COPY ${CMAKE_SOURCE_DIR}/contrib/completion/git-prompt.sh
-         DESTINATION ${CMAKE_BINARY_DIR}/contrib/completion/)
-    file(COPY ${CMAKE_SOURCE_DIR}/contrib/completion/git-completion.bash
-         DESTINATION ${CMAKE_BINARY_DIR}/contrib/completion/)
-  endif()
+file(STRINGS ${CMAKE_SOURCE_DIR}/GIT-BUILD-OPTIONS.in git_build_options NEWLINE_CONSUME)
+string(REPLACE "@BROKEN_PATH_FIX@" "" git_build_options "${git_build_options}")
+string(REPLACE "@DIFF@" "'${DIFF}'" git_build_options "${git_build_options}")
+string(REPLACE "@FSMONITOR_DAEMON_BACKEND@" "win32" git_build_options "${git_build_options}")
+string(REPLACE "@FSMONITOR_OS_SETTINGS@" "win32" git_build_options "${git_build_options}")
+string(REPLACE "@GITWEBDIR@" "'${GITWEBDIR}'" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_INTEROP_MAKE_OPTS@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_PERF_LARGE_REPO@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_PERF_MAKE_COMMAND@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_PERF_MAKE_OPTS@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_PERF_REPEAT_COUNT@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_PERF_REPO@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_CMP@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_CMP_USE_COPIED_CONTEXT@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_GITPERLLIB@" "'${CMAKE_BINARY_DIR}/perl/build/lib'" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_INDEX_VERSION@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_MERGE_TOOLS_DIR@" "'${CMAKE_BINARY_DIR}/mergetools'" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_OPTS@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_PERL_FATAL_WARNINGS@" "" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_POPATH@" "'${CMAKE_BINARY_DIR}/po'" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_TEMPLATE_DIR@" "'${CMAKE_BINARY_DIR}/templates/blt'" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_TEXTDOMAINDIR@" "'${CMAKE_BINARY_DIR}/po/build/locale'" git_build_options "${git_build_options}")
+string(REPLACE "@GIT_TEST_UTF8_LOCALE@" "" git_build_options "${git_build_options}")
+string(REPLACE "@LOCALEDIR@" "'${LOCALEDIR}'" git_build_options "${git_build_options}")
+string(REPLACE "@NO_CURL@" "${NO_CURL}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_EXPAT@" "${NO_EXPAT}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_GETTEXT@" "${NO_GETTEXT}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_GITWEB@" "1" git_build_options "${git_build_options}")
+string(REPLACE "@NO_ICONV@" "${NO_ICONV}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_PERL@" "${NO_PERL}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_PERL_CPAN_FALLBACKS@" "" git_build_options "${git_build_options}")
+string(REPLACE "@NO_PTHREADS@" "${NO_PTHREADS}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_PYTHON@" "${NO_PYTHON}" git_build_options "${git_build_options}")
+string(REPLACE "@NO_REGEX@" "" git_build_options "${git_build_options}")
+string(REPLACE "@NO_UNIX_SOCKETS@" "${NO_UNIX_SOCKETS}" git_build_options "${git_build_options}")
+string(REPLACE "@PAGER_ENV@" "'${PAGER_ENV}'" git_build_options "${git_build_options}")
+string(REPLACE "@PERL_LOCALEDIR@" "'${LOCALEDIR}'" git_build_options "${git_build_options}")
+string(REPLACE "@PERL_PATH@" "'${PERL_PATH}'" git_build_options "${git_build_options}")
+string(REPLACE "@PYTHON_PATH@" "'${PYTHON_PATH}'" git_build_options "${git_build_options}")
+string(REPLACE "@RUNTIME_PREFIX@" "'${RUNTIME_PREFIX}'" git_build_options "${git_build_options}")
+string(REPLACE "@SANITIZE_ADDRESS@" "" git_build_options "${git_build_options}")
+string(REPLACE "@SANITIZE_LEAK@" "" git_build_options "${git_build_options}")
+string(REPLACE "@SHELL_PATH@" "'${SHELL_PATH}'" git_build_options "${git_build_options}")
+string(REPLACE "@TAR@" "'${TAR}'" git_build_options "${git_build_options}")
+string(REPLACE "@TEST_OUTPUT_DIRECTORY@" "" git_build_options "${git_build_options}")
+string(REPLACE "@TEST_SHELL_PATH@" "'${TEST_SHELL_PATH}'" git_build_options "${git_build_options}")
+string(REPLACE "@USE_GETTEXT_SCHEME@" "" git_build_options "${git_build_options}")
+string(REPLACE "@USE_LIBPCRE2@" "" git_build_options "${git_build_options}")
+string(REPLACE "@X@" "${EXE_EXTENSION}" git_build_options "${git_build_options}")
+if(USE_VCPKG)
+	string(APPEND git_build_options "PATH=\"$PATH:$TEST_DIRECTORY/../compat/vcbuild/vcpkg/installed/x64-windows/bin\"\n")
+endif()
+file(WRITE ${CMAKE_BINARY_DIR}/GIT-BUILD-OPTIONS ${git_build_options})
 
   file(GLOB test_scripts "${CMAKE_SOURCE_DIR}/t/t[0-9]*.sh")
 

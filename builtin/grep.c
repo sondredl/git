@@ -3,7 +3,10 @@
  *
  * Copyright (c) 2006 Junio C Hamano
  */
+
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "abspath.h"
 #include "gettext.h"
@@ -1034,22 +1037,20 @@ int cmd_grep(int                     argc,
              const char             *prefix,
              struct repository *repo UNUSED)
 {
-    int                 hit           = 0;
-    int                 cached        = 0;
-    int                 untracked     = 0;
-    int                 opt_exclude   = -1;
-    int                 seen_dashdash = 0;
-    int                 external_grep_allowed__ignored;
-    const char         *show_in_pager = NULL;
-    const char         *default_pager = "dummy";
-    struct grep_opt     opt;
-    struct object_array list = OBJECT_ARRAY_INIT;
-    struct pathspec     pathspec;
-    struct string_list  path_list = STRING_LIST_INIT_DUP;
-    int                 i;
-    int                 dummy;
-    int                 use_index = 1;
-    int                 allow_revs;
+	int hit = 0;
+	int cached = 0, untracked = 0, opt_exclude = -1;
+	int seen_dashdash = 0;
+	int external_grep_allowed__ignored;
+	const char *show_in_pager = NULL, *default_pager = "dummy";
+	struct grep_opt opt;
+	struct object_array list = OBJECT_ARRAY_INIT;
+	struct pathspec pathspec;
+	struct string_list path_list = STRING_LIST_INIT_DUP;
+	int i;
+	int dummy;
+	int use_index = 1;
+	int allow_revs;
+	int ret;
 
     struct option options[] = {
         OPT_BOOL(0, "cached", &cached,
@@ -1341,14 +1342,14 @@ int cmd_grep(int                     argc,
         die(_("--untracked not supported with --recurse-submodules"));
     }
 
-    /*
-     * Optimize out the case where the amount of matches is limited to zero.
-     * We do this to keep results consistent with GNU grep(1).
-     */
-    if (opt.max_count == 0)
-    {
-        return 1;
-    }
+	/*
+	 * Optimize out the case where the amount of matches is limited to zero.
+	 * We do this to keep results consistent with GNU grep(1).
+	 */
+	if (opt.max_count == 0) {
+		ret = 1;
+		goto out;
+	}
 
     if (show_in_pager)
     {
@@ -1479,18 +1480,18 @@ int cmd_grep(int                     argc,
         hit = grep_objects(&opt, &pathspec, &list);
     }
 
-    if (num_threads > 1)
-    {
-        hit |= wait_all();
-    }
-    if (hit && show_in_pager)
-    {
-        run_pager(&opt, prefix);
-    }
-    clear_pathspec(&pathspec);
-    string_list_clear(&path_list, 0);
-    free_grep_patterns(&opt);
-    object_array_clear(&list);
-    free_repos();
-    return !hit;
+	if (num_threads > 1)
+		hit |= wait_all();
+	if (hit && show_in_pager)
+		run_pager(&opt, prefix);
+
+	ret = !hit;
+
+out:
+	clear_pathspec(&pathspec);
+	string_list_clear(&path_list, 0);
+	free_grep_patterns(&opt);
+	object_array_clear(&list);
+	free_repos();
+	return ret;
 }

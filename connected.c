@@ -50,15 +50,19 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
         return err;
     }
 
-    if (transport && transport->smart_options && transport->smart_options->self_contained_and_connected && transport->pack_lockfiles.nr == 1 && strip_suffix(transport->pack_lockfiles.items[0].string, ".keep", &base_len))
-    {
-        struct strbuf idx_file = STRBUF_INIT;
-        strbuf_add(&idx_file, transport->pack_lockfiles.items[0].string,
-                   base_len);
-        strbuf_addstr(&idx_file, ".idx");
-        new_pack = add_packed_git(idx_file.buf, idx_file.len, 1);
-        strbuf_release(&idx_file);
-    }
+	if (transport && transport->smart_options &&
+	    transport->smart_options->self_contained_and_connected &&
+	    transport->pack_lockfiles.nr == 1 &&
+	    strip_suffix(transport->pack_lockfiles.items[0].string,
+			 ".keep", &base_len)) {
+		struct strbuf idx_file = STRBUF_INIT;
+		strbuf_add(&idx_file, transport->pack_lockfiles.items[0].string,
+			   base_len);
+		strbuf_addstr(&idx_file, ".idx");
+		new_pack = add_packed_git(the_repository, idx_file.buf,
+					  idx_file.len, 1);
+		strbuf_release(&idx_file);
+	}
 
     if (repo_has_promisor_remote(the_repository))
     {
@@ -79,27 +83,23 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
         {
             struct packed_git *p;
 
-            for (p = get_all_packs(the_repository); p; p = p->next)
-            {
-                if (!p->pack_promisor)
-                {
-                    continue;
-                }
-                if (find_pack_entry_one(oid->hash, p))
-                {
-                    goto promisor_pack_found;
-                }
-            }
-            /*
-             * Fallback to rev-list with oid and the rest of the
-             * object IDs provided by fn.
-             */
-            goto no_promisor_pack_found;
-        promisor_pack_found:;
-        } while ((oid = fn(cb_data)) != NULL);
-        free(new_pack);
-        return 0;
-    }
+			for (p = get_all_packs(the_repository); p; p = p->next) {
+				if (!p->pack_promisor)
+					continue;
+				if (find_pack_entry_one(oid, p))
+					goto promisor_pack_found;
+			}
+			/*
+			 * Fallback to rev-list with oid and the rest of the
+			 * object IDs provided by fn.
+			 */
+			goto no_promisor_pack_found;
+promisor_pack_found:
+			;
+		} while ((oid = fn(cb_data)) != NULL);
+		free(new_pack);
+		return 0;
+	}
 
 no_promisor_pack_found:
     if (opt->shallow_file)
@@ -158,20 +158,17 @@ no_promisor_pack_found:
 
     rev_list_in = xfdopen(rev_list.in, "w");
 
-    do
-    {
-        /*
-         * If index-pack already checked that:
-         * - there are no dangling pointers in the new pack
-         * - the pack is self contained
-         * Then if the updated ref is in the new pack, then we
-         * are sure the ref is good and not sending it to
-         * rev-list for verification.
-         */
-        if (new_pack && find_pack_entry_one(oid->hash, new_pack))
-        {
-            continue;
-        }
+	do {
+		/*
+		 * If index-pack already checked that:
+		 * - there are no dangling pointers in the new pack
+		 * - the pack is self contained
+		 * Then if the updated ref is in the new pack, then we
+		 * are sure the ref is good and not sending it to
+		 * rev-list for verification.
+		 */
+		if (new_pack && find_pack_entry_one(oid, new_pack))
+			continue;
 
         if (fprintf(rev_list_in, "%s\n", oid_to_hex(oid)) < 0)
         {

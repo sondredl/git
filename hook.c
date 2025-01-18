@@ -37,19 +37,18 @@ const char *find_hook(struct repository *r, const char *name)
         {
             static struct string_list advise_given = STRING_LIST_INIT_DUP;
 
-            if (!string_list_lookup(&advise_given, name))
-            {
-                string_list_insert(&advise_given, name);
-                advise(_("The '%s' hook was ignored because "
-                         "it's not set as executable.\n"
-                         "You can disable this warning with "
-                         "`git config advice.ignoredHook false`."),
-                       path.buf);
-            }
-        }
-        return NULL;
-    }
-    return path.buf;
+			if (!string_list_lookup(&advise_given, name)) {
+				string_list_insert(&advise_given, name);
+				advise(_("The '%s' hook was ignored because "
+					 "it's not set as executable.\n"
+					 "You can disable this warning with "
+					 "`git config set advice.ignoredHook false`."),
+				       path.buf);
+			}
+		}
+		return NULL;
+	}
+	return path.buf;
 }
 
 int hook_exists(struct repository *r, const char *name)

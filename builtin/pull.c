@@ -7,6 +7,7 @@
  */
 
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
@@ -195,71 +196,71 @@ static struct option pull_options[] = {
                 &opt_allow_unrelated_histories,
                 N_("allow merging unrelated histories"), 1),
 
-    /* Options passed to git-fetch */
-    OPT_GROUP(N_("Options related to fetching")),
-    OPT_PASSTHRU(0, "all", &opt_all, NULL,
-                 N_("fetch from all remotes"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU('a', "append", &opt_append, NULL,
-                 N_("append to .git/FETCH_HEAD instead of overwriting"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU(0, "upload-pack", &opt_upload_pack, N_("path"),
-                 N_("path to upload pack on remote end"),
-                 0),
-    OPT__FORCE(&opt_force, N_("force overwrite of local branch"), 0),
-    OPT_PASSTHRU('t', "tags", &opt_tags, NULL,
-                 N_("fetch all tags and associated objects"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU('p', "prune", &opt_prune, NULL,
-                 N_("prune remote-tracking branches no longer on remote"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU('j', "jobs", &max_children, N_("n"),
-                 N_("number of submodules pulled in parallel"),
-                 PARSE_OPT_OPTARG),
-    OPT_BOOL(0, "dry-run", &opt_dry_run,
-             N_("dry run")),
-    OPT_PASSTHRU('k', "keep", &opt_keep, NULL,
-                 N_("keep downloaded pack"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU(0, "depth", &opt_depth, N_("depth"),
-                 N_("deepen history of shallow clone"),
-                 0),
-    OPT_PASSTHRU_ARGV(0, "shallow-since", &opt_fetch, N_("time"),
-                      N_("deepen history of shallow repository based on time"),
-                      0),
-    OPT_PASSTHRU_ARGV(0, "shallow-exclude", &opt_fetch, N_("revision"),
-                      N_("deepen history of shallow clone, excluding rev"),
-                      0),
-    OPT_PASSTHRU_ARGV(0, "deepen", &opt_fetch, N_("n"),
-                      N_("deepen history of shallow clone"),
-                      0),
-    OPT_PASSTHRU(0, "unshallow", &opt_unshallow, NULL,
-                 N_("convert to a complete repository"),
-                 PARSE_OPT_NONEG | PARSE_OPT_NOARG),
-    OPT_PASSTHRU(0, "update-shallow", &opt_update_shallow, NULL,
-                 N_("accept refs that update .git/shallow"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU(0, "refmap", &opt_refmap, N_("refmap"),
-                 N_("specify fetch refmap"),
-                 PARSE_OPT_NONEG),
-    OPT_PASSTHRU_ARGV('o', "server-option", &opt_fetch,
-                      N_("server-specific"),
-                      N_("option to transmit"),
-                      0),
-    OPT_PASSTHRU('4', "ipv4", &opt_ipv4, NULL,
-                 N_("use IPv4 addresses only"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU('6', "ipv6", &opt_ipv6, NULL,
-                 N_("use IPv6 addresses only"),
-                 PARSE_OPT_NOARG),
-    OPT_PASSTHRU_ARGV(0, "negotiation-tip", &opt_fetch, N_("revision"),
-                      N_("report that we have only objects reachable from this object"),
-                      0),
-    OPT_BOOL(0, "show-forced-updates", &opt_show_forced_updates,
-             N_("check for forced-updates on all updated branches")),
-    OPT_PASSTHRU(0, "set-upstream", &set_upstream, NULL,
-                 N_("set upstream for git pull/fetch"),
-                 PARSE_OPT_NOARG),
+	/* Options passed to git-fetch */
+	OPT_GROUP(N_("Options related to fetching")),
+	OPT_PASSTHRU(0, "all", &opt_all, NULL,
+		N_("fetch from all remotes"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU('a', "append", &opt_append, NULL,
+		N_("append to .git/FETCH_HEAD instead of overwriting"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU(0, "upload-pack", &opt_upload_pack, N_("path"),
+		N_("path to upload pack on remote end"),
+		0),
+	OPT__FORCE(&opt_force, N_("force overwrite of local branch"), 0),
+	OPT_PASSTHRU('t', "tags", &opt_tags, NULL,
+		N_("fetch all tags and associated objects"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU('p', "prune", &opt_prune, NULL,
+		N_("prune remote-tracking branches no longer on remote"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU('j', "jobs", &max_children, N_("n"),
+		N_("number of submodules pulled in parallel"),
+		PARSE_OPT_OPTARG),
+	OPT_BOOL(0, "dry-run", &opt_dry_run,
+		N_("dry run")),
+	OPT_PASSTHRU('k', "keep", &opt_keep, NULL,
+		N_("keep downloaded pack"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU(0, "depth", &opt_depth, N_("depth"),
+		N_("deepen history of shallow clone"),
+		0),
+	OPT_PASSTHRU_ARGV(0, "shallow-since", &opt_fetch, N_("time"),
+		N_("deepen history of shallow repository based on time"),
+		0),
+	OPT_PASSTHRU_ARGV(0, "shallow-exclude", &opt_fetch, N_("ref"),
+		N_("deepen history of shallow clone, excluding ref"),
+		0),
+	OPT_PASSTHRU_ARGV(0, "deepen", &opt_fetch, N_("n"),
+		N_("deepen history of shallow clone"),
+		0),
+	OPT_PASSTHRU(0, "unshallow", &opt_unshallow, NULL,
+		N_("convert to a complete repository"),
+		PARSE_OPT_NONEG | PARSE_OPT_NOARG),
+	OPT_PASSTHRU(0, "update-shallow", &opt_update_shallow, NULL,
+		N_("accept refs that update .git/shallow"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU(0, "refmap", &opt_refmap, N_("refmap"),
+		N_("specify fetch refmap"),
+		PARSE_OPT_NONEG),
+	OPT_PASSTHRU_ARGV('o', "server-option", &opt_fetch,
+		N_("server-specific"),
+		N_("option to transmit"),
+		0),
+	OPT_PASSTHRU('4',  "ipv4", &opt_ipv4, NULL,
+		N_("use IPv4 addresses only"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU('6',  "ipv6", &opt_ipv6, NULL,
+		N_("use IPv6 addresses only"),
+		PARSE_OPT_NOARG),
+	OPT_PASSTHRU_ARGV(0, "negotiation-tip", &opt_fetch, N_("revision"),
+		N_("report that we have only objects reachable from this object"),
+		0),
+	OPT_BOOL(0, "show-forced-updates", &opt_show_forced_updates,
+		 N_("check for forced-updates on all updated branches")),
+	OPT_PASSTHRU(0, "set-upstream", &set_upstream, NULL,
+		N_("set upstream for git pull/fetch"),
+		PARSE_OPT_NOARG),
 
     OPT_END()};
 
@@ -1153,15 +1154,13 @@ static int get_can_ff(struct object_id *orig_head,
 static int already_up_to_date(struct object_id *orig_head,
                               struct oid_array *merge_heads)
 {
-    int            i;
-    struct commit *ours;
+	struct commit *ours;
 
-    ours = lookup_commit_reference(the_repository, orig_head);
-    for (i = 0; i < merge_heads->nr; i++)
-    {
-        struct commit_list *list = NULL;
-        struct commit      *theirs;
-        int                 ok;
+	ours = lookup_commit_reference(the_repository, orig_head);
+	for (size_t i = 0; i < merge_heads->nr; i++) {
+		struct commit_list *list = NULL;
+		struct commit *theirs;
+		int ok;
 
         theirs = lookup_commit_reference(the_repository, &merge_heads->oid[i]);
         commit_list_insert(theirs, &list);

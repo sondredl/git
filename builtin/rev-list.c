@@ -1,4 +1,6 @@
 #define USE_THE_REPOSITORY_VARIABLE
+#define DISABLE_SIGN_COMPARE_WARNINGS
+
 #include "builtin.h"
 #include "config.h"
 #include "commit.h"
@@ -123,14 +125,12 @@ static inline void finish_object__ma(struct object *obj)
             oidset_insert(&missing_objects, &obj->oid);
             return;
 
-        case MA_ALLOW_PROMISOR:
-            if (is_promisor_object(&obj->oid))
-            {
-                return;
-            }
-            die("unexpected missing %s object '%s'",
-                type_name(obj->type), oid_to_hex(&obj->oid));
-            return;
+	case MA_ALLOW_PROMISOR:
+		if (is_promisor_object(the_repository, &obj->oid))
+			return;
+		die("unexpected missing %s object '%s'",
+		    type_name(obj->type), oid_to_hex(&obj->oid));
+		return;
 
         default:
             BUG("unhandled missing_action");
@@ -576,11 +576,16 @@ static int try_bitmap_traversal(struct rev_info *revs,
         return -1;
     }
 
-    bitmap_git = prepare_bitmap_walk(revs, filter_provided_objects);
-    if (!bitmap_git)
-    {
-        return -1;
-    }
+	/*
+	 * We can't know which commits were left/right in a single traversal,
+	 * and we don't yet know how to traverse them separately.
+	 */
+	if (revs->left_right)
+		return -1;
+
+	bitmap_git = prepare_bitmap_walk(revs, filter_provided_objects);
+	if (!bitmap_git)
+		return -1;
 
     traverse_bitmap_commit_list(bitmap_git, revs, &show_object_fast);
     free_bitmap_index(bitmap_git);

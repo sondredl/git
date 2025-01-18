@@ -1,4 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "abspath.h"
 #include "config.h"
@@ -255,7 +256,8 @@ static int do_clear_stash(void)
                            ref_stash, &obj, 0);
 }
 
-static int clear_stash(int argc, const char **argv, const char *prefix)
+static int clear_stash(int argc, const char **argv, const char *prefix,
+		       struct repository *repo UNUSED)
 {
     struct option options[] = {
         OPT_END()};
@@ -715,7 +717,8 @@ restore_untracked:
     return ret;
 }
 
-static int apply_stash(int argc, const char **argv, const char *prefix)
+static int apply_stash(int argc, const char **argv, const char *prefix,
+		       struct repository *repo UNUSED)
 {
     int               ret       = -1;
     int               quiet     = 0;
@@ -801,7 +804,8 @@ static int get_stash_info_assert(struct stash_info *info, int argc,
     return 0;
 }
 
-static int drop_stash(int argc, const char **argv, const char *prefix)
+static int drop_stash(int argc, const char **argv, const char *prefix,
+		      struct repository *repo UNUSED)
 {
     int               ret       = -1;
     int               quiet     = 0;
@@ -824,7 +828,8 @@ cleanup:
     return ret;
 }
 
-static int pop_stash(int argc, const char **argv, const char *prefix)
+static int pop_stash(int argc, const char **argv, const char *prefix,
+		     struct repository *repo UNUSED)
 {
     int               ret       = -1;
     int               index     = 0;
@@ -860,7 +865,8 @@ cleanup:
     return ret;
 }
 
-static int branch_stash(int argc, const char **argv, const char *prefix)
+static int branch_stash(int argc, const char **argv, const char *prefix,
+			struct repository *repo UNUSED)
 {
     int                  ret       = -1;
     const char          *branch    = NULL;
@@ -904,7 +910,8 @@ cleanup:
     return ret;
 }
 
-static int list_stash(int argc, const char **argv, const char *prefix)
+static int list_stash(int argc, const char **argv, const char *prefix,
+		      struct repository *repo UNUSED)
 {
     struct child_process cp        = CHILD_PROCESS_INIT;
     struct option        options[] = {
@@ -955,22 +962,18 @@ static int git_stash_config(const char *var, const char *value,
 
 static void diff_include_untracked(const struct stash_info *info, struct diff_options *diff_opt)
 {
-    const struct object_id     *oid[] = {&info->w_commit, &info->u_tree};
-    struct tree                *tree[ARRAY_SIZE(oid)];
-    struct tree_desc            tree_desc[ARRAY_SIZE(oid)];
-    struct unpack_trees_options unpack_tree_opt = {0};
-    int                         i;
+	const struct object_id *oid[] = { &info->w_commit, &info->u_tree };
+	struct tree *tree[ARRAY_SIZE(oid)];
+	struct tree_desc tree_desc[ARRAY_SIZE(oid)];
+	struct unpack_trees_options unpack_tree_opt = { 0 };
 
-    for (i = 0; i < ARRAY_SIZE(oid); i++)
-    {
-        tree[i] = parse_tree_indirect(oid[i]);
-        if (parse_tree(tree[i]) < 0)
-        {
-            die(_("failed to parse tree"));
-        }
-        init_tree_desc(&tree_desc[i], &tree[i]->object.oid,
-                       tree[i]->buffer, tree[i]->size);
-    }
+	for (size_t i = 0; i < ARRAY_SIZE(oid); i++) {
+		tree[i] = parse_tree_indirect(oid[i]);
+		if (parse_tree(tree[i]) < 0)
+			die(_("failed to parse tree"));
+		init_tree_desc(&tree_desc[i], &tree[i]->object.oid,
+			       tree[i]->buffer, tree[i]->size);
+	}
 
     unpack_tree_opt.head_idx  = -1;
     unpack_tree_opt.src_index = the_repository->index;
@@ -986,7 +989,8 @@ static void diff_include_untracked(const struct stash_info *info, struct diff_op
     do_diff_cache(&info->b_commit, diff_opt);
 }
 
-static int show_stash(int argc, const char **argv, const char *prefix)
+static int show_stash(int argc, const char **argv, const char *prefix,
+		      struct repository *repo UNUSED)
 {
     int               i;
     int               ret  = -1;
@@ -1141,7 +1145,8 @@ static int do_store_stash(const struct object_id *w_commit, const char *stash_ms
     return 0;
 }
 
-static int store_stash(int argc, const char **argv, const char *prefix)
+static int store_stash(int argc, const char **argv, const char *prefix,
+		       struct repository *repo UNUSED)
 {
     int                   quiet     = 0;
     const char           *stash_msg = NULL;
@@ -1700,7 +1705,8 @@ done:
     return ret;
 }
 
-static int create_stash(int argc, const char **argv, const char *prefix UNUSED)
+static int create_stash(int argc, const char **argv, const char *prefix UNUSED,
+			struct repository *repo UNUSED)
 {
     int               ret;
     struct strbuf     stash_msg_buf = STRBUF_INIT;
@@ -1765,19 +1771,15 @@ static int do_push_stash(const struct pathspec *ps, const char *stash_msg, int q
         goto done;
     }
 
-    repo_read_index_preload(the_repository, NULL, 0);
-    if (!include_untracked && ps->nr)
-    {
-        int   i;
-        char *ps_matched = xcalloc(ps->nr, 1);
+	repo_read_index_preload(the_repository, NULL, 0);
+	if (!include_untracked && ps->nr) {
+		char *ps_matched = xcalloc(ps->nr, 1);
 
-        /* TODO: audit for interaction with sparse-index. */
-        ensure_full_index(the_repository->index);
-        for (i = 0; i < the_repository->index->cache_nr; i++)
-        {
-            ce_path_match(the_repository->index, the_repository->index->cache[i], ps,
-                          ps_matched);
-        }
+		/* TODO: audit for interaction with sparse-index. */
+		ensure_full_index(the_repository->index);
+		for (size_t i = 0; i < the_repository->index->cache_nr; i++)
+			ce_path_match(the_repository->index, the_repository->index->cache[i], ps,
+				      ps_matched);
 
         if (report_path_error(ps_matched, ps))
         {
@@ -2106,12 +2108,14 @@ static int push_stash(int argc, const char **argv, const char *prefix,
     return ret;
 }
 
-static int push_stash_unassumed(int argc, const char **argv, const char *prefix)
+static int push_stash_unassumed(int argc, const char **argv, const char *prefix,
+				struct repository *repo UNUSED)
 {
     return push_stash(argc, argv, prefix, 0);
 }
 
-static int save_stash(int argc, const char **argv, const char *prefix)
+static int save_stash(int argc, const char **argv, const char *prefix,
+		      struct repository *repo UNUSED)
 {
     int             keep_index        = -1;
     int             only_staged       = 0;
@@ -2155,10 +2159,10 @@ static int save_stash(int argc, const char **argv, const char *prefix)
     return ret;
 }
 
-int cmd_stash(int                     argc,
-              const char            **argv,
-              const char             *prefix,
-              struct repository *repo UNUSED)
+int cmd_stash(int argc,
+	      const char **argv,
+	      const char *prefix,
+	      struct repository *repo)
 {
     pid_t                    pid = getpid();
     const char              *index_file;
@@ -2192,12 +2196,10 @@ int cmd_stash(int                     argc,
     strbuf_addf(&stash_index_path, "%s.stash.%" PRIuMAX, index_file,
                 (uintmax_t)pid);
 
-    if (fn)
-    {
-        return !!fn(argc, argv, prefix);
-    }
-    if (!argc)
-        return !!push_stash_unassumed(0, NULL, prefix);
+	if (fn)
+		return !!fn(argc, argv, prefix, repo);
+	else if (!argc)
+		return !!push_stash_unassumed(0, NULL, prefix, repo);
 
     /* Assume 'stash push' */
     strvec_push(&args, "push");

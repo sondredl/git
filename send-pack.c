@@ -69,15 +69,14 @@ static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
                         struct oid_array      *negotiated,
                         struct send_pack_args *args)
 {
-    /*
-     * The child becomes pack-objects --revs; we feed
-     * the revision parameters to it via its stdin and
-     * let its stdout go back to the other end.
-     */
-    struct child_process po = CHILD_PROCESS_INIT;
-    FILE                *po_in;
-    int                  i;
-    int                  rc;
+	/*
+	 * The child becomes pack-objects --revs; we feed
+	 * the revision parameters to it via its stdin and
+	 * let its stdout go back to the other end.
+	 */
+	struct child_process po = CHILD_PROCESS_INIT;
+	FILE *po_in;
+	int rc;
 
     trace2_region_enter("send_pack", "pack_objects", the_repository);
     strvec_push(&po.args, "pack-objects");
@@ -103,19 +102,15 @@ static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
     if (start_command(&po))
         die_errno("git pack-objects failed");
 
-    /*
-     * We feed the pack-objects we just spawned with revision
-     * parameters by writing to the pipe.
-     */
-    po_in = xfdopen(po.in, "w");
-    for (i = 0; i < advertised->nr; i++)
-    {
-        feed_object(&advertised->oid[i], po_in, 1);
-    }
-    for (i = 0; i < negotiated->nr; i++)
-    {
-        feed_object(&negotiated->oid[i], po_in, 1);
-    }
+	/*
+	 * We feed the pack-objects we just spawned with revision
+	 * parameters by writing to the pipe.
+	 */
+	po_in = xfdopen(po.in, "w");
+	for (size_t i = 0; i < advertised->nr; i++)
+		feed_object(&advertised->oid[i], po_in, 1);
+	for (size_t i = 0; i < negotiated->nr; i++)
+		feed_object(&negotiated->oid[i], po_in, 1);
 
     while (refs)
     {

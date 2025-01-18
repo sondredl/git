@@ -160,15 +160,13 @@ static int mark_object(struct object *obj, enum object_type type,
     }
     obj->flags |= REACHABLE;
 
-    if (is_promisor_object(&obj->oid))
-    {
-        /*
-         * Further recursion does not need to be performed on this
-         * object since it is a promisor object (so it does not need to
-         * be added to "pending").
-         */
-        return 0;
-    }
+	if (is_promisor_object(the_repository, &obj->oid))
+		/*
+		 * Further recursion does not need to be performed on this
+		 * object since it is a promisor object (so it does not need to
+		 * be added to "pending").
+		 */
+		return 0;
 
     if (!(obj->flags & HAS_OBJ))
     {
@@ -293,27 +291,22 @@ static int mark_packed_unreachable_referents(const struct object_id *oid,
  */
 static void check_reachable_object(struct object *obj)
 {
-    /*
-     * We obviously want the object to be parsed,
-     * except if it was in a pack-file and we didn't
-     * do a full fsck
-     */
-    if (!(obj->flags & HAS_OBJ))
-    {
-        if (is_promisor_object(&obj->oid))
-        {
-            return;
-        }
-        if (has_object_pack(&obj->oid))
-        {
-            return; /* it is in pack - forget about it */
-        }
-        printf_ln(_("missing %s %s"),
-                  printable_type(&obj->oid, obj->type),
-                  describe_object(&obj->oid));
-        errors_found |= ERROR_REACHABLE;
-        return;
-    }
+	/*
+	 * We obviously want the object to be parsed,
+	 * except if it was in a pack-file and we didn't
+	 * do a full fsck
+	 */
+	if (!(obj->flags & HAS_OBJ)) {
+		if (is_promisor_object(the_repository, &obj->oid))
+			return;
+		if (has_object_pack(the_repository, &obj->oid))
+			return; /* it is in pack - forget about it */
+		printf_ln(_("missing %s %s"),
+			  printable_type(&obj->oid, obj->type),
+			  describe_object(&obj->oid));
+		errors_found |= ERROR_REACHABLE;
+		return;
+	}
 }
 
 /*
@@ -431,26 +424,28 @@ static void check_connectivity(void)
     /* Traverse the pending reachable objects */
     traverse_reachable();
 
-    /*
-     * With --connectivity-only, we won't have actually opened and marked
-     * unreachable objects with USED. Do that now to make --dangling, etc
-     * accurate.
-     */
-    if (connectivity_only && (show_dangling || write_lost_and_found))
-    {
-        /*
-         * Even though we already have a "struct object" for each of
-         * these in memory, we must not iterate over the internal
-         * object hash as we do below. Our loop would potentially
-         * resize the hash, making our iteration invalid.
-         *
-         * Instead, we'll just go back to the source list of objects,
-         * and ignore any that weren't present in our earlier
-         * traversal.
-         */
-        for_each_loose_object(mark_loose_unreachable_referents, NULL, 0);
-        for_each_packed_object(mark_packed_unreachable_referents, NULL, 0);
-    }
+	/*
+	 * With --connectivity-only, we won't have actually opened and marked
+	 * unreachable objects with USED. Do that now to make --dangling, etc
+	 * accurate.
+	 */
+	if (connectivity_only && (show_dangling || write_lost_and_found)) {
+		/*
+		 * Even though we already have a "struct object" for each of
+		 * these in memory, we must not iterate over the internal
+		 * object hash as we do below. Our loop would potentially
+		 * resize the hash, making our iteration invalid.
+		 *
+		 * Instead, we'll just go back to the source list of objects,
+		 * and ignore any that weren't present in our earlier
+		 * traversal.
+		 */
+		for_each_loose_object(mark_loose_unreachable_referents, NULL, 0);
+		for_each_packed_object(the_repository,
+				       mark_packed_unreachable_referents,
+				       NULL,
+				       0);
+	}
 
     /* Look up all the requirements, warn about missing objects.. */
     max = get_max_object_index();
@@ -558,27 +553,21 @@ static void fsck_handle_reflog_oid(const char *refname, struct object_id *oid,
 {
     struct object *obj;
 
-    if (!is_null_oid(oid))
-    {
-        obj = lookup_object(the_repository, oid);
-        if (obj && (obj->flags & HAS_OBJ))
-        {
-            if (timestamp)
-            {
-                fsck_put_object_name(&fsck_walk_options, oid,
-                                     "%s@{%" PRItime "}",
-                                     refname, timestamp);
-            }
-            obj->flags |= USED;
-            mark_object_reachable(obj);
-        }
-        else if (!is_promisor_object(oid))
-        {
-            error(_("%s: invalid reflog entry %s"),
-                  refname, oid_to_hex(oid));
-            errors_found |= ERROR_REACHABLE;
-        }
-    }
+	if (!is_null_oid(oid)) {
+		obj = lookup_object(the_repository, oid);
+		if (obj && (obj->flags & HAS_OBJ)) {
+			if (timestamp)
+				fsck_put_object_name(&fsck_walk_options, oid,
+						     "%s@{%"PRItime"}",
+						     refname, timestamp);
+			obj->flags |= USED;
+			mark_object_reachable(obj);
+		} else if (!is_promisor_object(the_repository, oid)) {
+			error(_("%s: invalid reflog entry %s"),
+			      refname, oid_to_hex(oid));
+			errors_found |= ERROR_REACHABLE;
+		}
+	}
 }
 
 static int fsck_handle_reflog_ent(struct object_id *ooid, struct object_id *noid,
@@ -616,34 +605,31 @@ static int fsck_handle_ref(const char *refname, const char *referent UNUSED, con
 {
     struct object *obj;
 
-    obj = parse_object(the_repository, oid);
-    if (!obj)
-    {
-        if (is_promisor_object(oid))
-        {
-            /*
-             * Increment default_refs anyway, because this is a
-             * valid ref.
-             */
-            default_refs++;
-            return 0;
-        }
-        error(_("%s: invalid sha1 pointer %s"),
-              refname, oid_to_hex(oid));
-        errors_found |= ERROR_REACHABLE;
-        /* We'll continue with the rest despite the error.. */
-        return 0;
-    }
-    if (obj->type != OBJ_COMMIT && is_branch(refname))
-    {
-        error(_("%s: not a commit"), refname);
-        errors_found |= ERROR_REFS;
-    }
-    default_refs++;
-    obj->flags |= USED;
-    fsck_put_object_name(&fsck_walk_options,
-                         oid, "%s", refname);
-    mark_object_reachable(obj);
+	obj = parse_object(the_repository, oid);
+	if (!obj) {
+		if (is_promisor_object(the_repository, oid)) {
+			/*
+			 * Increment default_refs anyway, because this is a
+			 * valid ref.
+			 */
+			 default_refs++;
+			 return 0;
+		}
+		error(_("%s: invalid sha1 pointer %s"),
+		      refname, oid_to_hex(oid));
+		errors_found |= ERROR_REACHABLE;
+		/* We'll continue with the rest despite the error.. */
+		return 0;
+	}
+	if (obj->type != OBJ_COMMIT && is_branch(refname)) {
+		error(_("%s: not a commit"), refname);
+		errors_found |= ERROR_REFS;
+	}
+	default_refs++;
+	obj->flags |= USED;
+	fsck_put_object_name(&fsck_walk_options,
+			     oid, "%s", refname);
+	mark_object_reachable(obj);
 
     return 0;
 }
@@ -1129,18 +1115,14 @@ int cmd_fsck(int                     argc,
     git_config(git_fsck_config, &fsck_obj_options);
     prepare_repo_settings(the_repository);
 
-    if (connectivity_only)
-    {
-        for_each_loose_object(mark_loose_for_connectivity, NULL, 0);
-        for_each_packed_object(mark_packed_for_connectivity, NULL, 0);
-    }
-    else
-    {
-        prepare_alt_odb(the_repository);
-        for (odb = the_repository->objects->odb; odb; odb = odb->next)
-        {
-            fsck_object_dir(odb->path);
-        }
+	if (connectivity_only) {
+		for_each_loose_object(mark_loose_for_connectivity, NULL, 0);
+		for_each_packed_object(the_repository,
+				       mark_packed_for_connectivity, NULL, 0);
+	} else {
+		prepare_alt_odb(the_repository);
+		for (odb = the_repository->objects->odb; odb; odb = odb->next)
+			fsck_object_dir(odb->path);
 
         if (check_full)
         {
@@ -1193,16 +1175,13 @@ int cmd_fsck(int                     argc,
             struct object *obj = lookup_object(the_repository,
                                                &oid);
 
-            if (!obj || !(obj->flags & HAS_OBJ))
-            {
-                if (is_promisor_object(&oid))
-                {
-                    continue;
-                }
-                error(_("%s: object missing"), oid_to_hex(&oid));
-                errors_found |= ERROR_OBJECT;
-                continue;
-            }
+			if (!obj || !(obj->flags & HAS_OBJ)) {
+				if (is_promisor_object(the_repository, &oid))
+					continue;
+				error(_("%s: object missing"), oid_to_hex(&oid));
+				errors_found |= ERROR_OBJECT;
+				continue;
+			}
 
             obj->flags |= USED;
             fsck_put_object_name(&fsck_walk_options, &oid,

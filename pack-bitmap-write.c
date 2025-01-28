@@ -694,11 +694,12 @@ int bitmap_writer_build(struct bitmap_writer *writer)
     uint32_t             *mapping;
     int                   closed = 1; /* until proven otherwise */
 
-    if (writer->show_progress)
-        writer->progress = start_progress("Building bitmaps",
-                                          writer->selected_nr);
-    trace2_region_enter("pack-bitmap-write", "building_bitmaps_total",
-                        the_repository);
+	if (writer->show_progress)
+		writer->progress = start_progress(the_repository,
+						  "Building bitmaps",
+						  writer->selected_nr);
+	trace2_region_enter("pack-bitmap-write", "building_bitmaps_total",
+			    the_repository);
 
     old_bitmap = prepare_bitmap_git(writer->to_pack->repo);
     if (old_bitmap)
@@ -835,10 +836,9 @@ void bitmap_writer_select_commits(struct bitmap_writer *writer,
         return;
     }
 
-    if (writer->show_progress)
-    {
-        writer->progress = start_progress("Selecting bitmap commits", 0);
-    }
+	if (writer->show_progress)
+		writer->progress = start_progress(the_repository,
+						  "Selecting bitmap commits", 0);
 
     for (;;)
     {

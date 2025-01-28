@@ -338,22 +338,16 @@ static int graph_write(int argc, const char **argv, const char *prefix,
         goto cleanup;
     }
 
-    if (opts.stdin_packs)
-    {
-        while (strbuf_getline(&buf, stdin) != EOF)
-        {
-            string_list_append_nodup(&pack_indexes,
-                                     strbuf_detach(&buf, NULL));
-        }
-    }
-    else if (opts.stdin_commits)
-    {
-        oidset_init(&commits, 0);
-        if (opts.progress)
-        {
-            progress = start_delayed_progress(
-                _("Collecting commits from input"), 0);
-        }
+	if (opts.stdin_packs) {
+		while (strbuf_getline(&buf, stdin) != EOF)
+			string_list_append_nodup(&pack_indexes,
+						 strbuf_detach(&buf, NULL));
+	} else if (opts.stdin_commits) {
+		oidset_init(&commits, 0);
+		if (opts.progress)
+			progress = start_delayed_progress(
+				the_repository,
+				_("Collecting commits from input"), 0);
 
         while (strbuf_getline(&buf, stdin) != EOF)
         {

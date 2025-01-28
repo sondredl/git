@@ -745,51 +745,49 @@ int cmd_help(int                     argc,
                       builtin_help_usage, builtin_help_options);
     }
 
-    switch (cmd_mode)
-    {
-        case HELP_ACTION_ALL:
-            opt_mode_usage(argc, "--all", help_format);
-            if (verbose)
-            {
-                setup_pager();
-                list_all_cmds_help(show_external_commands,
-                                   show_aliases);
-                return 0;
-            }
-            printf(_("usage: %s%s"), _(git_usage_string), "\n\n");
-            load_command_list("git-", &main_cmds, &other_cmds);
-            list_commands(&main_cmds, &other_cmds);
-            printf("%s\n", _(git_more_info_string));
-            break;
-        case HELP_ACTION_GUIDES:
-            opt_mode_usage(argc, "--guides", help_format);
-            list_guides_help();
-            printf("%s\n", _(git_more_info_string));
-            return 0;
-        case HELP_ACTION_CONFIG_FOR_COMPLETION:
-            opt_mode_usage(argc, "--config-for-completion", help_format);
-            list_config_help(SHOW_CONFIG_VARS);
-            return 0;
-        case HELP_ACTION_USER_INTERFACES:
-            opt_mode_usage(argc, "--user-interfaces", help_format);
-            list_user_interfaces_help();
-            return 0;
-        case HELP_ACTION_DEVELOPER_INTERFACES:
-            opt_mode_usage(argc, "--developer-interfaces", help_format);
-            list_developer_interfaces_help();
-            return 0;
-        case HELP_ACTION_CONFIG_SECTIONS_FOR_COMPLETION:
-            opt_mode_usage(argc, "--config-sections-for-completion",
-                           help_format);
-            list_config_help(SHOW_CONFIG_SECTIONS);
-            return 0;
-        case HELP_ACTION_CONFIG:
-            opt_mode_usage(argc, "--config", help_format);
-            setup_pager();
-            list_config_help(SHOW_CONFIG_HUMAN);
-            printf("\n%s\n", _("'git help config' for more information"));
-            return 0;
-    }
+	switch (cmd_mode) {
+	case HELP_ACTION_ALL:
+		opt_mode_usage(argc, "--all", help_format);
+		if (verbose) {
+			setup_pager(the_repository);
+			list_all_cmds_help(show_external_commands,
+					   show_aliases);
+			return 0;
+		}
+		printf(_("usage: %s%s"), _(git_usage_string), "\n\n");
+		load_command_list("git-", &main_cmds, &other_cmds);
+		list_commands(&main_cmds, &other_cmds);
+		printf("%s\n", _(git_more_info_string));
+		break;
+	case HELP_ACTION_GUIDES:
+		opt_mode_usage(argc, "--guides", help_format);
+		list_guides_help();
+		printf("%s\n", _(git_more_info_string));
+		return 0;
+	case HELP_ACTION_CONFIG_FOR_COMPLETION:
+		opt_mode_usage(argc, "--config-for-completion", help_format);
+		list_config_help(SHOW_CONFIG_VARS);
+		return 0;
+	case HELP_ACTION_USER_INTERFACES:
+		opt_mode_usage(argc, "--user-interfaces", help_format);
+		list_user_interfaces_help();
+		return 0;
+	case HELP_ACTION_DEVELOPER_INTERFACES:
+		opt_mode_usage(argc, "--developer-interfaces", help_format);
+		list_developer_interfaces_help();
+		return 0;
+	case HELP_ACTION_CONFIG_SECTIONS_FOR_COMPLETION:
+		opt_mode_usage(argc, "--config-sections-for-completion",
+			       help_format);
+		list_config_help(SHOW_CONFIG_SECTIONS);
+		return 0;
+	case HELP_ACTION_CONFIG:
+		opt_mode_usage(argc, "--config", help_format);
+		setup_pager(the_repository);
+		list_config_help(SHOW_CONFIG_HUMAN);
+		printf("\n%s\n", _("'git help config' for more information"));
+		return 0;
+	}
 
     if (!argv[0])
     {

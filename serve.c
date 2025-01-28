@@ -1,5 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
-
 #include "git-compat-util.h"
 #include "repository.h"
 #include "config.h"
@@ -174,7 +172,7 @@ static struct protocol_capability capabilities[] = {
     },
 };
 
-void protocol_v2_advertise_capabilities(void)
+void protocol_v2_advertise_capabilities(struct repository *r)
 {
 	struct strbuf capability = STRBUF_INIT;
 	struct strbuf value = STRBUF_INIT;
@@ -185,9 +183,8 @@ void protocol_v2_advertise_capabilities(void)
 	for (size_t i = 0; i < ARRAY_SIZE(capabilities); i++) {
 		struct protocol_capability *c = &capabilities[i];
 
-        if (c->advertise(the_repository, &value))
-        {
-            strbuf_addstr(&capability, c->name);
+		if (c->advertise(r, &value)) {
+			strbuf_addstr(&capability, c->name);
 
             if (value.len)
             {
@@ -231,24 +228,20 @@ static struct protocol_capability *get_capability(const char *key, const char **
     return NULL;
 }
 
-static int receive_client_capability(const char *key)
+static int receive_client_capability(struct repository *r, const char *key)
 {
     const char                       *value;
     const struct protocol_capability *c = get_capability(key, &value);
 
-    if (!c || c->command || !c->advertise(the_repository, NULL))
-    {
-        return 0;
-    }
+	if (!c || c->command || !c->advertise(r, NULL))
+		return 0;
 
-    if (c->receive)
-    {
-        c->receive(the_repository, value);
-    }
-    return 1;
+	if (c->receive)
+		c->receive(r, value);
+	return 1;
 }
 
-static int parse_command(const char *key, struct protocol_capability **command)
+static int parse_command(struct repository *r, const char *key, struct protocol_capability **command)
 {
     const char *out;
 
@@ -257,15 +250,11 @@ static int parse_command(const char *key, struct protocol_capability **command)
         const char                 *value;
         struct protocol_capability *cmd = get_capability(out, &value);
 
-        if (*command)
-        {
-            die("command '%s' requested after already requesting command '%s'",
-                out, (*command)->name);
-        }
-        if (!cmd || !cmd->advertise(the_repository, NULL) || !cmd->command || value)
-        {
-            die("invalid command '%s'", out);
-        }
+		if (*command)
+			die("command '%s' requested after already requesting command '%s'",
+			    out, (*command)->name);
+		if (!cmd || !cmd->advertise(r, NULL) || !cmd->command || value)
+			die("invalid command '%s'", out);
 
         *command = cmd;
         return 1;
@@ -280,7 +269,7 @@ enum request_state
     PROCESS_REQUEST_DONE,
 };
 
-static int process_request(void)
+static int process_request(struct repository *r)
 {
     enum request_state          state = PROCESS_REQUEST_KEYS;
     struct packet_reader        reader;
@@ -300,21 +289,16 @@ static int process_request(void)
     }
     reader.options &= ~PACKET_READ_GENTLE_ON_EOF;
 
-    while (state != PROCESS_REQUEST_DONE)
-    {
-        switch (packet_reader_peek(&reader))
-        {
-            case PACKET_READ_EOF:
-                BUG("Should have already died when seeing EOF");
-            case PACKET_READ_NORMAL:
-                if (parse_command(reader.line, &command) || receive_client_capability(reader.line))
-                {
-                    seen_capability_or_command = 1;
-                }
-                else
-                {
-                    die("unknown capability '%s'", reader.line);
-                }
+	while (state != PROCESS_REQUEST_DONE) {
+		switch (packet_reader_peek(&reader)) {
+		case PACKET_READ_EOF:
+			BUG("Should have already died when seeing EOF");
+		case PACKET_READ_NORMAL:
+			if (parse_command(r, reader.line, &command) ||
+			    receive_client_capability(r, reader.line))
+				seen_capability_or_command = 1;
+			else
+				die("unknown capability '%s'", reader.line);
 
                 /* Consume the peeked line */
                 packet_reader_read(&reader);
@@ -355,39 +339,30 @@ static int process_request(void)
         die("no command requested");
     }
 
-    if (client_hash_algo != hash_algo_by_ptr(the_repository->hash_algo))
-        die("mismatched object format: server %s; client %s",
-            the_repository->hash_algo->name,
-            hash_algos[client_hash_algo].name);
+	if (client_hash_algo != hash_algo_by_ptr(r->hash_algo))
+		die("mismatched object format: server %s; client %s",
+		    r->hash_algo->name,
+		    hash_algos[client_hash_algo].name);
 
-    command->command(the_repository, &reader);
+	command->command(r, &reader);
 
     return 0;
 }
 
-void protocol_v2_serve_loop(int stateless_rpc)
+void protocol_v2_serve_loop(struct repository *r, int stateless_rpc)
 {
-    if (!stateless_rpc)
-    {
-        protocol_v2_advertise_capabilities();
-    }
+	if (!stateless_rpc)
+		protocol_v2_advertise_capabilities(r);
 
-    /*
-     * If stateless-rpc was requested then exit after
-     * a single request/response exchange
-     */
-    if (stateless_rpc)
-    {
-        process_request();
-    }
-    else
-    {
-        for (;;)
-        {
-            if (process_request())
-            {
-                break;
-            }
-        }
-    }
+	/*
+	 * If stateless-rpc was requested then exit after
+	 * a single request/response exchange
+	 */
+	if (stateless_rpc) {
+		process_request(r);
+	} else {
+		for (;;)
+			if (process_request(r))
+				break;
+	}
 }

@@ -1,3 +1,5 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "builtin.h"
 #include "exec-cmd.h"
 #include "gettext.h"
@@ -61,27 +63,20 @@ int cmd_upload_pack(int                     argc,
 	if (!enter_repo(dir, enter_repo_flags))
 		die("'%s' does not appear to be a git repository", dir);
 
-    switch (determine_protocol_version_server())
-    {
-        case protocol_v2:
-            if (advertise_refs)
-            {
-                protocol_v2_advertise_capabilities();
-            }
-            else
-            {
-                protocol_v2_serve_loop(stateless_rpc);
-            }
-            break;
-        case protocol_v1:
-            /*
-             * v1 is just the original protocol with a version string,
-             * so just fall through after writing the version string.
-             */
-            if (advertise_refs || !stateless_rpc)
-            {
-                packet_write_fmt(1, "version 1\n");
-            }
+	switch (determine_protocol_version_server()) {
+	case protocol_v2:
+		if (advertise_refs)
+			protocol_v2_advertise_capabilities(the_repository);
+		else
+			protocol_v2_serve_loop(the_repository, stateless_rpc);
+		break;
+	case protocol_v1:
+		/*
+		 * v1 is just the original protocol with a version string,
+		 * so just fall through after writing the version string.
+		 */
+		if (advertise_refs || !stateless_rpc)
+			packet_write_fmt(1, "version 1\n");
 
             /* fallthrough */
         case protocol_v0:

@@ -1814,13 +1814,13 @@ void diffcore_rename_extended(struct diff_options *options,
             break;
     }
 
-    trace2_region_enter("diff", "inexact renames", options->repo);
-    if (options->show_rename_progress)
-    {
-        progress = start_delayed_progress(
-            _("Performing inexact rename detection"),
-            (uint64_t)num_destinations * (uint64_t)num_sources);
-    }
+	trace2_region_enter("diff", "inexact renames", options->repo);
+	if (options->show_rename_progress) {
+		progress = start_delayed_progress(
+				the_repository,
+				_("Performing inexact rename detection"),
+				(uint64_t)num_destinations * (uint64_t)num_sources);
+	}
 
     /* Finish setting up dpf_options */
     prefetch_options.skip_unmodified = skip_unmodified;

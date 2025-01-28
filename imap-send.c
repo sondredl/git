@@ -1054,7 +1054,7 @@ static void server_fill_credential(struct imap_server_conf *srvc, struct credent
     cred->username = xstrdup_or_null(srvc->user);
     cred->password = xstrdup_or_null(srvc->pass);
 
-    credential_fill(cred, 1);
+	credential_fill(the_repository, cred, 1);
 
     if (!srvc->user)
     {
@@ -1299,11 +1299,9 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc, const c
         }
     } /* !preauth */
 
-    if (cred.username)
-    {
-        credential_approve(&cred);
-    }
-    credential_clear(&cred);
+	if (cred.username)
+		credential_approve(the_repository, &cred);
+	credential_clear(&cred);
 
     /* check the target mailbox exists */
     ctx->name = folder;
@@ -1332,11 +1330,9 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc, const c
     return ctx;
 
 bail:
-    if (cred.username)
-    {
-        credential_reject(&cred);
-    }
-    credential_clear(&cred);
+	if (cred.username)
+		credential_reject(the_repository, &cred);
+	credential_clear(&cred);
 
 out:
     imap_close_store(ctx);
@@ -1759,17 +1755,12 @@ static int curl_append_msgs_to_imap(struct imap_server_conf *server,
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 
-    if (cred.username)
-    {
-        if (res == CURLE_OK)
-        {
-            credential_approve(&cred);
-        }
-        else if (res == CURLE_LOGIN_DENIED)
-        {
-            credential_reject(&cred);
-        }
-    }
+	if (cred.username) {
+		if (res == CURLE_OK)
+			credential_approve(the_repository, &cred);
+		else if (res == CURLE_LOGIN_DENIED)
+			credential_reject(the_repository, &cred);
+	}
 
     credential_clear(&cred);
 

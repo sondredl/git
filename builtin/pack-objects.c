@@ -1492,12 +1492,11 @@ static void write_pack_file(void)
     time_t                last_mtime   = 0;
     struct object_entry **write_order;
 
-    if (progress > pack_to_stdout)
-    {
-        progress_state = start_progress(_("Writing objects"), nr_result);
-    }
-    ALLOC_ARRAY(written_list, to_pack.nr_objects);
-    write_order = compute_write_order();
+	if (progress > pack_to_stdout)
+		progress_state = start_progress(the_repository,
+						_("Writing objects"), nr_result);
+	ALLOC_ARRAY(written_list, to_pack.nr_objects);
+	write_order = compute_write_order();
 
     do
     {
@@ -2850,11 +2849,10 @@ static void get_object_details(void)
     uint32_t              i;
     struct object_entry **sorted_by_offset;
 
-    if (progress)
-    {
-        progress_state = start_progress(_("Counting objects"),
-                                        to_pack.nr_objects);
-    }
+	if (progress)
+		progress_state = start_progress(the_repository,
+						_("Counting objects"),
+						to_pack.nr_objects);
 
     CALLOC_ARRAY(sorted_by_offset, to_pack.nr_objects);
     for (i = 0; i < to_pack.nr_objects; i++)
@@ -3852,20 +3850,17 @@ static void prepare_pack(int window, int depth)
     {
         unsigned nr_done = 0;
 
-        if (progress)
-        {
-            progress_state = start_progress(_("Compressing objects"),
-                                            nr_deltas);
-        }
-        QSORT(delta_list, n, type_size_sort);
-        ll_find_deltas(delta_list, n, window + 1, depth, &nr_done);
-        stop_progress(&progress_state);
-        if (nr_done != nr_deltas)
-        {
-            die(_("inconsistency with delta count"));
-        }
-    }
-    free(delta_list);
+		if (progress)
+			progress_state = start_progress(the_repository,
+							_("Compressing objects"),
+							nr_deltas);
+		QSORT(delta_list, n, type_size_sort);
+		ll_find_deltas(delta_list, n, window+1, depth, &nr_done);
+		stop_progress(&progress_state);
+		if (nr_done != nr_deltas)
+			die(_("inconsistency with delta count"));
+	}
+	free(delta_list);
 }
 
 static int git_pack_config(const char *k, const char *v,
@@ -4377,10 +4372,9 @@ static void add_objects_in_unpacked_packs(void);
 
 static void enumerate_cruft_objects(void)
 {
-    if (progress)
-    {
-        progress_state = start_progress(_("Enumerating cruft objects"), 0);
-    }
+	if (progress)
+		progress_state = start_progress(the_repository,
+						_("Enumerating cruft objects"), 0);
 
     add_objects_in_unpacked_packs();
     add_unreachable_loose_objects();
@@ -4405,13 +4399,12 @@ static void enumerate_and_traverse_cruft_objects(struct string_list *fresh_packs
 
     revs.ignore_missing_links = 1;
 
-    if (progress)
-    {
-        progress_state = start_progress(_("Enumerating cruft objects"), 0);
-    }
-    ret = add_unseen_recent_objects_to_traversal(&revs, cruft_expiration,
-                                                 set_cruft_mtime, 1);
-    stop_progress(&progress_state);
+	if (progress)
+		progress_state = start_progress(the_repository,
+						_("Enumerating cruft objects"), 0);
+	ret = add_unseen_recent_objects_to_traversal(&revs, cruft_expiration,
+						     set_cruft_mtime, 1);
+	stop_progress(&progress_state);
 
     if (ret)
     {
@@ -4428,16 +4421,13 @@ static void enumerate_and_traverse_cruft_objects(struct string_list *fresh_packs
     }
     mark_pack_kept_in_core(fresh_packs, 1);
 
-    if (prepare_revision_walk(&revs))
-    {
-        die(_("revision walk setup failed"));
-    }
-    if (progress)
-    {
-        progress_state = start_progress(_("Traversing cruft objects"), 0);
-    }
-    nr_seen = 0;
-    traverse_commit_list(&revs, show_cruft_commit, show_cruft_object, NULL);
+	if (prepare_revision_walk(&revs))
+		die(_("revision walk setup failed"));
+	if (progress)
+		progress_state = start_progress(the_repository,
+						_("Traversing cruft objects"), 0);
+	nr_seen = 0;
+	traverse_commit_list(&revs, show_cruft_commit, show_cruft_object, NULL);
 
     stop_progress(&progress_state);
 }
@@ -5588,31 +5578,21 @@ int cmd_pack_objects(int argc,
                         the_repository);
     prepare_packing_data(the_repository, &to_pack);
 
-    if (progress && !cruft)
-    {
-        progress_state = start_progress(_("Enumerating objects"), 0);
-    }
-    if (stdin_packs)
-    {
-        /* avoids adding objects in excluded packs */
-        ignore_packed_keep_in_core = 1;
-        read_packs_list_from_stdin();
-        if (rev_list_unpacked)
-        {
-            add_unreachable_loose_objects();
-        }
-    }
-    else if (cruft)
-    {
-        read_cruft_objects();
-    }
-    else if (!use_internal_rev_list)
-    {
-        read_object_list_from_stdin();
-    }
-    else
-    {
-        struct rev_info revs;
+	if (progress && !cruft)
+		progress_state = start_progress(the_repository,
+						_("Enumerating objects"), 0);
+	if (stdin_packs) {
+		/* avoids adding objects in excluded packs */
+		ignore_packed_keep_in_core = 1;
+		read_packs_list_from_stdin();
+		if (rev_list_unpacked)
+			add_unreachable_loose_objects();
+	} else if (cruft) {
+		read_cruft_objects();
+	} else if (!use_internal_rev_list) {
+		read_object_list_from_stdin();
+	} else {
+		struct rev_info revs;
 
 		repo_init_revisions(the_repository, &revs, NULL);
 		list_objects_filter_copy(&revs.filter, &filter_options);

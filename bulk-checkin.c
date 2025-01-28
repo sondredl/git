@@ -386,11 +386,9 @@ void prepare_loose_object_bulk_checkin(void)
         return;
     }
 
-    bulk_fsync_objdir = tmp_objdir_create("bulk-fsync");
-    if (bulk_fsync_objdir)
-    {
-        tmp_objdir_replace_primary_odb(bulk_fsync_objdir, 0);
-    }
+	bulk_fsync_objdir = tmp_objdir_create(the_repository, "bulk-fsync");
+	if (bulk_fsync_objdir)
+		tmp_objdir_replace_primary_odb(bulk_fsync_objdir, 0);
 }
 
 void fsync_loose_object_bulk_checkin(int fd, const char *filename)

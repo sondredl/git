@@ -1232,19 +1232,16 @@ int cmd_grep(int                     argc,
         argc--;
     }
 
-    if (show_in_pager == default_pager)
-    {
-        show_in_pager = git_pager(1);
-    }
-    if (show_in_pager)
-    {
-        opt.color               = 0;
-        opt.name_only           = 1;
-        opt.null_following_name = 1;
-        opt.output_priv         = &path_list;
-        opt.output              = append_path;
-        string_list_append(&path_list, show_in_pager);
-    }
+	if (show_in_pager == default_pager)
+		show_in_pager = git_pager(the_repository, 1);
+	if (show_in_pager) {
+		opt.color = 0;
+		opt.name_only = 1;
+		opt.null_following_name = 1;
+		opt.output_priv = &path_list;
+		opt.output = append_path;
+		string_list_append(&path_list, show_in_pager);
+	}
 
     if (!opt.pattern_list)
     {
@@ -1443,10 +1440,8 @@ int cmd_grep(int                     argc,
         }
     }
 
-    if (!show_in_pager && !opt.status_only)
-    {
-        setup_pager();
-    }
+	if (!show_in_pager && !opt.status_only)
+		setup_pager(the_repository);
 
     die_for_incompatible_opt3(!use_index, "--no-index",
                               untracked, "--untracked",

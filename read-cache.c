@@ -1807,11 +1807,10 @@ int refresh_index(struct index_state *istate, unsigned int flags,
     int              t2_sum_lstat = 0;
     int              t2_sum_scan  = 0;
 
-    if (flags & REFRESH_PROGRESS && isatty(2))
-    {
-        progress = start_delayed_progress(_("Refresh index"),
-                                          istate->cache_nr);
-    }
+	if (flags & REFRESH_PROGRESS && isatty(2))
+		progress = start_delayed_progress(the_repository,
+						  _("Refresh index"),
+						  istate->cache_nr);
 
     trace_performance_enter();
     modified_fmt   = in_porcelain ? "M\t%s\n" : "%s: needs update\n";
@@ -2083,44 +2082,39 @@ static int verify_hdr(const struct cache_header *hdr, unsigned long size)
 static int read_index_extension(struct index_state *istate,
                                 const char *ext, const char *data, unsigned long sz)
 {
-    switch (CACHE_EXT(ext))
-    {
-        case CACHE_EXT_TREE:
-            istate->cache_tree = cache_tree_read(data, sz);
-            break;
-        case CACHE_EXT_RESOLVE_UNDO:
-            istate->resolve_undo = resolve_undo_read(data, sz);
-            break;
-        case CACHE_EXT_LINK:
-            if (read_link_extension(istate, data, sz))
-            {
-                return -1;
-            }
-            break;
-        case CACHE_EXT_UNTRACKED:
-            istate->untracked = read_untracked_extension(data, sz);
-            break;
-        case CACHE_EXT_FSMONITOR:
-            read_fsmonitor_extension(istate, data, sz);
-            break;
-        case CACHE_EXT_ENDOFINDEXENTRIES:
-        case CACHE_EXT_INDEXENTRYOFFSETTABLE:
-            /* already handled in do_read_index() */
-            break;
-        case CACHE_EXT_SPARSE_DIRECTORIES:
-            /* no content, only an indicator */
-            istate->sparse_index = INDEX_COLLAPSED;
-            break;
-        default:
-            if (*ext < 'A' || 'Z' < *ext)
-            {
-                return error(_("index uses %.4s extension, which we do not understand"),
-                             ext);
-            }
-            fprintf_ln(stderr, _("ignoring %.4s extension"), ext);
-            break;
-    }
-    return 0;
+	switch (CACHE_EXT(ext)) {
+	case CACHE_EXT_TREE:
+		istate->cache_tree = cache_tree_read(data, sz);
+		break;
+	case CACHE_EXT_RESOLVE_UNDO:
+		istate->resolve_undo = resolve_undo_read(data, sz, the_hash_algo);
+		break;
+	case CACHE_EXT_LINK:
+		if (read_link_extension(istate, data, sz))
+			return -1;
+		break;
+	case CACHE_EXT_UNTRACKED:
+		istate->untracked = read_untracked_extension(data, sz);
+		break;
+	case CACHE_EXT_FSMONITOR:
+		read_fsmonitor_extension(istate, data, sz);
+		break;
+	case CACHE_EXT_ENDOFINDEXENTRIES:
+	case CACHE_EXT_INDEXENTRYOFFSETTABLE:
+		/* already handled in do_read_index() */
+		break;
+	case CACHE_EXT_SPARSE_DIRECTORIES:
+		/* no content, only an indicator */
+		istate->sparse_index = INDEX_COLLAPSED;
+		break;
+	default:
+		if (*ext < 'A' || 'Z' < *ext)
+			return error(_("index uses %.4s extension, which we do not understand"),
+				     ext);
+		fprintf_ln(stderr, _("ignoring %.4s extension"), ext);
+		break;
+	}
+	return 0;
 }
 
 /*
@@ -3595,20 +3589,18 @@ static int do_write_index(struct index_state *istate, struct tempfile *tempfile,
     {
         strbuf_reset(&sb);
 
-        resolve_undo_write(&sb, istate->resolve_undo);
-        err = write_index_ext_header(f, eoie_c, CACHE_EXT_RESOLVE_UNDO,
-                                     sb.len)
-              < 0;
-        hashwrite(f, sb.buf, sb.len);
-        if (err)
-        {
-            ret = -1;
-            goto out;
-        }
-    }
-    if (write_extensions & WRITE_UNTRACKED_CACHE_EXTENSION && istate->untracked)
-    {
-        strbuf_reset(&sb);
+		resolve_undo_write(&sb, istate->resolve_undo, the_hash_algo);
+		err = write_index_ext_header(f, eoie_c, CACHE_EXT_RESOLVE_UNDO,
+					     sb.len) < 0;
+		hashwrite(f, sb.buf, sb.len);
+		if (err) {
+			ret = -1;
+			goto out;
+		}
+	}
+	if (write_extensions & WRITE_UNTRACKED_CACHE_EXTENSION &&
+	    istate->untracked) {
+		strbuf_reset(&sb);
 
         write_untracked_extension(&sb, istate->untracked);
         err = write_index_ext_header(f, eoie_c, CACHE_EXT_UNTRACKED,

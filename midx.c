@@ -1037,17 +1037,13 @@ int verify_midx_file(struct repository *r, const char *object_dir, unsigned flag
         midx_report(_("incorrect checksum"));
     }
 
-    if (flags & MIDX_PROGRESS)
-    {
-        progress = start_delayed_progress(_("Looking for referenced packfiles"),
-                                          m->num_packs + m->num_packs_in_base);
-    }
-    for (i = 0; i < m->num_packs + m->num_packs_in_base; i++)
-    {
-        if (prepare_midx_pack(r, m, i))
-        {
-            midx_report("failed to load pack in position %d", i);
-        }
+	if (flags & MIDX_PROGRESS)
+		progress = start_delayed_progress(r,
+						  _("Looking for referenced packfiles"),
+						  m->num_packs + m->num_packs_in_base);
+	for (i = 0; i < m->num_packs + m->num_packs_in_base; i++) {
+		if (prepare_midx_pack(r, m, i))
+			midx_report("failed to load pack in position %d", i);
 
         display_progress(progress, i + 1);
     }
@@ -1063,11 +1059,10 @@ int verify_midx_file(struct repository *r, const char *object_dir, unsigned flag
         goto cleanup;
     }
 
-    if (flags & MIDX_PROGRESS)
-    {
-        progress = start_sparse_progress(_("Verifying OID order in multi-pack-index"),
-                                         m->num_objects - 1);
-    }
+	if (flags & MIDX_PROGRESS)
+		progress = start_sparse_progress(r,
+						 _("Verifying OID order in multi-pack-index"),
+						 m->num_objects - 1);
 
     for (curr = m; curr; curr = curr->base_midx)
     {
@@ -1103,25 +1098,22 @@ int verify_midx_file(struct repository *r, const char *object_dir, unsigned flag
         pairs[i].pack_int_id = nth_midxed_pack_int_id(m, i);
     }
 
-    if (flags & MIDX_PROGRESS)
-    {
-        progress = start_sparse_progress(_("Sorting objects by packfile"),
-                                         m->num_objects);
-    }
-    display_progress(progress, 0); /* TODO: Measure QSORT() progress */
-    QSORT(pairs, m->num_objects, compare_pair_pos_vs_id);
-    stop_progress(&progress);
+	if (flags & MIDX_PROGRESS)
+		progress = start_sparse_progress(r,
+						 _("Sorting objects by packfile"),
+						 m->num_objects);
+	display_progress(progress, 0); /* TODO: Measure QSORT() progress */
+	QSORT(pairs, m->num_objects, compare_pair_pos_vs_id);
+	stop_progress(&progress);
 
-    if (flags & MIDX_PROGRESS)
-    {
-        progress = start_sparse_progress(_("Verifying object offsets"), m->num_objects);
-    }
-    for (i = 0; i < m->num_objects + m->num_objects_in_base; i++)
-    {
-        struct object_id  oid;
-        struct pack_entry e;
-        off_t             m_offset;
-        off_t             p_offset;
+	if (flags & MIDX_PROGRESS)
+		progress = start_sparse_progress(r,
+						 _("Verifying object offsets"),
+						 m->num_objects);
+	for (i = 0; i < m->num_objects + m->num_objects_in_base; i++) {
+		struct object_id oid;
+		struct pack_entry e;
+		off_t m_offset, p_offset;
 
         if (i > 0 && pairs[i - 1].pack_int_id != pairs[i].pack_int_id && nth_midxed_pack(m, pairs[i - 1].pack_int_id))
         {

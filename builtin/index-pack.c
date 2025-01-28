@@ -314,10 +314,9 @@ static unsigned check_objects(void)
 
     max = get_max_object_index();
 
-    if (verbose)
-    {
-        progress = start_delayed_progress(_("Checking objects"), max);
-    }
+	if (verbose)
+		progress = start_delayed_progress(the_repository,
+						  _("Checking objects"), max);
 
     for (i = 0; i < max; i++)
     {
@@ -1461,49 +1460,39 @@ static void parse_pack_objects(unsigned char *hash)
     struct stat             st;
     git_hash_ctx            tmp_ctx;
 
-    if (verbose)
-    {
-        progress = start_progress(
-            progress_title ? progress_title : from_stdin ? _("Receiving objects")
-                                                         : _("Indexing objects"),
-            nr_objects);
-    }
-    for (i = 0; i < nr_objects; i++)
-    {
-        struct object_entry *obj  = &objects[i];
-        void                *data = unpack_raw_entry(obj, &ofs_delta->offset,
-                                                     &ref_delta_oid,
-                                                     &obj->idx.oid);
-        obj->real_type            = obj->type;
-        if (obj->type == OBJ_OFS_DELTA)
-        {
-            nr_ofs_deltas++;
-            ofs_delta->obj_no = i;
-            ofs_delta++;
-        }
-        else if (obj->type == OBJ_REF_DELTA)
-        {
-            ALLOC_GROW(ref_deltas, nr_ref_deltas + 1, ref_deltas_alloc);
-            oidcpy(&ref_deltas[nr_ref_deltas].oid, &ref_delta_oid);
-            ref_deltas[nr_ref_deltas].obj_no = i;
-            nr_ref_deltas++;
-        }
-        else if (!data)
-        {
-            /* large blobs, check later */
-            obj->real_type = OBJ_BAD;
-            nr_delays++;
-        }
-        else
-        {
-            sha1_object(data, NULL, obj->size, obj->type,
-                        &obj->idx.oid);
-        }
-        free(data);
-        display_progress(progress, i + 1);
-    }
-    objects[i].idx.offset = consumed_bytes;
-    stop_progress(&progress);
+	if (verbose)
+		progress = start_progress(
+				the_repository,
+				progress_title ? progress_title :
+				from_stdin ? _("Receiving objects") : _("Indexing objects"),
+				nr_objects);
+	for (i = 0; i < nr_objects; i++) {
+		struct object_entry *obj = &objects[i];
+		void *data = unpack_raw_entry(obj, &ofs_delta->offset,
+					      &ref_delta_oid,
+					      &obj->idx.oid);
+		obj->real_type = obj->type;
+		if (obj->type == OBJ_OFS_DELTA) {
+			nr_ofs_deltas++;
+			ofs_delta->obj_no = i;
+			ofs_delta++;
+		} else if (obj->type == OBJ_REF_DELTA) {
+			ALLOC_GROW(ref_deltas, nr_ref_deltas + 1, ref_deltas_alloc);
+			oidcpy(&ref_deltas[nr_ref_deltas].oid, &ref_delta_oid);
+			ref_deltas[nr_ref_deltas].obj_no = i;
+			nr_ref_deltas++;
+		} else if (!data) {
+			/* large blobs, check later */
+			obj->real_type = OBJ_BAD;
+			nr_delays++;
+		} else
+			sha1_object(data, NULL, obj->size, obj->type,
+				    &obj->idx.oid);
+		free(data);
+		display_progress(progress, i+1);
+	}
+	objects[i].idx.offset = consumed_bytes;
+	stop_progress(&progress);
 
     /* Check pack integrity */
     flush();
@@ -1565,11 +1554,10 @@ static void resolve_deltas(struct pack_idx_option *opts)
     QSORT(ofs_deltas, nr_ofs_deltas, compare_ofs_delta_entry);
     QSORT(ref_deltas, nr_ref_deltas, compare_ref_delta_entry);
 
-    if (verbose || show_resolving_progress)
-    {
-        progress = start_progress(_("Resolving deltas"),
-                                  nr_ref_deltas + nr_ofs_deltas);
-    }
+	if (verbose || show_resolving_progress)
+		progress = start_progress(the_repository,
+					  _("Resolving deltas"),
+					  nr_ref_deltas + nr_ofs_deltas);
 
 	nr_dispatched = 0;
 	base_cache_limit = opts->delta_base_cache_limit * nr_threads;

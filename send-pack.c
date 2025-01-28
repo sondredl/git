@@ -1,5 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
-
 #include "git-compat-util.h"
 #include "config.h"
 #include "commit.h"
@@ -47,12 +45,14 @@ int option_parse_push_signed(const struct option *opt,
     die("bad %s argument: %s", opt->long_name, arg);
 }
 
-static void feed_object(const struct object_id *oid, FILE *fh, int negative)
+static void feed_object(struct repository *r,
+			const struct object_id *oid, FILE *fh, int negative)
 {
-    if (negative && !repo_has_object_file_with_flags(the_repository, oid, OBJECT_INFO_SKIP_FETCH_OBJECT | OBJECT_INFO_QUICK))
-    {
-        return;
-    }
+	if (negative &&
+	    !repo_has_object_file_with_flags(r, oid,
+					     OBJECT_INFO_SKIP_FETCH_OBJECT |
+					     OBJECT_INFO_QUICK))
+		return;
 
     if (negative)
     {
@@ -65,9 +65,10 @@ static void feed_object(const struct object_id *oid, FILE *fh, int negative)
 /*
  * Make a pack stream and spit it out into file descriptor fd
  */
-static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
-                        struct oid_array      *negotiated,
-                        struct send_pack_args *args)
+static int pack_objects(struct repository *r,
+			int fd, struct ref *refs, struct oid_array *advertised,
+			struct oid_array *negotiated,
+			struct send_pack_args *args)
 {
 	/*
 	 * The child becomes pack-objects --revs; we feed
@@ -78,29 +79,29 @@ static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
 	FILE *po_in;
 	int rc;
 
-    trace2_region_enter("send_pack", "pack_objects", the_repository);
-    strvec_push(&po.args, "pack-objects");
-    strvec_push(&po.args, "--all-progress-implied");
-    strvec_push(&po.args, "--revs");
-    strvec_push(&po.args, "--stdout");
-    if (args->use_thin_pack)
-        strvec_push(&po.args, "--thin");
-    if (args->use_ofs_delta)
-        strvec_push(&po.args, "--delta-base-offset");
-    if (args->quiet || !args->progress)
-        strvec_push(&po.args, "-q");
-    if (args->progress)
-        strvec_push(&po.args, "--progress");
-    if (is_repository_shallow(the_repository))
-        strvec_push(&po.args, "--shallow");
-    if (args->disable_bitmaps)
-        strvec_push(&po.args, "--no-use-bitmap-index");
-    po.in            = -1;
-    po.out           = args->stateless_rpc ? -1 : fd;
-    po.git_cmd       = 1;
-    po.clean_on_exit = 1;
-    if (start_command(&po))
-        die_errno("git pack-objects failed");
+	trace2_region_enter("send_pack", "pack_objects", r);
+	strvec_push(&po.args, "pack-objects");
+	strvec_push(&po.args, "--all-progress-implied");
+	strvec_push(&po.args, "--revs");
+	strvec_push(&po.args, "--stdout");
+	if (args->use_thin_pack)
+		strvec_push(&po.args, "--thin");
+	if (args->use_ofs_delta)
+		strvec_push(&po.args, "--delta-base-offset");
+	if (args->quiet || !args->progress)
+		strvec_push(&po.args, "-q");
+	if (args->progress)
+		strvec_push(&po.args, "--progress");
+	if (is_repository_shallow(r))
+		strvec_push(&po.args, "--shallow");
+	if (args->disable_bitmaps)
+		strvec_push(&po.args, "--no-use-bitmap-index");
+	po.in = -1;
+	po.out = args->stateless_rpc ? -1 : fd;
+	po.git_cmd = 1;
+	po.clean_on_exit = 1;
+	if (start_command(&po))
+		die_errno("git pack-objects failed");
 
 	/*
 	 * We feed the pack-objects we just spawned with revision
@@ -108,22 +109,17 @@ static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
 	 */
 	po_in = xfdopen(po.in, "w");
 	for (size_t i = 0; i < advertised->nr; i++)
-		feed_object(&advertised->oid[i], po_in, 1);
+		feed_object(r, &advertised->oid[i], po_in, 1);
 	for (size_t i = 0; i < negotiated->nr; i++)
-		feed_object(&negotiated->oid[i], po_in, 1);
+		feed_object(r, &negotiated->oid[i], po_in, 1);
 
-    while (refs)
-    {
-        if (!is_null_oid(&refs->old_oid))
-        {
-            feed_object(&refs->old_oid, po_in, 1);
-        }
-        if (!is_null_oid(&refs->new_oid))
-        {
-            feed_object(&refs->new_oid, po_in, 0);
-        }
-        refs = refs->next;
-    }
+	while (refs) {
+		if (!is_null_oid(&refs->old_oid))
+			feed_object(r, &refs->old_oid, po_in, 1);
+		if (!is_null_oid(&refs->new_oid))
+			feed_object(r, &refs->new_oid, po_in, 0);
+		refs = refs->next;
+	}
 
     fflush(po_in);
     if (ferror(po_in))
@@ -149,24 +145,23 @@ static int pack_objects(int fd, struct ref *refs, struct oid_array *advertised,
         po.out = -1;
     }
 
-    rc = finish_command(&po);
-    if (rc)
-    {
-        /*
-         * For a normal non-zero exit, we assume pack-objects wrote
-         * something useful to stderr. For death by signal, though,
-         * we should mention it to the user. The exception is SIGPIPE
-         * (141), because that's a normal occurrence if the remote end
-         * hangs up (and we'll report that by trying to read the unpack
-         * status).
-         */
-        if (rc > 128 && rc != 141)
-            error("pack-objects died of signal %d", rc - 128);
-        trace2_region_leave("send_pack", "pack_objects", the_repository);
-        return -1;
-    }
-    trace2_region_leave("send_pack", "pack_objects", the_repository);
-    return 0;
+	rc = finish_command(&po);
+	if (rc) {
+		/*
+		 * For a normal non-zero exit, we assume pack-objects wrote
+		 * something useful to stderr. For death by signal, though,
+		 * we should mention it to the user. The exception is SIGPIPE
+		 * (141), because that's a normal occurrence if the remote end
+		 * hangs up (and we'll report that by trying to read the unpack
+		 * status).
+		 */
+		if (rc > 128 && rc != 141)
+			error("pack-objects died of signal %d", rc - 128);
+		trace2_region_leave("send_pack", "pack_objects", r);
+		return -1;
+	}
+	trace2_region_leave("send_pack", "pack_objects", r);
+	return 0;
 }
 
 static int receive_unpack_status(struct packet_reader *reader)
@@ -186,7 +181,8 @@ static int receive_unpack_status(struct packet_reader *reader)
     return 0;
 }
 
-static int receive_status(struct packet_reader *reader, struct ref *refs)
+static int receive_status(struct repository *r,
+			  struct packet_reader *reader, struct ref *refs)
 {
     struct ref             *hint;
     int                     ret;
@@ -194,132 +190,109 @@ static int receive_status(struct packet_reader *reader, struct ref *refs)
     int                     new_report = 0;
     int                     once       = 0;
 
-    trace2_region_enter("send_pack", "receive_status", the_repository);
-    hint = NULL;
-    ret  = receive_unpack_status(reader);
-    while (1)
-    {
-        struct object_id old_oid, new_oid;
-        const char      *head;
-        const char      *refname;
-        char            *p;
-        if (packet_reader_read(reader) != PACKET_READ_NORMAL)
-            break;
-        head = reader->line;
-        p    = strchr(head, ' ');
-        if (!p)
-        {
-            error("invalid status line from remote: %s", reader->line);
-            ret = -1;
-            break;
-        }
-        *p++ = '\0';
+	trace2_region_enter("send_pack", "receive_status", r);
+	hint = NULL;
+	ret = receive_unpack_status(reader);
+	while (1) {
+		struct object_id old_oid, new_oid;
+		const char *head;
+		const char *refname;
+		char *p;
+		if (packet_reader_read(reader) != PACKET_READ_NORMAL)
+			break;
+		head = reader->line;
+		p = strchr(head, ' ');
+		if (!p) {
+			error("invalid status line from remote: %s", reader->line);
+			ret = -1;
+			break;
+		}
+		*p++ = '\0';
 
         if (!strcmp(head, "option"))
         {
             const char *key;
             const char *val;
 
-            if (!hint || !(report || new_report))
-            {
-                if (!once++)
-                {
-                    error("'option' without a matching 'ok/ng' directive");
-                }
-                ret = -1;
-                continue;
-            }
-            if (new_report)
-            {
-                if (!hint->report)
-                {
-                    CALLOC_ARRAY(hint->report, 1);
-                    report = hint->report;
-                }
-                else
-                {
-                    report = hint->report;
-                    while (report->next)
-                    {
-                        report = report->next;
-                    }
-                    CALLOC_ARRAY(report->next, 1);
-                    report = report->next;
-                }
-                new_report = 0;
-            }
-            key = p;
-            p   = strchr(key, ' ');
-            if (p)
-            {
-                *p++ = '\0';
-            }
-            val = p;
-            if (!strcmp(key, "refname"))
-            {
-                report->ref_name = xstrdup_or_null(val);
-            }
-            else if (!strcmp(key, "old-oid") && val && !parse_oid_hex(val, &old_oid, &val))
-            {
-                report->old_oid = oiddup(&old_oid);
-            }
-            else if (!strcmp(key, "new-oid") && val && !parse_oid_hex(val, &new_oid, &val))
-            {
-                report->new_oid = oiddup(&new_oid);
-            }
-            else if (!strcmp(key, "forced-update"))
-            {
-                report->forced_update = 1;
-            }
-            continue;
-        }
+			if (!hint || !(report || new_report)) {
+				if (!once++)
+					error("'option' without a matching 'ok/ng' directive");
+				ret = -1;
+				continue;
+			}
+			if (new_report) {
+				if (!hint->report) {
+					CALLOC_ARRAY(hint->report, 1);
+					report = hint->report;
+				} else {
+					report = hint->report;
+					while (report->next)
+						report = report->next;
+					CALLOC_ARRAY(report->next, 1);
+					report = report->next;
+				}
+				new_report = 0;
+			}
+			key = p;
+			p = strchr(key, ' ');
+			if (p)
+				*p++ = '\0';
+			val = p;
+			if (!strcmp(key, "refname"))
+				report->ref_name = xstrdup_or_null(val);
+			else if (!strcmp(key, "old-oid") && val &&
+				 !parse_oid_hex_algop(val, &old_oid, &val, r->hash_algo))
+				report->old_oid = oiddup(&old_oid);
+			else if (!strcmp(key, "new-oid") && val &&
+				 !parse_oid_hex_algop(val, &new_oid, &val, r->hash_algo))
+				report->new_oid = oiddup(&new_oid);
+			else if (!strcmp(key, "forced-update"))
+				report->forced_update = 1;
+			continue;
+		}
 
-        report     = NULL;
-        new_report = 0;
-        if (strcmp(head, "ok") && strcmp(head, "ng"))
-        {
-            error("invalid ref status from remote: %s", head);
-            ret = -1;
-            break;
-        }
-        refname = p;
-        p       = strchr(refname, ' ');
-        if (p)
-            *p++ = '\0';
-        /* first try searching at our hint, falling back to all refs */
-        if (hint)
-            hint = find_ref_by_name(hint, refname);
-        if (!hint)
-            hint = find_ref_by_name(refs, refname);
-        if (!hint)
-        {
-            warning("remote reported status on unknown ref: %s",
-                    refname);
-            continue;
-        }
-        if (hint->status != REF_STATUS_EXPECTING_REPORT && hint->status != REF_STATUS_OK && hint->status != REF_STATUS_REMOTE_REJECT)
-        {
-            warning("remote reported status on unexpected ref: %s",
-                    refname);
-            continue;
-        }
-        if (!strcmp(head, "ng"))
-        {
-            hint->status = REF_STATUS_REMOTE_REJECT;
-            if (p)
-                hint->remote_status = xstrdup(p);
-            else
-                hint->remote_status = xstrdup("failed");
-        }
-        else
-        {
-            hint->status        = REF_STATUS_OK;
-            hint->remote_status = xstrdup_or_null(p);
-            new_report          = 1;
-        }
-    }
-    trace2_region_leave("send_pack", "receive_status", the_repository);
-    return ret;
+		report = NULL;
+		new_report = 0;
+		if (strcmp(head, "ok") && strcmp(head, "ng")) {
+			error("invalid ref status from remote: %s", head);
+			ret = -1;
+			break;
+		}
+		refname = p;
+		p = strchr(refname, ' ');
+		if (p)
+			*p++ = '\0';
+		/* first try searching at our hint, falling back to all refs */
+		if (hint)
+			hint = find_ref_by_name(hint, refname);
+		if (!hint)
+			hint = find_ref_by_name(refs, refname);
+		if (!hint) {
+			warning("remote reported status on unknown ref: %s",
+				refname);
+			continue;
+		}
+		if (hint->status != REF_STATUS_EXPECTING_REPORT &&
+		    hint->status != REF_STATUS_OK &&
+		    hint->status != REF_STATUS_REMOTE_REJECT) {
+			warning("remote reported status on unexpected ref: %s",
+				refname);
+			continue;
+		}
+		if (!strcmp(head, "ng")) {
+			hint->status = REF_STATUS_REMOTE_REJECT;
+			if (p)
+				hint->remote_status = xstrdup(p);
+			else
+				hint->remote_status = xstrdup("failed");
+		} else {
+			hint->status = REF_STATUS_OK;
+			hint->remote_status = xstrdup_or_null(p);
+			new_report = 1;
+		}
+	}
+	trace2_region_leave("send_pack", "receive_status", r);
+	return ret;
 }
 
 static int sideband_demux(int in UNUSED, int out, void *data)
@@ -345,13 +318,11 @@ static int advertise_shallow_grafts_cb(const struct commit_graft *graft, void *c
     return 0;
 }
 
-static void advertise_shallow_grafts_buf(struct strbuf *sb)
+static void advertise_shallow_grafts_buf(struct repository *r, struct strbuf *sb)
 {
-    if (!is_repository_shallow(the_repository))
-    {
-        return;
-    }
-    for_each_commit_graft(advertise_shallow_grafts_cb, sb);
+	if (!is_repository_shallow(r))
+		return;
+	for_each_commit_graft(advertise_shallow_grafts_cb, sb);
 }
 
 #define CHECK_REF_NO_PUSH         (-1)
@@ -498,14 +469,15 @@ static void reject_invalid_nonce(const char *nonce, int len)
     }
 }
 
-static void get_commons_through_negotiation(const char       *url,
-                                            const struct ref *remote_refs,
-                                            struct oid_array *commons)
+static void get_commons_through_negotiation(struct repository *r,
+					    const char *url,
+					    const struct ref *remote_refs,
+					    struct oid_array *commons)
 {
-    struct child_process child = CHILD_PROCESS_INIT;
-    const struct ref    *ref;
-    int                  len                = the_hash_algo->hexsz + 1; /* hash + NL */
-    int                  nr_negotiation_tip = 0;
+	struct child_process child = CHILD_PROCESS_INIT;
+	const struct ref *ref;
+	int len = r->hash_algo->hexsz + 1; /* hash + NL */
+	int nr_negotiation_tip = 0;
 
     child.git_cmd  = 1;
     child.no_stdin = 1;
@@ -540,20 +512,14 @@ static void get_commons_through_negotiation(const char       *url,
         struct object_id oid;
         const char      *end;
 
-        if (!read_len)
-        {
-            break;
-        }
-        if (read_len != len)
-        {
-            die("invalid length read %d", read_len);
-        }
-        if (parse_oid_hex(hex_hash, &oid, &end) || *end != '\n')
-        {
-            die("invalid hash");
-        }
-        oid_array_append(commons, &oid);
-    } while (1);
+		if (!read_len)
+			break;
+		if (read_len != len)
+			die("invalid length read %d", read_len);
+		if (parse_oid_hex_algop(hex_hash, &oid, &end, r->hash_algo) || *end != '\n')
+			die("invalid hash");
+		oid_array_append(commons, &oid);
+	} while (1);
 
     if (finish_command(&child))
     {
@@ -565,10 +531,11 @@ static void get_commons_through_negotiation(const char       *url,
     }
 }
 
-int send_pack(struct send_pack_args *args,
-              int fd[], struct child_process *conn,
-              struct ref       *remote_refs,
-              struct oid_array *extra_have)
+int send_pack(struct repository *r,
+	      struct send_pack_args *args,
+	      int fd[], struct child_process *conn,
+	      struct ref *remote_refs,
+	      struct oid_array *extra_have)
 {
     struct oid_array     commons = OID_ARRAY_INIT;
     int                  in      = fd[0];
@@ -605,20 +572,17 @@ int send_pack(struct send_pack_args *args,
         goto out;
     }
 
-    git_config_get_bool("push.negotiate", &push_negotiate);
-    if (push_negotiate)
-    {
-        trace2_region_enter("send_pack", "push_negotiate", the_repository);
-        get_commons_through_negotiation(args->url, remote_refs, &commons);
-        trace2_region_leave("send_pack", "push_negotiate", the_repository);
-    }
+	repo_config_get_bool(r, "push.negotiate", &push_negotiate);
+	if (push_negotiate) {
+		trace2_region_enter("send_pack", "push_negotiate", r);
+		get_commons_through_negotiation(r, args->url, remote_refs, &commons);
+		trace2_region_leave("send_pack", "push_negotiate", r);
+	}
 
-    if (!git_config_get_bool("push.usebitmaps", &use_bitmaps))
-    {
-        args->disable_bitmaps = !use_bitmaps;
-    }
+	if (!repo_config_get_bool(r, "push.usebitmaps", &use_bitmaps))
+		args->disable_bitmaps = !use_bitmaps;
 
-    git_config_get_bool("transfer.advertisesid", &advertise_sid);
+	repo_config_get_bool(r, "transfer.advertisesid", &advertise_sid);
 
     /* Does the other end support the reporting? */
     if (server_supports("report-status-v2"))
@@ -666,10 +630,8 @@ int send_pack(struct send_pack_args *args,
         push_options_supported = 1;
     }
 
-    if (!server_supports_hash(the_hash_algo->name, &object_format_supported))
-    {
-        die(_("the receiving end does not support this repository's hash algorithm"));
-    }
+	if (!server_supports_hash(r->hash_algo->name, &object_format_supported))
+		die(_("the receiving end does not support this repository's hash algorithm"));
 
     if (args->push_cert != SEND_PACK_PUSH_CERT_NEVER)
     {
@@ -708,42 +670,24 @@ int send_pack(struct send_pack_args *args,
 
     use_push_options = push_options_supported && args->push_options;
 
-    if (status_report == 1)
-    {
-        strbuf_addstr(&cap_buf, " report-status");
-    }
-    else if (status_report == 2)
-    {
-        strbuf_addstr(&cap_buf, " report-status-v2");
-    }
-    if (use_sideband)
-    {
-        strbuf_addstr(&cap_buf, " side-band-64k");
-    }
-    if (quiet_supported && (args->quiet || !args->progress))
-    {
-        strbuf_addstr(&cap_buf, " quiet");
-    }
-    if (use_atomic)
-    {
-        strbuf_addstr(&cap_buf, " atomic");
-    }
-    if (use_push_options)
-    {
-        strbuf_addstr(&cap_buf, " push-options");
-    }
-    if (object_format_supported)
-    {
-        strbuf_addf(&cap_buf, " object-format=%s", the_hash_algo->name);
-    }
-    if (agent_supported)
-    {
-        strbuf_addf(&cap_buf, " agent=%s", git_user_agent_sanitized());
-    }
-    if (advertise_sid)
-    {
-        strbuf_addf(&cap_buf, " session-id=%s", trace2_session_id());
-    }
+	if (status_report == 1)
+		strbuf_addstr(&cap_buf, " report-status");
+	else if (status_report == 2)
+		strbuf_addstr(&cap_buf, " report-status-v2");
+	if (use_sideband)
+		strbuf_addstr(&cap_buf, " side-band-64k");
+	if (quiet_supported && (args->quiet || !args->progress))
+		strbuf_addstr(&cap_buf, " quiet");
+	if (use_atomic)
+		strbuf_addstr(&cap_buf, " atomic");
+	if (use_push_options)
+		strbuf_addstr(&cap_buf, " push-options");
+	if (object_format_supported)
+		strbuf_addf(&cap_buf, " object-format=%s", r->hash_algo->name);
+	if (agent_supported)
+		strbuf_addf(&cap_buf, " agent=%s", git_user_agent_sanitized());
+	if (advertise_sid)
+		strbuf_addf(&cap_buf, " session-id=%s", trace2_session_id());
 
     /*
      * NEEDSWORK: why does delete-refs have to be so specific to
@@ -799,10 +743,8 @@ int send_pack(struct send_pack_args *args,
         }
     }
 
-    if (!args->dry_run)
-    {
-        advertise_shallow_grafts_buf(&req_buf);
-    }
+	if (!args->dry_run)
+		advertise_shallow_grafts_buf(r, &req_buf);
 
     /*
      * Finally, tell the other end!
@@ -851,19 +793,15 @@ int send_pack(struct send_pack_args *args,
             packet_buf_write(&req_buf, "%s", item->string);
     }
 
-    if (args->stateless_rpc)
-    {
-        if (!args->dry_run && (cmds_sent || is_repository_shallow(the_repository)))
-        {
-            packet_buf_flush(&req_buf);
-            send_sideband(out, -1, req_buf.buf, req_buf.len, LARGE_PACKET_MAX);
-        }
-    }
-    else
-    {
-        write_or_die(out, req_buf.buf, req_buf.len);
-        packet_flush(out);
-    }
+	if (args->stateless_rpc) {
+		if (!args->dry_run && (cmds_sent || is_repository_shallow(r))) {
+			packet_buf_flush(&req_buf);
+			send_sideband(out, -1, req_buf.buf, req_buf.len, LARGE_PACKET_MAX);
+		}
+	} else {
+		write_or_die(out, req_buf.buf, req_buf.len);
+		packet_flush(out);
+	}
 
     if (use_sideband && cmds_sent)
     {
@@ -882,29 +820,21 @@ int send_pack(struct send_pack_args *args,
     packet_reader_init(&reader, in, NULL, 0,
                        PACKET_READ_CHOMP_NEWLINE | PACKET_READ_DIE_ON_ERR_PACKET);
 
-    if (need_pack_data && cmds_sent)
-    {
-        if (pack_objects(out, remote_refs, extra_have, &commons, args) < 0)
-        {
-            if (args->stateless_rpc)
-            {
-                close(out);
-            }
-            if (git_connection_is_socket(conn))
-            {
-                shutdown(fd[0], SHUT_WR);
-            }
+	if (need_pack_data && cmds_sent) {
+		if (pack_objects(r, out, remote_refs, extra_have, &commons, args) < 0) {
+			if (args->stateless_rpc)
+				close(out);
+			if (git_connection_is_socket(conn))
+				shutdown(fd[0], SHUT_WR);
 
-            /*
-             * Do not even bother with the return value; we know we
-             * are failing, and just want the error() side effects,
-             * as well as marking refs with their remote status (if
-             * we get one).
-             */
-            if (status_report)
-            {
-                receive_status(&reader, remote_refs);
-            }
+			/*
+			 * Do not even bother with the return value; we know we
+			 * are failing, and just want the error() side effects,
+			 * as well as marking refs with their remote status (if
+			 * we get one).
+			 */
+			if (status_report)
+				receive_status(r, &reader, remote_refs);
 
             if (use_sideband)
             {
@@ -923,18 +853,12 @@ int send_pack(struct send_pack_args *args,
     if (args->stateless_rpc && cmds_sent)
         packet_flush(out);
 
-    if (status_report && cmds_sent)
-    {
-        ret = receive_status(&reader, remote_refs);
-    }
-    else
-    {
-        ret = 0;
-    }
-    if (args->stateless_rpc)
-    {
-        packet_flush(out);
-    }
+	if (status_report && cmds_sent)
+		ret = receive_status(r, &reader, remote_refs);
+	else
+		ret = 0;
+	if (args->stateless_rpc)
+		packet_flush(out);
 
     if (use_sideband && cmds_sent)
     {

@@ -27,5 +27,5 @@ int cmd_update_server_info(int                     argc,
         usage_with_options(update_server_info_usage, options);
     }
 
-    return !!update_server_info(force);
+	return !!update_server_info(the_repository, force);
 }

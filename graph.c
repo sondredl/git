@@ -1,4 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
 #define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
@@ -367,26 +366,22 @@ struct git_graph *graph_init(struct rev_info *opt)
 {
     struct git_graph *graph = xmalloc(sizeof(struct git_graph));
 
-    if (!column_colors)
-    {
-        char *string;
-        if (git_config_get_string("log.graphcolors", &string))
-        {
-            /* not configured -- use default */
-            graph_set_column_colors(column_colors_ansi,
-                                    column_colors_ansi_max);
-        }
-        else
-        {
-            static struct strvec custom_colors = STRVEC_INIT;
-            strvec_clear(&custom_colors);
-            parse_graph_colors_config(&custom_colors, string);
-            free(string);
-            /* graph_set_column_colors takes a max-index, not a count */
-            graph_set_column_colors(custom_colors.v,
-                                    custom_colors.nr - 1);
-        }
-    }
+	if (!column_colors) {
+		char *string;
+		if (repo_config_get_string(opt->repo, "log.graphcolors", &string)) {
+			/* not configured -- use default */
+			graph_set_column_colors(column_colors_ansi,
+						column_colors_ansi_max);
+		} else {
+			static struct strvec custom_colors = STRVEC_INIT;
+			strvec_clear(&custom_colors);
+			parse_graph_colors_config(&custom_colors, string);
+			free(string);
+			/* graph_set_column_colors takes a max-index, not a count */
+			graph_set_column_colors(custom_colors.v,
+						custom_colors.nr - 1);
+		}
+	}
 
     graph->commit            = NULL;
     graph->revs              = opt;

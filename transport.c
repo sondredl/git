@@ -1135,19 +1135,18 @@ static int git_transport_push(struct transport *transport, struct ref *remote_re
         args.push_cert = SEND_PACK_PUSH_CERT_NEVER;
     }
 
-    switch (data->version)
-    {
-        case protocol_v2:
-            die(_("support for protocol v2 not implemented yet"));
-            break;
-        case protocol_v1:
-        case protocol_v0:
-            ret = send_pack(&args, data->fd, data->conn, remote_refs,
-                            &data->extra_have);
-            break;
-        case protocol_unknown_version:
-            BUG("unknown protocol version");
-    }
+	switch (data->version) {
+	case protocol_v2:
+		die(_("support for protocol v2 not implemented yet"));
+		break;
+	case protocol_v1:
+	case protocol_v0:
+		ret = send_pack(the_repository, &args, data->fd, data->conn, remote_refs,
+				&data->extra_have);
+		break;
+	case protocol_unknown_version:
+		BUG("unknown protocol version");
+	}
 
     close(data->fd[1]);
     close(data->fd[0]);

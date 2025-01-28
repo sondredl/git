@@ -14,11 +14,13 @@ struct resolve_undo_info
     struct object_id oid[3];
 };
 
-void                record_resolve_undo(struct index_state *, struct cache_entry *);
-void                resolve_undo_write(struct strbuf *, struct string_list *);
-struct string_list *resolve_undo_read(const char *, unsigned long);
-void                resolve_undo_clear_index(struct index_state *);
-int                 unmerge_index_entry(struct index_state *, const char *, struct resolve_undo_info *, unsigned);
-void                unmerge_index(struct index_state *, const struct pathspec *, unsigned);
+void record_resolve_undo(struct index_state *, struct cache_entry *);
+void resolve_undo_write(struct strbuf *, struct string_list *,
+			const struct git_hash_algo *algop);
+struct string_list *resolve_undo_read(const char *, unsigned long,
+				      const struct git_hash_algo *algop);
+void resolve_undo_clear_index(struct index_state *);
+int unmerge_index_entry(struct index_state *, const char *, struct resolve_undo_info *, unsigned);
+void unmerge_index(struct index_state *, const struct pathspec *, unsigned);
 
 #endif

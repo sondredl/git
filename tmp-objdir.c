@@ -1,5 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
-
 #include "git-compat-util.h"
 #include "tmp-objdir.h"
 #include "abspath.h"
@@ -15,12 +13,12 @@
 #include "object-store-ll.h"
 #include "repository.h"
 
-struct tmp_objdir
-{
-    struct strbuf            path;
-    struct strvec            env;
-    struct object_directory *prev_odb;
-    int                      will_destroy;
+struct tmp_objdir {
+	struct repository *repo;
+	struct strbuf path;
+	struct strvec env;
+	struct object_directory *prev_odb;
+	int will_destroy;
 };
 
 /*
@@ -128,7 +126,8 @@ static int setup_tmp_objdir(const char *root)
     return ret;
 }
 
-struct tmp_objdir *tmp_objdir_create(const char *prefix)
+struct tmp_objdir *tmp_objdir_create(struct repository *r,
+				     const char *prefix)
 {
     static int         installed_handlers;
     struct tmp_objdir *t;
@@ -138,17 +137,18 @@ struct tmp_objdir *tmp_objdir_create(const char *prefix)
         BUG("only one tmp_objdir can be used at a time");
     }
 
-    t = xcalloc(1, sizeof(*t));
-    strbuf_init(&t->path, 0);
-    strvec_init(&t->env);
+	t = xcalloc(1, sizeof(*t));
+	t->repo = r;
+	strbuf_init(&t->path, 0);
+	strvec_init(&t->env);
 
-    /*
-     * Use a string starting with tmp_ so that the builtin/prune.c code
-     * can recognize any stale objdirs left behind by a crash and delete
-     * them.
-     */
-    strbuf_addf(&t->path, "%s/tmp_objdir-%s-XXXXXX",
-                repo_get_object_directory(the_repository), prefix);
+	/*
+	 * Use a string starting with tmp_ so that the builtin/prune.c code
+	 * can recognize any stale objdirs left behind by a crash and delete
+	 * them.
+	 */
+	strbuf_addf(&t->path, "%s/tmp_objdir-%s-XXXXXX",
+		    repo_get_object_directory(r), prefix);
 
     if (!mkdtemp(t->path.buf))
     {
@@ -170,11 +170,11 @@ struct tmp_objdir *tmp_objdir_create(const char *prefix)
         return NULL;
     }
 
-    env_append(&t->env, ALTERNATE_DB_ENVIRONMENT,
-               absolute_path(repo_get_object_directory(the_repository)));
-    env_replace(&t->env, DB_ENVIRONMENT, absolute_path(t->path.buf));
-    env_replace(&t->env, GIT_QUARANTINE_ENVIRONMENT,
-                absolute_path(t->path.buf));
+	env_append(&t->env, ALTERNATE_DB_ENVIRONMENT,
+		   absolute_path(repo_get_object_directory(r)));
+	env_replace(&t->env, DB_ENVIRONMENT, absolute_path(t->path.buf));
+	env_replace(&t->env, GIT_QUARANTINE_ENVIRONMENT,
+		    absolute_path(t->path.buf));
 
     return t;
 }
@@ -313,18 +313,15 @@ int tmp_objdir_migrate(struct tmp_objdir *t)
         return 0;
     }
 
-    if (t->prev_odb)
-    {
-        if (the_repository->objects->odb->will_destroy)
-        {
-            BUG("migrating an ODB that was marked for destruction");
-        }
-        restore_primary_odb(t->prev_odb, t->path.buf);
-        t->prev_odb = NULL;
-    }
+	if (t->prev_odb) {
+		if (t->repo->objects->odb->will_destroy)
+			BUG("migrating an ODB that was marked for destruction");
+		restore_primary_odb(t->prev_odb, t->path.buf);
+		t->prev_odb = NULL;
+	}
 
-    strbuf_addbuf(&src, &t->path);
-    strbuf_addstr(&dst, repo_get_object_directory(the_repository));
+	strbuf_addbuf(&src, &t->path);
+	strbuf_addstr(&dst, repo_get_object_directory(t->repo));
 
     ret = migrate_paths(&src, &dst, 0);
 

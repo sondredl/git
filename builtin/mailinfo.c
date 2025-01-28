@@ -86,8 +86,8 @@ int cmd_mailinfo(int                     argc,
                         N_("use headers in message's body")),
         OPT_END()};
 
-    setup_mailinfo(&mi);
-    meta_charset.policy = CHARSET_DEFAULT;
+	setup_mailinfo(the_repository, &mi);
+	meta_charset.policy = CHARSET_DEFAULT;
 
     argc = parse_options(argc, argv, prefix, options, mailinfo_usage, 0);
 

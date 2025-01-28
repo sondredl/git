@@ -5,12 +5,13 @@
 
 #define MAX_BOUNDARIES 5
 
-enum quoted_cr_action
-{
-    quoted_cr_unset = -1,
-    quoted_cr_nowarn,
-    quoted_cr_warn,
-    quoted_cr_strip,
+struct repository;
+
+enum quoted_cr_action {
+	quoted_cr_unset = -1,
+	quoted_cr_nowarn,
+	quoted_cr_warn,
+	quoted_cr_strip,
 };
 
 struct mailinfo
@@ -53,9 +54,9 @@ struct mailinfo
     int           input_error;
 };
 
-int  mailinfo_parse_quoted_cr_action(const char *actionstr, int *action);
-void setup_mailinfo(struct mailinfo *);
-int  mailinfo(struct mailinfo *, const char *msg, const char *patch);
+int mailinfo_parse_quoted_cr_action(const char *actionstr, int *action);
+void setup_mailinfo(struct repository *r, struct mailinfo *);
+int mailinfo(struct mailinfo *, const char *msg, const char *patch);
 void clear_mailinfo(struct mailinfo *);
 
 #endif /* MAILINFO_H */

@@ -17,10 +17,14 @@
  *
  * See 't0500-progress-display.sh' for examples.
  */
+
+#define USE_THE_REPOSITORY_VARIABLE
 #define GIT_TEST_PROGRESS_ONLY
+
 #include "test-tool.h"
 #include "parse-options.h"
 #include "progress.h"
+#include "repository.h"
 #include "strbuf.h"
 #include "string-list.h"
 
@@ -65,19 +69,15 @@ int cmd__progress(int argc, const char **argv)
             else
                 die("invalid input: '%s'", line.buf);
 
-            progress = start_progress(title, total);
-        }
-        else if (skip_prefix(line.buf, "progress ", (const char **)&end))
-        {
-            uint64_t item_count = strtoull(end, &end, 10);
-            if (*end != '\0')
-                die("invalid input: '%s'", line.buf);
-            display_progress(progress, item_count);
-        }
-        else if (skip_prefix(line.buf, "throughput ",
-                             (const char **)&end))
-        {
-            uint64_t byte_count, test_ms;
+			progress = start_progress(the_repository, title, total);
+		} else if (skip_prefix(line.buf, "progress ", (const char **) &end)) {
+			uint64_t item_count = strtoull(end, &end, 10);
+			if (*end != '\0')
+				die("invalid input: '%s'", line.buf);
+			display_progress(progress, item_count);
+		} else if (skip_prefix(line.buf, "throughput ",
+				       (const char **) &end)) {
+			uint64_t byte_count, test_ms;
 
             byte_count = strtoull(end, &end, 10);
             if (*end != ' ')

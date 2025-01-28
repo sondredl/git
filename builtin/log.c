@@ -413,7 +413,7 @@ static void cmd_log_init_finish(int argc, const char **argv, const char *prefix,
         line_log_init(rev, line_cb.prefix, &line_cb.args);
     }
 
-    setup_pager();
+	setup_pager(the_repository);
 }
 
 static void cmd_log_init(int argc, const char **argv, const char *prefix,
@@ -2715,13 +2715,10 @@ int cmd_format_patch(int                     argc,
         rev.commit_format = CMIT_FMT_MBOXRD;
     }
 
-    if (use_stdout)
-    {
-        setup_pager();
-    }
-    else if (!rev.diffopt.close_file)
-    {
-        int saved;
+	if (use_stdout) {
+		setup_pager(the_repository);
+	} else if (!rev.diffopt.close_file) {
+		int saved;
 
         if (!output_directory)
         {
@@ -2987,7 +2984,8 @@ int cmd_format_patch(int                     argc,
     rev.add_signoff = cfg.do_signoff;
 
 	if (show_progress)
-		progress = start_delayed_progress(_("Generating patches"), total);
+		progress = start_delayed_progress(the_repository,
+						  _("Generating patches"), total);
 	for (i = 0; i < nr; i++) {
 		size_t idx = nr - i - 1;
 		int shown;

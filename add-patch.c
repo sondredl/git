@@ -1740,26 +1740,22 @@ static int patch_update_file(struct add_p_state *s,
             break;
         }
 
-        strbuf_reset(&s->buf);
-        if (file_diff->hunk_nr)
-        {
-            if (rendered_hunk_index != hunk_index)
-            {
-                if (use_pager)
-                {
-                    setup_pager();
-                    sigchain_push(SIGPIPE, SIG_IGN);
-                }
-                render_hunk(s, hunk, 0, colored, &s->buf);
-                fputs(s->buf.buf, stdout);
-                rendered_hunk_index = hunk_index;
-                if (use_pager)
-                {
-                    sigchain_pop(SIGPIPE);
-                    wait_for_pager();
-                    use_pager = 0;
-                }
-            }
+		strbuf_reset(&s->buf);
+		if (file_diff->hunk_nr) {
+			if (rendered_hunk_index != hunk_index) {
+				if (use_pager) {
+					setup_pager(the_repository);
+					sigchain_push(SIGPIPE, SIG_IGN);
+				}
+				render_hunk(s, hunk, 0, colored, &s->buf);
+				fputs(s->buf.buf, stdout);
+				rendered_hunk_index = hunk_index;
+				if (use_pager) {
+					sigchain_pop(SIGPIPE);
+					wait_for_pager();
+					use_pager = 0;
+				}
+			}
 
             strbuf_reset(&s->buf);
             if (undecided_previous >= 0)

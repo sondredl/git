@@ -1,4 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
 #define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
@@ -8,6 +7,7 @@
 #include "tree.h"
 #include "tree-walk.h"
 #include "object-store-ll.h"
+#include "repository.h"
 
 static int score_missing(unsigned mode)
 {
@@ -75,24 +75,21 @@ static int score_matches(unsigned mode1, unsigned mode2)
     return score;
 }
 
-static void *fill_tree_desc_strict(struct tree_desc       *desc,
-                                   const struct object_id *hash)
+static void *fill_tree_desc_strict(struct repository *r,
+				   struct tree_desc *desc,
+				   const struct object_id *hash)
 {
     void            *buffer;
     enum object_type type;
     unsigned long    size;
 
-    buffer = repo_read_object_file(the_repository, hash, &type, &size);
-    if (!buffer)
-    {
-        die("unable to read tree (%s)", oid_to_hex(hash));
-    }
-    if (type != OBJ_TREE)
-    {
-        die("%s is not a tree", oid_to_hex(hash));
-    }
-    init_tree_desc(desc, hash, buffer, size);
-    return buffer;
+	buffer = repo_read_object_file(r, hash, &type, &size);
+	if (!buffer)
+		die("unable to read tree (%s)", oid_to_hex(hash));
+	if (type != OBJ_TREE)
+		die("%s is not a tree", oid_to_hex(hash));
+	init_tree_desc(desc, hash, buffer, size);
+	return buffer;
 }
 
 static int base_name_entries_compare(const struct name_entry *a,
@@ -105,13 +102,14 @@ static int base_name_entries_compare(const struct name_entry *a,
 /*
  * Inspect two trees, and give a score that tells how similar they are.
  */
-static int score_trees(const struct object_id *hash1, const struct object_id *hash2)
+static int score_trees(struct repository *r,
+		       const struct object_id *hash1, const struct object_id *hash2)
 {
-    struct tree_desc one;
-    struct tree_desc two;
-    void            *one_buf = fill_tree_desc_strict(&one, hash1);
-    void            *two_buf = fill_tree_desc_strict(&two, hash2);
-    int              score   = 0;
+	struct tree_desc one;
+	struct tree_desc two;
+	void *one_buf = fill_tree_desc_strict(r, &one, hash1);
+	void *two_buf = fill_tree_desc_strict(r, &two, hash2);
+	int score = 0;
 
     for (;;)
     {
@@ -175,15 +173,16 @@ static int score_trees(const struct object_id *hash1, const struct object_id *ha
 /*
  * Match one itself and its subtrees with two and pick the best match.
  */
-static void match_trees(const struct object_id *hash1,
-                        const struct object_id *hash2,
-                        int                    *best_score,
-                        char                  **best_match,
-                        const char             *base,
-                        int                     recurse_limit)
+static void match_trees(struct repository *r,
+			const struct object_id *hash1,
+			const struct object_id *hash2,
+			int *best_score,
+			char **best_match,
+			const char *base,
+			int recurse_limit)
 {
-    struct tree_desc one;
-    void            *one_buf = fill_tree_desc_strict(&one, hash1);
+	struct tree_desc one;
+	void *one_buf = fill_tree_desc_strict(r, &one, hash1);
 
     while (one.size)
     {
@@ -192,25 +191,21 @@ static void match_trees(const struct object_id *hash1,
         unsigned short          mode;
         int                     score;
 
-        elem = tree_entry_extract(&one, &path, &mode);
-        if (!S_ISDIR(mode))
-        {
-            goto next;
-        }
-        score = score_trees(elem, hash2);
-        if (*best_score < score)
-        {
-            free(*best_match);
-            *best_match = xstrfmt("%s%s", base, path);
-            *best_score = score;
-        }
-        if (recurse_limit)
-        {
-            char *newbase = xstrfmt("%s%s/", base, path);
-            match_trees(elem, hash2, best_score, best_match,
-                        newbase, recurse_limit - 1);
-            free(newbase);
-        }
+		elem = tree_entry_extract(&one, &path, &mode);
+		if (!S_ISDIR(mode))
+			goto next;
+		score = score_trees(r, elem, hash2);
+		if (*best_score < score) {
+			free(*best_match);
+			*best_match = xstrfmt("%s%s", base, path);
+			*best_score = score;
+		}
+		if (recurse_limit) {
+			char *newbase = xstrfmt("%s%s/", base, path);
+			match_trees(r, elem, hash2, best_score, best_match,
+				    newbase, recurse_limit - 1);
+			free(newbase);
+		}
 
     next:
         update_tree_entry(&one);
@@ -222,8 +217,9 @@ static void match_trees(const struct object_id *hash1,
  * A tree "oid1" has a subdirectory at "prefix".  Come up with a tree object by
  * replacing it with another tree "oid2".
  */
-static int splice_tree(const struct object_id *oid1, const char *prefix,
-                       const struct object_id *oid2, struct object_id *result)
+static int splice_tree(struct repository *r,
+		       const struct object_id *oid1, const char *prefix,
+		       const struct object_id *oid2, struct object_id *result)
 {
     char                   *subpath;
     int                     toplen;
@@ -243,12 +239,10 @@ static int splice_tree(const struct object_id *oid1, const char *prefix,
         subpath++;
     }
 
-    buf = repo_read_object_file(the_repository, oid1, &type, &sz);
-    if (!buf)
-    {
-        die("cannot read tree %s", oid_to_hex(oid1));
-    }
-    init_tree_desc(&desc, oid1, buf, sz);
+	buf = repo_read_object_file(r, oid1, &type, &sz);
+	if (!buf)
+		die("cannot read tree %s", oid_to_hex(oid1));
+	init_tree_desc(&desc, oid1, buf, sz);
 
     rewrite_here = NULL;
     while (desc.size)
@@ -265,44 +259,39 @@ static int splice_tree(const struct object_id *oid1, const char *prefix,
                     oid_to_hex(oid1));
             }
 
-            /*
-             * We cast here for two reasons:
-             *
-             *   - to flip the "char *" (for the path) to "unsigned
-             *     char *" (for the hash stored after it)
-             *
-             *   - to discard the "const"; this is OK because we
-             *     know it points into our non-const "buf"
-             */
-            rewrite_here = (unsigned char *)(desc.entry.path + strlen(desc.entry.path) + 1);
-            break;
-        }
-        update_tree_entry(&desc);
-    }
-    if (!rewrite_here)
-    {
-        die("entry %.*s not found in tree %s", toplen, prefix,
-            oid_to_hex(oid1));
-    }
-    if (*subpath)
-    {
-        struct object_id tree_oid;
-        oidread(&tree_oid, rewrite_here, the_repository->hash_algo);
-        status = splice_tree(&tree_oid, subpath, oid2, &subtree);
-        if (status)
-        {
-            return status;
-        }
-        rewrite_with = &subtree;
-    }
-    else
-    {
-        rewrite_with = oid2;
-    }
-    hashcpy(rewrite_here, rewrite_with->hash, the_repository->hash_algo);
-    status = write_object_file(buf, sz, OBJ_TREE, result);
-    free(buf);
-    return status;
+			/*
+			 * We cast here for two reasons:
+			 *
+			 *   - to flip the "char *" (for the path) to "unsigned
+			 *     char *" (for the hash stored after it)
+			 *
+			 *   - to discard the "const"; this is OK because we
+			 *     know it points into our non-const "buf"
+			 */
+			rewrite_here = (unsigned char *)(desc.entry.path +
+							 strlen(desc.entry.path) +
+							 1);
+			break;
+		}
+		update_tree_entry(&desc);
+	}
+	if (!rewrite_here)
+		die("entry %.*s not found in tree %s", toplen, prefix,
+		    oid_to_hex(oid1));
+	if (*subpath) {
+		struct object_id tree_oid;
+		oidread(&tree_oid, rewrite_here, r->hash_algo);
+		status = splice_tree(r, &tree_oid, subpath, oid2, &subtree);
+		if (status)
+			return status;
+		rewrite_with = &subtree;
+	} else {
+		rewrite_with = oid2;
+	}
+	hashcpy(rewrite_here, rewrite_with->hash, r->hash_algo);
+	status = write_object_file(buf, sz, OBJ_TREE, result);
+	free(buf);
+	return status;
 }
 
 /*
@@ -333,21 +322,21 @@ void shift_tree(struct repository      *r,
         depth_limit = 2;
     }
 
-    add_score = del_score = score_trees(hash1, hash2);
-    add_prefix            = xcalloc(1, 1);
-    del_prefix            = xcalloc(1, 1);
+	add_score = del_score = score_trees(r, hash1, hash2);
+	add_prefix = xcalloc(1, 1);
+	del_prefix = xcalloc(1, 1);
 
-    /*
-     * See if one's subtree resembles two; if so we need to prefix
-     * two with a few fake trees to match the prefix.
-     */
-    match_trees(hash1, hash2, &add_score, &add_prefix, "", depth_limit);
+	/*
+	 * See if one's subtree resembles two; if so we need to prefix
+	 * two with a few fake trees to match the prefix.
+	 */
+	match_trees(r, hash1, hash2, &add_score, &add_prefix, "", depth_limit);
 
-    /*
-     * See if two's subtree resembles one; if so we need to
-     * pick only subtree of two.
-     */
-    match_trees(hash2, hash1, &del_score, &del_prefix, "", depth_limit);
+	/*
+	 * See if two's subtree resembles one; if so we need to
+	 * pick only subtree of two.
+	 */
+	match_trees(r, hash2, hash1, &del_score, &del_prefix, "", depth_limit);
 
     /* Assume we do not have to do any shifting */
     oidcpy(shifted, hash2);
@@ -369,7 +358,7 @@ void shift_tree(struct repository      *r,
     if (!*add_prefix)
         goto out;
 
-    splice_tree(hash1, add_prefix, hash2, shifted);
+	splice_tree(r, hash1, add_prefix, hash2, shifted);
 
 out:
     free(add_prefix);
@@ -405,25 +394,21 @@ void shift_tree_by(struct repository      *r,
         candidate |= 2;
     }
 
-    if (candidate == 3)
-    {
-        /* Both are plausible -- we need to evaluate the score */
-        int best_score = score_trees(hash1, hash2);
-        int score;
+	if (candidate == 3) {
+		/* Both are plausible -- we need to evaluate the score */
+		int best_score = score_trees(r, hash1, hash2);
+		int score;
 
-        candidate = 0;
-        score     = score_trees(&sub1, hash2);
-        if (score > best_score)
-        {
-            candidate  = 1;
-            best_score = score;
-        }
-        score = score_trees(&sub2, hash1);
-        if (score > best_score)
-        {
-            candidate = 2;
-        }
-    }
+		candidate = 0;
+		score = score_trees(r, &sub1, hash2);
+		if (score > best_score) {
+			candidate = 1;
+			best_score = score;
+		}
+		score = score_trees(r, &sub2, hash1);
+		if (score > best_score)
+			candidate = 2;
+	}
 
     if (!candidate)
     {
@@ -432,20 +417,16 @@ void shift_tree_by(struct repository      *r,
         return;
     }
 
-    if (candidate == 1)
-    {
-        /*
-         * shift tree2 down by adding shift_prefix above it
-         * to match tree1.
-         */
-        splice_tree(hash1, shift_prefix, hash2, shifted);
-    }
-    else
-    {
-        /*
-         * shift tree2 up by removing shift_prefix from it
-         * to match tree1.
-         */
-        oidcpy(shifted, &sub2);
-    }
+	if (candidate == 1)
+		/*
+		 * shift tree2 down by adding shift_prefix above it
+		 * to match tree1.
+		 */
+		splice_tree(r, hash1, shift_prefix, hash2, shifted);
+	else
+		/*
+		 * shift tree2 up by removing shift_prefix from it
+		 * to match tree1.
+		 */
+		oidcpy(shifted, &sub2);
 }

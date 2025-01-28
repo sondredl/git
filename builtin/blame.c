@@ -1415,25 +1415,21 @@ parse_done:
 
     read_mailmap(&mailmap);
 
-    sb.found_guilty_entry      = &found_guilty_entry;
-    sb.found_guilty_entry_data = &pi;
-    if (show_progress)
-    {
-        pi.progress = start_delayed_progress(_("Blaming lines"), num_lines);
-    }
+	sb.found_guilty_entry = &found_guilty_entry;
+	sb.found_guilty_entry_data = &pi;
+	if (show_progress)
+		pi.progress = start_delayed_progress(the_repository,
+						     _("Blaming lines"),
+						     num_lines);
 
     assign_blame(&sb, opt);
 
     stop_progress(&pi.progress);
 
-    if (!incremental)
-    {
-        setup_pager();
-    }
-    else
-    {
-        goto cleanup;
-    }
+	if (!incremental)
+		setup_pager(the_repository);
+	else
+		goto cleanup;
 
     blame_sort_final(&sb);
 

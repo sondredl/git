@@ -1394,7 +1394,7 @@ static int parse_mail(struct am_state *state, const char *mail)
     int             ret          = 0;
     struct mailinfo mi;
 
-    setup_mailinfo(&mi);
+	setup_mailinfo(the_repository, &mi);
 
     if (state->utf8)
     {
@@ -2075,17 +2075,14 @@ static int do_interactive(struct am_state *state)
         {
             struct strbuf msg = STRBUF_INIT;
 
-            if (!launch_editor(am_path(state, "final-commit"), &msg, NULL))
-            {
-                free(state->msg);
-                state->msg = strbuf_detach(&msg, &state->msg_len);
-            }
-            strbuf_release(&msg);
-        }
-        else if (*reply == 'v' || *reply == 'V')
-        {
-            const char          *pager = git_pager(1);
-            struct child_process cp    = CHILD_PROCESS_INIT;
+			if (!launch_editor(am_path(state, "final-commit"), &msg, NULL)) {
+				free(state->msg);
+				state->msg = strbuf_detach(&msg, &state->msg_len);
+			}
+			strbuf_release(&msg);
+		} else if (*reply == 'v' || *reply == 'V') {
+			const char *pager = git_pager(the_repository, 1);
+			struct child_process cp = CHILD_PROCESS_INIT;
 
             if (!pager)
                 pager = "cat";
@@ -2648,10 +2645,10 @@ static int show_patch(struct am_state *state, enum resume_type resume_mode)
         die_errno(_("failed to read '%s'"), patch_path);
     }
 
-    setup_pager();
-    write_in_full(1, sb.buf, sb.len);
-    strbuf_release(&sb);
-    return 0;
+	setup_pager(the_repository);
+	write_in_full(1, sb.buf, sb.len);
+	strbuf_release(&sb);
+	return 0;
 }
 
 /**

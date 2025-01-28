@@ -1283,7 +1283,8 @@ static int write_midx_internal(struct repository *r, const char *object_dir,
 
 	ctx.pack_paths_checked = 0;
 	if (flags & MIDX_PROGRESS)
-		ctx.progress = start_delayed_progress(_("Adding packfiles to multi-pack-index"), 0);
+		ctx.progress = start_delayed_progress(r,
+						      _("Adding packfiles to multi-pack-index"), 0);
 	else
 		ctx.progress = NULL;
 
@@ -1701,28 +1702,26 @@ int expire_midx_packs(struct repository *r, const char *object_dir, unsigned fla
 
     CALLOC_ARRAY(count, m->num_packs);
 
-    if (flags & MIDX_PROGRESS)
-    {
-        progress = start_delayed_progress(_("Counting referenced objects"),
-                                          m->num_objects);
-    }
-    for (i = 0; i < m->num_objects; i++)
-    {
-        int pack_int_id = nth_midxed_pack_int_id(m, i);
-        count[pack_int_id]++;
-        display_progress(progress, i + 1);
-    }
-    stop_progress(&progress);
+	if (flags & MIDX_PROGRESS)
+		progress = start_delayed_progress(
+					  r,
+					  _("Counting referenced objects"),
+					  m->num_objects);
+	for (i = 0; i < m->num_objects; i++) {
+		int pack_int_id = nth_midxed_pack_int_id(m, i);
+		count[pack_int_id]++;
+		display_progress(progress, i + 1);
+	}
+	stop_progress(&progress);
 
-    if (flags & MIDX_PROGRESS)
-    {
-        progress = start_delayed_progress(_("Finding and deleting unreferenced packfiles"),
-                                          m->num_packs);
-    }
-    for (i = 0; i < m->num_packs; i++)
-    {
-        char *pack_name;
-        display_progress(progress, i + 1);
+	if (flags & MIDX_PROGRESS)
+		progress = start_delayed_progress(
+					  r,
+					  _("Finding and deleting unreferenced packfiles"),
+					  m->num_packs);
+	for (i = 0; i < m->num_packs; i++) {
+		char *pack_name;
+		display_progress(progress, i + 1);
 
         if (count[i])
         {

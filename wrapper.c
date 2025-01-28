@@ -584,19 +584,16 @@ int git_mkstemps_mode(char *pattern, int suffix_len, int mode)
         return -1;
     }
 
-    /*
-     * Replace pattern's XXXXXX characters with randomness.
-     * Try TMP_MAX different filenames.
-     */
-    filename_template = &pattern[len - num_x - suffix_len];
-    for (count = 0; count < TMP_MAX; ++count)
-    {
-        int      i;
-        uint64_t v;
-        if (csprng_bytes(&v, sizeof(v)) < 0)
-        {
-            return error_errno("unable to get random bytes for temporary file");
-        }
+	/*
+	 * Replace pattern's XXXXXX characters with randomness.
+	 * Try TMP_MAX different filenames.
+	 */
+	filename_template = &pattern[len - num_x - suffix_len];
+	for (count = 0; count < TMP_MAX; ++count) {
+		int i;
+		uint64_t v;
+		if (csprng_bytes(&v, sizeof(v), 0) < 0)
+			return error_errno("unable to get random bytes for temporary file");
 
         /* Fill in the random bits. */
         for (i = 0; i < num_x; i++)
@@ -897,7 +894,7 @@ int open_nofollow(const char *path, int flags)
 #endif
 }
 
-int csprng_bytes(void *buf, size_t len)
+int csprng_bytes(void *buf, size_t len, MAYBE_UNUSED unsigned flags)
 {
 #if defined(HAVE_ARC4RANDOM) || defined(HAVE_ARC4RANDOM_LIBBSD)
     /* This function never returns an error. */
@@ -934,14 +931,18 @@ int csprng_bytes(void *buf, size_t len)
         return -1;
     return 0;
 #elif defined(HAVE_OPENSSL_CSPRNG)
-    int res = RAND_bytes(buf, len);
-    if (res == 1)
-        return 0;
-    if (res == -1)
-        errno = ENOTSUP;
-    else
-        errno = EIO;
-    return -1;
+	switch (RAND_pseudo_bytes(buf, len)) {
+	case 1:
+		return 0;
+	case 0:
+		if (flags & CSPRNG_BYTES_INSECURE)
+			return 0;
+		errno = EIO;
+		return -1;
+	default:
+		errno = ENOTSUP;
+		return -1;
+	}
 #else
     ssize_t res;
     char   *p = buf;
@@ -970,14 +971,12 @@ int csprng_bytes(void *buf, size_t len)
 #endif
 }
 
-uint32_t git_rand(void)
+uint32_t git_rand(unsigned flags)
 {
     uint32_t result;
 
-    if (csprng_bytes(&result, sizeof(result)) < 0)
-    {
-        die(_("unable to get random bytes"));
-    }
+	if (csprng_bytes(&result, sizeof(result), flags) < 0)
+		die(_("unable to get random bytes"));
 
     return result;
 }

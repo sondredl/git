@@ -212,10 +212,9 @@ static int loop(struct walker *walker)
     struct progress    *progress = NULL;
     uint64_t            nr       = 0;
 
-    if (walker->get_progress)
-    {
-        progress = start_delayed_progress(_("Fetching objects"), 0);
-    }
+	if (walker->get_progress)
+		progress = start_delayed_progress(the_repository,
+						  _("Fetching objects"), 0);
 
     while (process_queue)
     {

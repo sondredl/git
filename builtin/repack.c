@@ -1855,10 +1855,8 @@ int cmd_repack(int                     argc,
         }
     }
 
-    if (run_update_server_info)
-    {
-        update_server_info(0);
-    }
+	if (run_update_server_info)
+		update_server_info(the_repository, 0);
 
 	if (git_env_bool(GIT_TEST_MULTI_PACK_INDEX, 0)) {
 		unsigned flags = 0;

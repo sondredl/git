@@ -193,15 +193,13 @@ static int receive_pack_config(const char *var, const char *value,
     {
         char *path;
 
-        if (git_config_pathname(&path, var, value))
-        {
-            return 1;
-        }
-        strbuf_addf(&fsck_msg_types, "%cskiplist=%s",
-                    fsck_msg_types.len ? ',' : '=', path);
-        free(path);
-        return 0;
-    }
+		if (git_config_pathname(&path, var, value))
+			return -1;
+		strbuf_addf(&fsck_msg_types, "%cskiplist=%s",
+			fsck_msg_types.len ? ',' : '=', path);
+		free(path);
+		return 0;
+	}
 
     if (skip_prefix(var, "receive.fsck.", &msg_id))
     {
@@ -2725,16 +2723,13 @@ static const char *unpack(int err_fd, struct shallow_info *si)
         strvec_push(&child.args, alt_shallow_file);
     }
 
-    tmp_objdir = tmp_objdir_create("incoming");
-    if (!tmp_objdir)
-    {
-        if (err_fd > 0)
-        {
-            close(err_fd);
-        }
-        return "unable to create temporary object directory";
-    }
-    strvec_pushv(&child.env, tmp_objdir_env(tmp_objdir));
+	tmp_objdir = tmp_objdir_create(the_repository, "incoming");
+	if (!tmp_objdir) {
+		if (err_fd > 0)
+			close(err_fd);
+		return "unable to create temporary object directory";
+	}
+	strvec_pushv(&child.env, tmp_objdir_env(tmp_objdir));
 
     /*
      * Normally we just pass the tmp_objdir environment to the child
@@ -3225,29 +3220,22 @@ int cmd_receive_pack(int                     argc,
                 proc.stdout_to_stderr = 1;
                 proc.err              = use_sideband ? -1 : 0;
 
-                if (!start_command(&proc))
-                {
-                    if (use_sideband)
-                    {
-                        copy_to_sideband(proc.err, -1, NULL);
-                    }
-                    finish_command(&proc);
-                }
-            }
-        }
-        if (auto_update_server_info)
-        {
-            update_server_info(0);
-        }
-        clear_shallow_info(&si);
-    }
-    if (use_sideband)
-    {
-        packet_flush(1);
-    }
-    oid_array_clear(&shallow);
-    oid_array_clear(&ref);
-    strvec_clear(&hidden_refs);
-    free((void *)push_cert_nonce);
-    return 0;
+				if (!start_command(&proc)) {
+					if (use_sideband)
+						copy_to_sideband(proc.err, -1, NULL);
+					finish_command(&proc);
+				}
+			}
+		}
+		if (auto_update_server_info)
+			update_server_info(the_repository, 0);
+		clear_shallow_info(&si);
+	}
+	if (use_sideband)
+		packet_flush(1);
+	oid_array_clear(&shallow);
+	oid_array_clear(&ref);
+	strvec_clear(&hidden_refs);
+	free((void *)push_cert_nonce);
+	return 0;
 }

@@ -883,21 +883,9 @@ int cmd_rev_list(int                     argc,
         progress = start_delayed_progress(show_progress, 0);
     }
 
-    if (use_bitmap_index)
-    {
-        if (!try_bitmap_count(&revs, filter_provided_objects))
-        {
-            goto cleanup;
-        }
-        if (!try_bitmap_disk_usage(&revs, filter_provided_objects))
-        {
-            goto cleanup;
-        }
-        if (!try_bitmap_traversal(&revs, filter_provided_objects))
-        {
-            goto cleanup;
-        }
-    }
+	if (show_progress)
+		progress = start_delayed_progress(the_repository,
+						  show_progress, 0);
 
     if (prepare_revision_walk(&revs))
     {

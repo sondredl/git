@@ -949,25 +949,24 @@ static int mv(int argc, const char **argv, const char *prefix,
         goto out;
     }
 
-    /*
-     * First remove symrefs, then rename the rest, finally create
-     * the new symrefs.
-     */
-    refs_for_each_ref(get_main_ref_store(the_repository),
-                      read_remote_branches, &rename);
-    if (show_progress)
-    {
-        /*
-         * Count symrefs twice, since "renaming" them is done by
-         * deleting and recreating them in two separate passes.
-         */
-        progress = start_progress(_("Renaming remote references"),
-                                  rename.remote_branches->nr + rename.symrefs_nr);
-    }
-    for (i = 0; i < remote_branches.nr; i++)
-    {
-        struct string_list_item *item     = remote_branches.items + i;
-        struct strbuf            referent = STRBUF_INIT;
+	/*
+	 * First remove symrefs, then rename the rest, finally create
+	 * the new symrefs.
+	 */
+	refs_for_each_ref(get_main_ref_store(the_repository),
+			  read_remote_branches, &rename);
+	if (show_progress) {
+		/*
+		 * Count symrefs twice, since "renaming" them is done by
+		 * deleting and recreating them in two separate passes.
+		 */
+		progress = start_progress(the_repository,
+					  _("Renaming remote references"),
+					  rename.remote_branches->nr + rename.symrefs_nr);
+	}
+	for (i = 0; i < remote_branches.nr; i++) {
+		struct string_list_item *item = remote_branches.items + i;
+		struct strbuf referent = STRBUF_INIT;
 
         if (refs_read_symbolic_ref(get_main_ref_store(the_repository), item->string,
                                    &referent))

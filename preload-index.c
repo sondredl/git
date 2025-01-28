@@ -167,12 +167,13 @@ void preload_index(struct index_state    *index,
     work   = DIV_ROUND_UP(index->cache_nr, threads);
     memset(&data, 0, sizeof(data));
 
-    memset(&pd, 0, sizeof(pd));
-    if (refresh_flags & REFRESH_PROGRESS && isatty(2))
-    {
-        pd.progress = start_delayed_progress(_("Refreshing index"), index->cache_nr);
-        pthread_mutex_init(&pd.mutex, NULL);
-    }
+	memset(&pd, 0, sizeof(pd));
+	if (refresh_flags & REFRESH_PROGRESS && isatty(2)) {
+		pd.progress = start_delayed_progress(the_repository,
+						     _("Refreshing index"),
+						     index->cache_nr);
+		pthread_mutex_init(&pd.mutex, NULL);
+	}
 
     for (i = 0; i < threads; i++)
     {

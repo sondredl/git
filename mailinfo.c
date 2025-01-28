@@ -1,4 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
 #define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
@@ -1556,19 +1555,19 @@ static int git_mailinfo_config(const char *var, const char *value,
     return 0;
 }
 
-void setup_mailinfo(struct mailinfo *mi)
+void setup_mailinfo(struct repository *r, struct mailinfo *mi)
 {
-    memset(mi, 0, sizeof(*mi));
-    strbuf_init(&mi->name, 0);
-    strbuf_init(&mi->email, 0);
-    strbuf_init(&mi->charset, 0);
-    strbuf_init(&mi->log_message, 0);
-    strbuf_init(&mi->inbody_header_accum, 0);
-    mi->quoted_cr          = quoted_cr_warn;
-    mi->header_stage       = 1;
-    mi->use_inbody_headers = 1;
-    mi->content_top        = mi->content;
-    git_config(git_mailinfo_config, mi);
+	memset(mi, 0, sizeof(*mi));
+	strbuf_init(&mi->name, 0);
+	strbuf_init(&mi->email, 0);
+	strbuf_init(&mi->charset, 0);
+	strbuf_init(&mi->log_message, 0);
+	strbuf_init(&mi->inbody_header_accum, 0);
+	mi->quoted_cr = quoted_cr_warn;
+	mi->header_stage = 1;
+	mi->use_inbody_headers = 1;
+	mi->content_top = mi->content;
+	repo_config(r, git_mailinfo_config, mi);
 }
 
 void clear_mailinfo(struct mailinfo *mi)

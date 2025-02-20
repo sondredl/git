@@ -1154,7 +1154,6 @@ static enum verify_path_result verify_path_internal(const char *path,
         inside:
             if (protect_hfs)
             {
-
                 if (is_hfs_dotgit(path))
                 {
                     return PATH_INVALID;
@@ -1807,10 +1806,10 @@ int refresh_index(struct index_state *istate, unsigned int flags,
     int              t2_sum_lstat = 0;
     int              t2_sum_scan  = 0;
 
-	if (flags & REFRESH_PROGRESS && isatty(2))
-		progress = start_delayed_progress(the_repository,
-						  _("Refresh index"),
-						  istate->cache_nr);
+    if (flags & REFRESH_PROGRESS && isatty(2))
+        progress = start_delayed_progress(the_repository,
+                                          _("Refresh index"),
+                                          istate->cache_nr);
 
     trace_performance_enter();
     modified_fmt   = in_porcelain ? "M\t%s\n" : "%s: needs update\n";
@@ -2039,12 +2038,11 @@ int verify_ce_order;
 
 static int verify_hdr(const struct cache_header *hdr, unsigned long size)
 {
-    git_hash_ctx     c;
-    unsigned char    hash[GIT_MAX_RAWSZ];
-    int              hdr_version;
-    unsigned char   *start;
-    unsigned char   *end;
-    struct object_id oid;
+    struct git_hash_ctx c;
+    unsigned char       hash[GIT_MAX_RAWSZ];
+    int                 hdr_version;
+    unsigned char      *start, *end;
+    struct object_id    oid;
 
     if (hdr->hdr_signature != htonl(CACHE_SIGNATURE))
     {
@@ -2070,51 +2068,50 @@ static int verify_hdr(const struct cache_header *hdr, unsigned long size)
     }
 
     the_hash_algo->init_fn(&c);
-    the_hash_algo->update_fn(&c, hdr, size - the_hash_algo->rawsz);
-    the_hash_algo->final_fn(hash, &c);
+    git_hash_update(&c, hdr, size - the_hash_algo->rawsz);
+    git_hash_final(hash, &c);
     if (!hasheq(hash, start, the_repository->hash_algo))
-    {
         return error(_("bad index file sha1 signature"));
-    }
     return 0;
 }
 
 static int read_index_extension(struct index_state *istate,
                                 const char *ext, const char *data, unsigned long sz)
 {
-	switch (CACHE_EXT(ext)) {
-	case CACHE_EXT_TREE:
-		istate->cache_tree = cache_tree_read(data, sz);
-		break;
-	case CACHE_EXT_RESOLVE_UNDO:
-		istate->resolve_undo = resolve_undo_read(data, sz, the_hash_algo);
-		break;
-	case CACHE_EXT_LINK:
-		if (read_link_extension(istate, data, sz))
-			return -1;
-		break;
-	case CACHE_EXT_UNTRACKED:
-		istate->untracked = read_untracked_extension(data, sz);
-		break;
-	case CACHE_EXT_FSMONITOR:
-		read_fsmonitor_extension(istate, data, sz);
-		break;
-	case CACHE_EXT_ENDOFINDEXENTRIES:
-	case CACHE_EXT_INDEXENTRYOFFSETTABLE:
-		/* already handled in do_read_index() */
-		break;
-	case CACHE_EXT_SPARSE_DIRECTORIES:
-		/* no content, only an indicator */
-		istate->sparse_index = INDEX_COLLAPSED;
-		break;
-	default:
-		if (*ext < 'A' || 'Z' < *ext)
-			return error(_("index uses %.4s extension, which we do not understand"),
-				     ext);
-		fprintf_ln(stderr, _("ignoring %.4s extension"), ext);
-		break;
-	}
-	return 0;
+    switch (CACHE_EXT(ext))
+    {
+        case CACHE_EXT_TREE:
+            istate->cache_tree = cache_tree_read(data, sz);
+            break;
+        case CACHE_EXT_RESOLVE_UNDO:
+            istate->resolve_undo = resolve_undo_read(data, sz, the_hash_algo);
+            break;
+        case CACHE_EXT_LINK:
+            if (read_link_extension(istate, data, sz))
+                return -1;
+            break;
+        case CACHE_EXT_UNTRACKED:
+            istate->untracked = read_untracked_extension(data, sz);
+            break;
+        case CACHE_EXT_FSMONITOR:
+            read_fsmonitor_extension(istate, data, sz);
+            break;
+        case CACHE_EXT_ENDOFINDEXENTRIES:
+        case CACHE_EXT_INDEXENTRYOFFSETTABLE:
+            /* already handled in do_read_index() */
+            break;
+        case CACHE_EXT_SPARSE_DIRECTORIES:
+            /* no content, only an indicator */
+            istate->sparse_index = INDEX_COLLAPSED;
+            break;
+        default:
+            if (*ext < 'A' || 'Z' < *ext)
+                return error(_("index uses %.4s extension, which we do not understand"),
+                             ext);
+            fprintf_ln(stderr, _("ignoring %.4s extension"), ext);
+            break;
+    }
+    return 0;
 }
 
 /*
@@ -2365,7 +2362,7 @@ static struct index_entry_offset_table *read_ieot_extension(const char *mmap, si
 static void                             write_ieot_extension(struct strbuf *sb, struct index_entry_offset_table *ieot);
 
 static size_t read_eoie_extension(const char *mmap, size_t mmap_size);
-static void   write_eoie_extension(struct strbuf *sb, git_hash_ctx *eoie_context, size_t offset);
+static void   write_eoie_extension(struct strbuf *sb, struct git_hash_ctx *eoie_context, size_t offset);
 
 struct load_index_extensions
 {
@@ -3032,10 +3029,10 @@ int repo_index_has_changes(struct repository *repo,
     return !!istate->cache_nr;
 }
 
-static int write_index_ext_header(struct hashfile *f,
-                                  git_hash_ctx    *eoie_f,
-                                  unsigned int     ext,
-                                  unsigned int     sz)
+static int write_index_ext_header(struct hashfile     *f,
+                                  struct git_hash_ctx *eoie_f,
+                                  unsigned int         ext,
+                                  unsigned int         sz)
 {
     hashwrite_be32(f, ext);
     hashwrite_be32(f, sz);
@@ -3044,8 +3041,8 @@ static int write_index_ext_header(struct hashfile *f,
     {
         ext = htonl(ext);
         sz  = htonl(sz);
-        the_hash_algo->update_fn(eoie_f, &ext, sizeof(ext));
-        the_hash_algo->update_fn(eoie_f, &sz, sizeof(sz));
+        git_hash_update(eoie_f, &ext, sizeof(ext));
+        git_hash_update(eoie_f, &sz, sizeof(sz));
     }
     return 0;
 }
@@ -3140,7 +3137,7 @@ static int ce_write_entry(struct hashfile *f, struct cache_entry *ce,
     int                  size;
     unsigned int         saved_namelen;
     int                  stripped_name = 0;
-    static unsigned char padding[8]    = {0x00};
+    static unsigned char padding[8]    = { 0x00 };
 
     if (ce->ce_flags & CE_STRIP_NAME)
     {
@@ -3334,29 +3331,22 @@ static int do_write_index(struct index_state *istate, struct tempfile *tempfile,
 {
     uint64_t                         start = getnanotime();
     struct hashfile                 *f;
-    git_hash_ctx                    *eoie_c = NULL;
+    struct git_hash_ctx             *eoie_c = NULL;
     struct cache_header              hdr;
-    int                              i;
-    int                              err = 0;
-    int                              removed;
-    int                              extended;
-    int                              hdr_version;
+    int                              i, err = 0, removed, extended, hdr_version;
     struct cache_entry             **cache   = istate->cache;
     int                              entries = istate->cache_nr;
     struct stat                      st;
     struct ondisk_cache_entry        ondisk;
-    struct strbuf                    previous_name_buf = STRBUF_INIT;
-    struct strbuf                   *previous_name;
-    int                              drop_cache_tree = istate->drop_cache_tree;
+    struct strbuf                    previous_name_buf = STRBUF_INIT, *previous_name;
+    int                              drop_cache_tree   = istate->drop_cache_tree;
     off_t                            offset;
     int                              csum_fsync_flag;
     int                              ieot_entries = 1;
     struct index_entry_offset_table *ieot         = NULL;
     struct repository               *r            = istate->repo;
     struct strbuf                    sb           = STRBUF_INIT;
-    int                              nr;
-    int                              nr_threads;
-    int                              ret;
+    int                              nr, nr_threads, ret;
 
     f = hashfd(tempfile->fd, tempfile->filename.buf);
 
@@ -3589,18 +3579,20 @@ static int do_write_index(struct index_state *istate, struct tempfile *tempfile,
     {
         strbuf_reset(&sb);
 
-		resolve_undo_write(&sb, istate->resolve_undo, the_hash_algo);
-		err = write_index_ext_header(f, eoie_c, CACHE_EXT_RESOLVE_UNDO,
-					     sb.len) < 0;
-		hashwrite(f, sb.buf, sb.len);
-		if (err) {
-			ret = -1;
-			goto out;
-		}
-	}
-	if (write_extensions & WRITE_UNTRACKED_CACHE_EXTENSION &&
-	    istate->untracked) {
-		strbuf_reset(&sb);
+        resolve_undo_write(&sb, istate->resolve_undo, the_hash_algo);
+        err = write_index_ext_header(f, eoie_c, CACHE_EXT_RESOLVE_UNDO,
+                                     sb.len)
+              < 0;
+        hashwrite(f, sb.buf, sb.len);
+        if (err)
+        {
+            ret = -1;
+            goto out;
+        }
+    }
+    if (write_extensions & WRITE_UNTRACKED_CACHE_EXTENSION && istate->untracked)
+    {
+        strbuf_reset(&sb);
 
         write_untracked_extension(&sb, istate->untracked);
         err = write_index_ext_header(f, eoie_c, CACHE_EXT_UNTRACKED,
@@ -4229,13 +4221,11 @@ static size_t read_eoie_extension(const char *mmap, size_t mmap_size)
      * <4-byte offset>
      * <20-byte hash>
      */
-    const char   *index;
-    const char   *eoie;
-    uint32_t      extsize;
-    size_t        offset;
-    size_t        src_offset;
-    unsigned char hash[GIT_MAX_RAWSZ];
-    git_hash_ctx  c;
+    const char         *index, *eoie;
+    uint32_t            extsize;
+    size_t              offset, src_offset;
+    unsigned char       hash[GIT_MAX_RAWSZ];
+    struct git_hash_ctx c;
 
     /* ensure we have an index big enough to contain an EOIE extension */
     if (mmap_size < sizeof(struct cache_header) + EOIE_SIZE_WITH_HEADER + the_hash_algo->rawsz)
@@ -4303,16 +4293,14 @@ static size_t read_eoie_extension(const char *mmap, size_t mmap_size)
             return 0;
         }
 
-        the_hash_algo->update_fn(&c, mmap + src_offset, 8);
+        git_hash_update(&c, mmap + src_offset, 8);
 
         src_offset += 8;
         src_offset += extsize;
     }
-    the_hash_algo->final_fn(hash, &c);
+    git_hash_final(hash, &c);
     if (!hasheq(hash, (const unsigned char *)index, the_repository->hash_algo))
-    {
         return 0;
-    }
 
     /* Validate that the extension offsets returned us back to the eoie extension. */
     if (src_offset != mmap_size - the_hash_algo->rawsz - EOIE_SIZE_WITH_HEADER)
@@ -4323,7 +4311,7 @@ static size_t read_eoie_extension(const char *mmap, size_t mmap_size)
     return offset;
 }
 
-static void write_eoie_extension(struct strbuf *sb, git_hash_ctx *eoie_context, size_t offset)
+static void write_eoie_extension(struct strbuf *sb, struct git_hash_ctx *eoie_context, size_t offset)
 {
     uint32_t      buffer;
     unsigned char hash[GIT_MAX_RAWSZ];
@@ -4333,7 +4321,7 @@ static void write_eoie_extension(struct strbuf *sb, git_hash_ctx *eoie_context, 
     strbuf_add(sb, &buffer, sizeof(uint32_t));
 
     /* hash */
-    the_hash_algo->final_fn(hash, eoie_context);
+    git_hash_final(hash, eoie_context);
     strbuf_add(sb, hash, the_hash_algo->rawsz);
 }
 
@@ -4411,7 +4399,6 @@ static void write_ieot_extension(struct strbuf *sb, struct index_entry_offset_ta
     /* ieot */
     for (i = 0; i < ieot->nr; i++)
     {
-
         /* offset */
         put_be32(&buffer, ieot->entries[i].offset);
         strbuf_add(sb, &buffer, sizeof(uint32_t));

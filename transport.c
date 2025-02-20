@@ -44,12 +44,13 @@ enum color_transport
 
 static int transport_color_config(void)
 {
-	const char *keys[] = {
-		"color.transport.reset",
-		"color.transport.rejected"
-	}, *key = "color.transport";
-	char *value;
-	static int initialized;
+    const char *keys[] = {
+        "color.transport.reset",
+        "color.transport.rejected"
+    },
+               *key = "color.transport";
+    char      *value;
+    static int initialized;
 
     if (initialized)
     {
@@ -67,13 +68,14 @@ static int transport_color_config(void)
         return 0;
     }
 
-	for (size_t i = 0; i < ARRAY_SIZE(keys); i++)
-		if (!git_config_get_string(keys[i], &value)) {
-			if (!value)
-				return config_error_nonbool(keys[i]);
-			if (color_parse(value, transport_colors[i]) < 0)
-				return -1;
-		}
+    for (size_t i = 0; i < ARRAY_SIZE(keys); i++)
+        if (!git_config_get_string(keys[i], &value))
+        {
+            if (!value)
+                return config_error_nonbool(keys[i]);
+            if (color_parse(value, transport_colors[i]) < 0)
+                return -1;
+        }
 
     return 0;
 }
@@ -154,7 +156,7 @@ struct bundle_transport_data
 {
     int                  fd;
     struct bundle_header header;
-    unsigned             get_refs_from_bundle_called : 1;
+    unsigned             get_refs_from_bundle_called:1;
 };
 
 static void get_refs_from_bundle_inner(struct transport *transport)
@@ -180,8 +182,8 @@ static struct ref *get_refs_from_bundle(struct transport                        
                                         int                                                 for_push,
                                         struct transport_ls_refs_options *transport_options UNUSED)
 {
-	struct bundle_transport_data *data = transport->data;
-	struct ref *result = NULL;
+    struct bundle_transport_data *data   = transport->data;
+    struct ref                   *result = NULL;
 
     if (for_push)
     {
@@ -190,61 +192,63 @@ static struct ref *get_refs_from_bundle(struct transport                        
 
     get_refs_from_bundle_inner(transport);
 
-	for (size_t i = 0; i < data->header.references.nr; i++) {
-		struct string_list_item *e = data->header.references.items + i;
-		const char *name = e->string;
-		struct ref *ref = alloc_ref(name);
-		struct object_id *oid = e->util;
-		oidcpy(&ref->old_oid, oid);
-		ref->next = result;
-		result = ref;
-	}
-	return result;
+    for (size_t i = 0; i < data->header.references.nr; i++)
+    {
+        struct string_list_item *e    = data->header.references.items + i;
+        const char              *name = e->string;
+        struct ref              *ref  = alloc_ref(name);
+        struct object_id        *oid  = e->util;
+        oidcpy(&ref->old_oid, oid);
+        ref->next = result;
+        result    = ref;
+    }
+    return result;
 }
 
 static int fetch_fsck_config_cb(const char *var, const char *value,
-				const struct config_context *ctx UNUSED, void *cb)
+                                const struct config_context *ctx UNUSED, void *cb)
 {
-	struct strbuf *msg_types = cb;
-	int ret;
+    struct strbuf *msg_types = cb;
+    int            ret;
 
-	ret = fetch_pack_fsck_config(var, value, msg_types);
-	if (ret > 0)
-		return 0;
+    ret = fetch_pack_fsck_config(var, value, msg_types);
+    if (ret > 0)
+        return 0;
 
-	return ret;
+    return ret;
 }
 
-static int fetch_refs_from_bundle(struct transport *transport,
-				  int nr_heads UNUSED,
-				  struct ref **to_fetch UNUSED)
+static int fetch_refs_from_bundle(struct transport     *transport,
+                                  int nr_heads          UNUSED,
+                                  struct ref **to_fetch UNUSED)
 {
-	struct unbundle_opts opts = {
-		.flags = fetch_pack_fsck_objects() ? VERIFY_BUNDLE_FSCK : 0,
-	};
-	struct bundle_transport_data *data = transport->data;
-	struct strvec extra_index_pack_args = STRVEC_INIT;
-	struct strbuf msg_types = STRBUF_INIT;
-	int ret;
+    struct unbundle_opts opts = {
+        .flags = fetch_pack_fsck_objects() ? VERIFY_BUNDLE_FSCK : 0,
+    };
+    struct bundle_transport_data *data                  = transport->data;
+    struct strvec                 extra_index_pack_args = STRVEC_INIT;
+    struct strbuf                 msg_types             = STRBUF_INIT;
+    int                           ret;
 
     if (transport->progress)
     {
         strvec_push(&extra_index_pack_args, "-v");
     }
 
-	if (!data->get_refs_from_bundle_called)
-		get_refs_from_bundle_inner(transport);
+    if (!data->get_refs_from_bundle_called)
+        get_refs_from_bundle_inner(transport);
 
-	git_config(fetch_fsck_config_cb, &msg_types);
-	opts.fsck_msg_types = msg_types.buf;
+    git_config(fetch_fsck_config_cb, &msg_types);
+    opts.fsck_msg_types = msg_types.buf;
 
-	ret = unbundle(the_repository, &data->header, data->fd,
-		       &extra_index_pack_args, &opts);
-	transport->hash_algo = data->header.hash_algo;
+    ret                  = unbundle(the_repository, &data->header, data->fd,
+                                    &extra_index_pack_args, &opts);
+    data->fd             = -1; /* `unbundle()` closes the file descriptor */
+    transport->hash_algo = data->header.hash_algo;
 
-	strvec_clear(&extra_index_pack_args);
-	strbuf_release(&msg_types);
-	return ret;
+    strvec_clear(&extra_index_pack_args);
+    strbuf_release(&msg_types);
+    return ret;
 }
 
 static int close_bundle(struct transport *transport)
@@ -264,7 +268,7 @@ struct git_transport_data
     struct git_transport_options options;
     struct child_process        *conn;
     int                          fd[2];
-    unsigned                     finished_handshake : 1;
+    unsigned                     finished_handshake:1;
     enum protocol_version        version;
     struct oid_array             extra_have;
     struct oid_array             shallow;
@@ -1135,34 +1139,30 @@ static int git_transport_push(struct transport *transport, struct ref *remote_re
         args.push_cert = SEND_PACK_PUSH_CERT_NEVER;
     }
 
-	switch (data->version) {
-	case protocol_v2:
-		die(_("support for protocol v2 not implemented yet"));
-		break;
-	case protocol_v1:
-	case protocol_v0:
-		ret = send_pack(the_repository, &args, data->fd, data->conn, remote_refs,
-				&data->extra_have);
-		break;
-	case protocol_unknown_version:
-		BUG("unknown protocol version");
-	}
+    switch (data->version)
+    {
+        case protocol_v2:
+            die(_("support for protocol v2 not implemented yet"));
+            break;
+        case protocol_v1:
+        case protocol_v0:
+            ret = send_pack(the_repository, &args, data->fd, data->conn, remote_refs,
+                            &data->extra_have);
+            /*
+             * Ignore the specific error code to maintain consistent behavior
+             * with the "push_refs()" function across different transports,
+             * such as "push_refs_with_push()" for HTTP protocol.
+             */
+            if (ret == ERROR_SEND_PACK_BAD_REF_STATUS)
+                ret = 0;
+            break;
+        case protocol_unknown_version:
+            BUG("unknown protocol version");
+    }
 
     close(data->fd[1]);
     close(data->fd[0]);
-    /*
-     * Atomic push may abort the connection early and close the pipe,
-     * which may cause an error for `finish_connect()`. Ignore this error
-     * for atomic git-push.
-     */
-    if (ret || args.atomic)
-    {
-        finish_connect(data->conn);
-    }
-    else
-    {
-        ret = finish_connect(data->conn);
-    }
+    ret |= finish_connect(data->conn);
     data->conn               = NULL;
     data->finished_handshake = 0;
 
@@ -1214,7 +1214,8 @@ static struct transport_vtable taken_over_vtable = {
     .get_bundle_uri = get_bundle_uri,
     .fetch_refs     = fetch_refs_via_pack,
     .push_refs      = git_transport_push,
-    .disconnect     = disconnect_git};
+    .disconnect     = disconnect_git
+};
 
 void transport_take_over(struct transport     *transport,
                          struct child_process *child)
@@ -1395,7 +1396,8 @@ void transport_check_allowed(const char *type)
 static struct transport_vtable bundle_vtable = {
     .get_refs_list = get_refs_from_bundle,
     .fetch_refs    = fetch_refs_from_bundle,
-    .disconnect    = close_bundle};
+    .disconnect    = close_bundle
+};
 
 static struct transport_vtable builtin_smart_vtable = {
     .get_refs_list  = get_refs_via_connect,
@@ -1403,7 +1405,8 @@ static struct transport_vtable builtin_smart_vtable = {
     .fetch_refs     = fetch_refs_via_pack,
     .push_refs      = git_transport_push,
     .connect        = connect_git,
-    .disconnect     = disconnect_git};
+    .disconnect     = disconnect_git
+};
 
 struct transport *transport_get(struct remote *remote, const char *url)
 {
@@ -1581,15 +1584,15 @@ void transport_set_verbosity(struct transport *transport, int verbosity,
 
 static void die_with_unpushed_submodules(struct string_list *needs_pushing)
 {
-	fprintf(stderr, _("The following submodule paths contain changes that can\n"
-			"not be found on any remote:\n"));
-	for (size_t i = 0; i < needs_pushing->nr; i++)
-		fprintf(stderr, "  %s\n", needs_pushing->items[i].string);
-	fprintf(stderr, _("\nPlease try\n\n"
-			  "	git push --recurse-submodules=on-demand\n\n"
-			  "or cd to the path and use\n\n"
-			  "	git push\n\n"
-			  "to push them to a remote.\n\n"));
+    fprintf(stderr, _("The following submodule paths contain changes that can\n"
+                      "not be found on any remote:\n"));
+    for (size_t i = 0; i < needs_pushing->nr; i++)
+        fprintf(stderr, "  %s\n", needs_pushing->items[i].string);
+    fprintf(stderr, _("\nPlease try\n\n"
+                      "	git push --recurse-submodules=on-demand\n\n"
+                      "or cd to the path and use\n\n"
+                      "	git push\n\n"
+                      "to push them to a remote.\n\n"));
 
     string_list_clear(needs_pushing, 0);
 
@@ -1984,15 +1987,15 @@ int transport_get_remote_bundle_uri(struct transport *transport)
 
 void transport_unlock_pack(struct transport *transport, unsigned int flags)
 {
-	int in_signal_handler = !!(flags & TRANSPORT_UNLOCK_PACK_IN_SIGNAL_HANDLER);
+    int in_signal_handler = !!(flags & TRANSPORT_UNLOCK_PACK_IN_SIGNAL_HANDLER);
 
-	for (size_t i = 0; i < transport->pack_lockfiles.nr; i++)
-		if (in_signal_handler)
-			unlink(transport->pack_lockfiles.items[i].string);
-		else
-			unlink_or_warn(transport->pack_lockfiles.items[i].string);
-	if (!in_signal_handler)
-		string_list_clear(&transport->pack_lockfiles, 0);
+    for (size_t i = 0; i < transport->pack_lockfiles.nr; i++)
+        if (in_signal_handler)
+            unlink(transport->pack_lockfiles.items[i].string);
+        else
+            unlink_or_warn(transport->pack_lockfiles.items[i].string);
+    if (!in_signal_handler)
+        string_list_clear(&transport->pack_lockfiles, 0);
 }
 
 int transport_connect(struct transport *transport, const char *name,

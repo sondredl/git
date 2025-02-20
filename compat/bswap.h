@@ -27,7 +27,7 @@ static inline uint64_t default_bswap64(uint64_t val)
 
 #if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
 
-    #define bswap32 git_bswap32
+ #define bswap32 git_bswap32
 static inline uint32_t git_bswap32(uint32_t x)
 {
     uint32_t result;
@@ -40,8 +40,8 @@ static inline uint32_t git_bswap32(uint32_t x)
     return result;
 }
 
-    #define bswap64 git_bswap64
-    #if defined(__x86_64__)
+ #define bswap64 git_bswap64
+ #if defined(__x86_64__)
 static inline uint64_t git_bswap64(uint64_t x)
 {
     uint64_t result;
@@ -53,7 +53,7 @@ static inline uint64_t git_bswap64(uint64_t x)
                 : "0"(x));
     return result;
 }
-    #else
+ #else
 static inline uint64_t git_bswap64(uint64_t x)
 {
     union
@@ -71,76 +71,76 @@ static inline uint64_t git_bswap64(uint64_t x)
     }
     return result.i64;
 }
-    #endif
+ #endif
 
 #elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM64))
 
-    #include <stdlib.h>
+ #include <stdlib.h>
 
-    #define bswap32(x) _byteswap_ulong(x)
-    #define bswap64(x) _byteswap_uint64(x)
+ #define bswap32(x) _byteswap_ulong(x)
+ #define bswap64(x) _byteswap_uint64(x)
 
 #endif
 
 #if defined(bswap32)
 
-    #undef ntohl
-    #undef htonl
-    #define ntohl(x) bswap32(x)
-    #define htonl(x) bswap32(x)
+ #undef ntohl
+ #undef htonl
+ #define ntohl(x) bswap32(x)
+ #define htonl(x) bswap32(x)
 
 #endif
 
 #if defined(bswap64)
 
-    #undef ntohll
-    #undef htonll
-    #define ntohll(x) bswap64(x)
-    #define htonll(x) bswap64(x)
+ #undef ntohll
+ #undef htonll
+ #define ntohll(x) bswap64(x)
+ #define htonll(x) bswap64(x)
 
 #else
 
-    #undef ntohll
-    #undef htonll
+ #undef ntohll
+ #undef htonll
 
-    #if defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && defined(__BIG_ENDIAN)
+ #if defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && defined(__BIG_ENDIAN)
 
-        #define GIT_BYTE_ORDER    __BYTE_ORDER
-        #define GIT_LITTLE_ENDIAN __LITTLE_ENDIAN
-        #define GIT_BIG_ENDIAN    __BIG_ENDIAN
+  #define GIT_BYTE_ORDER    __BYTE_ORDER
+  #define GIT_LITTLE_ENDIAN __LITTLE_ENDIAN
+  #define GIT_BIG_ENDIAN    __BIG_ENDIAN
 
-    #elif defined(BYTE_ORDER) && defined(LITTLE_ENDIAN) && defined(BIG_ENDIAN)
+ #elif defined(BYTE_ORDER) && defined(LITTLE_ENDIAN) && defined(BIG_ENDIAN)
 
-        #define GIT_BYTE_ORDER    BYTE_ORDER
-        #define GIT_LITTLE_ENDIAN LITTLE_ENDIAN
-        #define GIT_BIG_ENDIAN    BIG_ENDIAN
+  #define GIT_BYTE_ORDER    BYTE_ORDER
+  #define GIT_LITTLE_ENDIAN LITTLE_ENDIAN
+  #define GIT_BIG_ENDIAN    BIG_ENDIAN
 
-    #else
+ #else
 
-        #define GIT_BIG_ENDIAN    4321
-        #define GIT_LITTLE_ENDIAN 1234
+  #define GIT_BIG_ENDIAN    4321
+  #define GIT_LITTLE_ENDIAN 1234
 
-        #if defined(_BIG_ENDIAN) && !defined(_LITTLE_ENDIAN)
-            #define GIT_BYTE_ORDER GIT_BIG_ENDIAN
-        #elif defined(_LITTLE_ENDIAN) && !defined(_BIG_ENDIAN)
-            #define GIT_BYTE_ORDER GIT_LITTLE_ENDIAN
-        #elif defined(__THW_BIG_ENDIAN__) && !defined(__THW_LITTLE_ENDIAN__)
-            #define GIT_BYTE_ORDER GIT_BIG_ENDIAN
-        #elif defined(__THW_LITTLE_ENDIAN__) && !defined(__THW_BIG_ENDIAN__)
-            #define GIT_BYTE_ORDER GIT_LITTLE_ENDIAN
-        #else
-            #error "Cannot determine endianness"
-        #endif
+  #if defined(_BIG_ENDIAN) && !defined(_LITTLE_ENDIAN)
+   #define GIT_BYTE_ORDER GIT_BIG_ENDIAN
+  #elif defined(_LITTLE_ENDIAN) && !defined(_BIG_ENDIAN)
+   #define GIT_BYTE_ORDER GIT_LITTLE_ENDIAN
+  #elif defined(__THW_BIG_ENDIAN__) && !defined(__THW_LITTLE_ENDIAN__)
+   #define GIT_BYTE_ORDER GIT_BIG_ENDIAN
+  #elif defined(__THW_LITTLE_ENDIAN__) && !defined(__THW_BIG_ENDIAN__)
+   #define GIT_BYTE_ORDER GIT_LITTLE_ENDIAN
+  #else
+   #error "Cannot determine endianness"
+  #endif
 
-    #endif
+ #endif
 
-    #if GIT_BYTE_ORDER == GIT_BIG_ENDIAN
-        #define ntohll(n) (n)
-        #define htonll(n) (n)
-    #else
-        #define ntohll(n) default_bswap64(n)
-        #define htonll(n) default_bswap64(n)
-    #endif
+ #if GIT_BYTE_ORDER == GIT_BIG_ENDIAN
+  #define ntohll(n) (n)
+  #define htonll(n) (n)
+ #else
+  #define ntohll(n) default_bswap64(n)
+  #define htonll(n) default_bswap64(n)
+ #endif
 
 #endif
 
@@ -165,23 +165,23 @@ static inline uint64_t get_be64(const void *ptr)
 static inline void put_be32(void *ptr, uint32_t value)
 {
     unsigned char *p = ptr;
-    p[0]             = value >> 24;
-    p[1]             = value >> 16;
-    p[2]             = value >> 8;
-    p[3]             = value >> 0;
+    p[0]             = (value >> 24) & 0xff;
+    p[1]             = (value >> 16) & 0xff;
+    p[2]             = (value >> 8) & 0xff;
+    p[3]             = (value >> 0) & 0xff;
 }
 
 static inline void put_be64(void *ptr, uint64_t value)
 {
     unsigned char *p = ptr;
-    p[0]             = value >> 56;
-    p[1]             = value >> 48;
-    p[2]             = value >> 40;
-    p[3]             = value >> 32;
-    p[4]             = value >> 24;
-    p[5]             = value >> 16;
-    p[6]             = value >> 8;
-    p[7]             = value >> 0;
+    p[0]             = (value >> 56) & 0xff;
+    p[1]             = (value >> 48) & 0xff;
+    p[2]             = (value >> 40) & 0xff;
+    p[3]             = (value >> 32) & 0xff;
+    p[4]             = (value >> 24) & 0xff;
+    p[5]             = (value >> 16) & 0xff;
+    p[6]             = (value >> 8) & 0xff;
+    p[7]             = (value >> 0) & 0xff;
 }
 
 #endif /* COMPAT_BSWAP_H */

@@ -43,7 +43,8 @@ static const char *const git_tag_usage[] = {
        "        [--create-reflog] [--sort=<key>] [--format=<format>]\n"
        "        [--merged <commit>] [--no-merged <commit>] [<pattern>...]"),
     N_("git tag -v [--format=<format>] <tagname>..."),
-    NULL};
+    NULL
+};
 
 static unsigned int colopts;
 static int          force_sign_annotate;
@@ -138,7 +139,7 @@ static int delete_tags(const char **argv)
         result = 1;
     }
 
-    for_each_string_list_item(item, &refs_to_delete)
+    for_each_string_list_item (item, &refs_to_delete)
     {
         const char       *name = item->string;
         struct object_id *oid  = item->util;
@@ -189,8 +190,8 @@ static int do_sign(struct strbuf *buffer, struct object_id **compat_oid,
     char                       *keyid      = get_signing_key();
     int                         ret        = -1;
 
-	if (sign_buffer(buffer, &sig, keyid))
-		goto out;
+    if (sign_buffer(buffer, &sig, keyid))
+        goto out;
 
     if (compat)
     {
@@ -329,8 +330,8 @@ static int build_tag_object(struct strbuf *buf, int sign, struct object_id *resu
 
 struct create_tag_options
 {
-    unsigned int message_given : 1;
-    unsigned int use_editor : 1;
+    unsigned int message_given:1;
+    unsigned int use_editor:1;
     unsigned int sign;
     enum
     {
@@ -546,10 +547,10 @@ static int parse_msg_arg(const struct option *opt, const char *arg, int unset)
     return 0;
 }
 
-int cmd_tag(int argc,
-	    const char **argv,
-	    const char *prefix,
-	    struct repository *repo UNUSED)
+int cmd_tag(int                     argc,
+            const char            **argv,
+            const char             *prefix,
+            struct repository *repo UNUSED)
 {
     struct strbuf             buf        = STRBUF_INIT;
     struct strbuf             ref        = STRBUF_INIT;
@@ -567,7 +568,7 @@ int cmd_tag(int argc,
     int                       create_tag_object = 0;
     char                     *msgfile           = NULL;
     const char               *keyid             = NULL;
-    struct msg_arg            msg               = {.buf = STRBUF_INIT};
+    struct msg_arg            msg               = { .buf = STRBUF_INIT };
     struct ref_transaction   *transaction;
     struct strbuf             err    = STRBUF_INIT;
     struct ref_filter         filter = REF_FILTER_INIT;
@@ -579,9 +580,9 @@ int cmd_tag(int argc,
     int                       edit_flag       = 0;
     struct option             options[]       = {
                           OPT_CMDMODE('l', "list", &cmdmode, N_("list tag names"), 'l'),
-                          {OPTION_INTEGER, 'n', NULL, &filter.lines, N_("n"),
-                           N_("print <n> lines of each tag message"),
-                           PARSE_OPT_OPTARG, NULL, 1},
+                          { OPTION_INTEGER, 'n', NULL, &filter.lines, N_("n"),
+                            N_("print <n> lines of each tag message"),
+                            PARSE_OPT_OPTARG, NULL, 1 },
                           OPT_CMDMODE('d', "delete", &cmdmode, N_("delete tags"), 'd'),
                           OPT_CMDMODE('v', "verify", &cmdmode, N_("verify tags"), 'v'),
 
@@ -612,14 +613,15 @@ int cmd_tag(int argc,
                           OPT_BOOL(0, "omit-empty", &format.array_opts.omit_empty,
                                    N_("do not output a newline after empty formatted refs")),
                           OPT_REF_SORT(&sorting_options),
-                          {OPTION_CALLBACK, 0, "points-at", &filter.points_at, N_("object"),
-                           N_("print only tags of the object"), PARSE_OPT_LASTARG_DEFAULT,
-                           parse_opt_object_name, (intptr_t) "HEAD"},
+                          { OPTION_CALLBACK, 0, "points-at", &filter.points_at, N_("object"),
+                            N_("print only tags of the object"), PARSE_OPT_LASTARG_DEFAULT,
+                            parse_opt_object_name, (intptr_t) "HEAD" },
                           OPT_STRING(0, "format", &format.format, N_("format"),
                                      N_("format to use for the output")),
                           OPT__COLOR(&format.use_color, N_("respect format colors")),
                           OPT_BOOL('i', "ignore-case", &icase, N_("sorting and filtering are case insensitive")),
-                          OPT_END()};
+                          OPT_END()
+    };
     int         ret          = 0;
     const char *only_in_list = NULL;
     char       *path         = NULL;
@@ -794,8 +796,8 @@ int cmd_tag(int argc,
         die(_("Failed to resolve '%s' as a valid ref."), object_ref);
     }
 
-	if (check_tag_ref(&ref, tag))
-		die(_("'%s' is not a valid tag name."), tag);
+    if (check_tag_ref(&ref, tag))
+        die(_("'%s' is not a valid tag name."), tag);
 
     if (refs_read_ref(get_main_ref_store(the_repository), ref.buf, &prev))
     {
@@ -839,33 +841,29 @@ int cmd_tag(int argc,
                    &trailer_args, path);
     }
 
-	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-						  0, &err);
-	if (!transaction ||
-	    ref_transaction_update(transaction, ref.buf, &object, &prev,
-				   NULL, NULL,
-				   create_reflog ? REF_FORCE_CREATE_REFLOG : 0,
-				   reflog_msg.buf, &err) ||
-	    ref_transaction_commit(transaction, &err)) {
-		if (path)
-			fprintf(stderr,
-				_("The tag message has been left in %s\n"),
-				path);
-		die("%s", err.buf);
-	}
-	if (path) {
-		unlink_or_warn(path);
-		free(path);
-	}
-	ref_transaction_free(transaction);
-	if (force && !is_null_oid(&prev) && !oideq(&prev, &object))
-		printf(_("Updated tag '%s' (was %s)\n"), tag,
-		       repo_find_unique_abbrev(the_repository, &prev, DEFAULT_ABBREV));
+    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+                                              0, &err);
+    if (!transaction || ref_transaction_update(transaction, ref.buf, &object, &prev, NULL, NULL, create_reflog ? REF_FORCE_CREATE_REFLOG : 0, reflog_msg.buf, &err) || ref_transaction_commit(transaction, &err))
+    {
+        if (path)
+            fprintf(stderr,
+                    _("The tag message has been left in %s\n"),
+                    path);
+        die("%s", err.buf);
+    }
+    if (path)
+    {
+        unlink_or_warn(path);
+        free(path);
+    }
+    ref_transaction_free(transaction);
+    if (force && !is_null_oid(&prev) && !oideq(&prev, &object))
+        printf(_("Updated tag '%s' (was %s)\n"), tag,
+               repo_find_unique_abbrev(the_repository, &prev, DEFAULT_ABBREV));
 
 cleanup:
     ref_sorting_release(sorting);
     ref_filter_clear(&filter);
-    ref_format_clear(&format);
     strbuf_release(&buf);
     strbuf_release(&ref);
     strbuf_release(&reflog_msg);

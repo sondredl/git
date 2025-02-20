@@ -117,12 +117,12 @@ int refs_read_symbolic_ref(struct ref_store *ref_store, const char *refname,
  *
  * extras and skip must be sorted.
  */
-int refs_verify_refname_available(struct ref_store *refs,
-				  const char *refname,
-				  const struct string_list *extras,
-				  const struct string_list *skip,
-				  unsigned int initial_transaction,
-				  struct strbuf *err);
+int refs_verify_refname_available(struct ref_store         *refs,
+                                  const char               *refname,
+                                  const struct string_list *extras,
+                                  const struct string_list *skip,
+                                  unsigned int              initial_transaction,
+                                  struct strbuf            *err);
 
 int refs_ref_exists(struct ref_store *refs, const char *refname);
 
@@ -206,7 +206,7 @@ char *repo_default_branch_name(struct repository *r, int quiet);
  * repo_interpret_branch_name() for details.
  */
 void copy_branchname(struct strbuf *sb, const char *name,
-		       unsigned allowed);
+                     unsigned allowed);
 
 /*
  * Like copy_branchname() above, but confirm that the result is
@@ -592,7 +592,7 @@ int check_refname_format(const char *refname, int flags);
  * written to stderr.
  */
 int refs_fsck(struct ref_store *refs, struct fsck_options *o,
-	      struct worktree *wt);
+              struct worktree *wt);
 
 /*
  * Apply the rules from check_refname_format, but mutate the result until it
@@ -617,28 +617,30 @@ int refs_update_symref(struct ref_store *refs, const char *refname,
                        const char *target, const char *logmsg);
 
 int refs_update_symref_extended(struct ref_store *refs, const char *refname,
-		       const char *target, const char *logmsg,
-		       struct strbuf *referent, int create_only);
+                                const char *target, const char *logmsg,
+                                struct strbuf *referent, int create_only);
 
-enum action_on_err {
-	UPDATE_REFS_MSG_ON_ERR,
-	UPDATE_REFS_DIE_ON_ERR,
-	UPDATE_REFS_QUIET_ON_ERR
+enum action_on_err
+{
+    UPDATE_REFS_MSG_ON_ERR,
+    UPDATE_REFS_DIE_ON_ERR,
+    UPDATE_REFS_QUIET_ON_ERR
 };
 
-enum ref_transaction_flag {
-	/*
-	 * The ref transaction is part of the initial creation of the ref store
-	 * and can thus assume that the ref store is completely empty. This
-	 * allows the backend to perform the transaction more efficiently by
-	 * skipping certain checks.
-	 *
-	 * It is a bug to set this flag when there might be other processes
-	 * accessing the repository or if there are existing references that
-	 * might conflict with the ones being created. All old_oid values must
-	 * either be absent or null_oid.
-	 */
-	REF_TRANSACTION_FLAG_INITIAL = (1 << 0),
+enum ref_transaction_flag
+{
+    /*
+     * The ref transaction is part of the initial creation of the ref store
+     * and can thus assume that the ref store is completely empty. This
+     * allows the backend to perform the transaction more efficiently by
+     * skipping certain checks.
+     *
+     * It is a bug to set this flag when there might be other processes
+     * accessing the repository or if there are existing references that
+     * might conflict with the ones being created. All old_oid values must
+     * either be absent or null_oid.
+     */
+    REF_TRANSACTION_FLAG_INITIAL = (1 << 0),
 };
 
 /*
@@ -646,8 +648,8 @@ enum ref_transaction_flag {
  * be freed by calling ref_transaction_free().
  */
 struct ref_transaction *ref_store_transaction_begin(struct ref_store *refs,
-						    unsigned int flags,
-						    struct strbuf *err);
+                                                    unsigned int      flags,
+                                                    struct strbuf    *err);
 
 /*
  * Reference transaction updates
@@ -742,7 +744,7 @@ struct ref_transaction *ref_store_transaction_begin(struct ref_store *refs,
  * ref_transaction_update() and friends:
  */
 #define REF_TRANSACTION_UPDATE_ALLOWED_FLAGS \
-    (REF_NO_DEREF | REF_FORCE_CREATE_REFLOG | REF_SKIP_OID_VERIFICATION | REF_SKIP_REFNAME_VERIFICATION | REF_SKIP_CREATE_REFLOG)
+ (REF_NO_DEREF | REF_FORCE_CREATE_REFLOG | REF_SKIP_OID_VERIFICATION | REF_SKIP_REFNAME_VERIFICATION | REF_SKIP_CREATE_REFLOG)
 
 /*
  * Add a reference update to transaction. `new_oid` is the value that
@@ -770,20 +772,6 @@ int ref_transaction_update(struct ref_transaction *transaction,
                            const char             *old_target,
                            unsigned int flags, const char *msg,
                            struct strbuf *err);
-
-/*
- * Similar to`ref_transaction_update`, but this function is only for adding
- * a reflog update. Supports providing custom committer information. The index
- * field can be utiltized to order updates as desired. When not used, the
- * updates default to being ordered by refname.
- */
-int ref_transaction_update_reflog(struct ref_transaction *transaction,
-				  const char *refname,
-				  const struct object_id *new_oid,
-				  const struct object_id *old_oid,
-				  const char *committer_info, unsigned int flags,
-				  const char *msg, unsigned int index,
-				  struct strbuf *err);
 
 /*
  * Add a reference creation to transaction. new_oid is the value that
@@ -1079,8 +1067,8 @@ struct ref_namespace_info
      * 'ref_updated' is for internal use. It represents whether the
      * 'ref' value was replaced from its original literal version.
      */
-    unsigned exact : 1,
-        ref_updated : 1;
+    unsigned exact:1,
+        ref_updated:1;
 };
 
 enum ref_namespace

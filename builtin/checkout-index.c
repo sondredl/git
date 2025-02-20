@@ -252,7 +252,8 @@ static int checkout_all(const char *prefix, int prefix_length)
 
 static const char *const builtin_checkout_index_usage[] = {
     N_("git checkout-index [<options>] [--] [<file>...]"),
-    NULL};
+    NULL
+};
 
 static int option_parse_stage(const struct option *opt,
                               const char *arg, int unset)
@@ -320,13 +321,12 @@ int cmd_checkout_index(int                     argc,
            OPT_CALLBACK_F(0, "stage", &checkout_stage, "(1|2|3|all)",
                           N_("copy out the files from named stage"),
                           PARSE_OPT_NONEG, option_parse_stage),
-           OPT_END()};
+           OPT_END()
+    };
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_checkout_index_usage,
-                           builtin_checkout_index_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_checkout_index_usage,
+                                     builtin_checkout_index_options);
     git_config(git_default_config, NULL);
     prefix_length = prefix ? strlen(prefix) : 0;
 

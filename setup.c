@@ -800,7 +800,7 @@ static enum extension_result handle_extension(const char               *var,
                          "extensions.compatobjectformat", value);
         }
         /* For now only support compatObjectFormat being specified once. */
-        for_each_string_list_item(item, &data->v1_only_extensions)
+        for_each_string_list_item (item, &data->v1_only_extensions)
         {
             if (!strcmp(item->string, "compatobjectformat"))
             {
@@ -816,19 +816,21 @@ static enum extension_result handle_extension(const char               *var,
     {
         unsigned int format;
 
-		if (!value)
-			return config_error_nonbool(var);
-		format = ref_storage_format_by_name(value);
-		if (format == REF_STORAGE_FORMAT_UNKNOWN)
-			return error(_("invalid value for '%s': '%s'"),
-				     "extensions.refstorage", value);
-		data->ref_storage_format = format;
-		return EXTENSION_OK;
-	} else if (!strcmp(ext, "relativeworktrees")) {
-		data->relative_worktrees = git_config_bool(var, value);
-		return EXTENSION_OK;
-	}
-	return EXTENSION_UNKNOWN;
+        if (!value)
+            return config_error_nonbool(var);
+        format = ref_storage_format_by_name(value);
+        if (format == REF_STORAGE_FORMAT_UNKNOWN)
+            return error(_("invalid value for '%s': '%s'"),
+                         "extensions.refstorage", value);
+        data->ref_storage_format = format;
+        return EXTENSION_OK;
+    }
+    else if (!strcmp(ext, "relativeworktrees"))
+    {
+        data->relative_worktrees = git_config_bool(var, value);
+        return EXTENSION_OK;
+    }
+    return EXTENSION_UNKNOWN;
 }
 
 static int check_repo_format(const char *var, const char *value,
@@ -1562,7 +1564,7 @@ static int ensure_valid_ownership(const char *gitfile,
                                   const char *worktree, const char *gitdir,
                                   struct strbuf *report)
 {
-    struct safe_directory_data data = {0};
+    struct safe_directory_data data = { 0 };
 
     if (!git_env_bool("GIT_TEST_ASSUME_DIFFERENT_OWNER", 0) && (!gitfile || is_path_owned_by_current_user(gitfile, report)) && (!worktree || is_path_owned_by_current_user(worktree, report)) && (!gitdir || is_path_owned_by_current_user(gitdir, report)))
     {
@@ -1949,7 +1951,7 @@ void setup_git_env(const char *git_dir)
     char                  *git_replace_ref_base;
     const char            *shallow_file;
     const char            *replace_ref_base;
-    struct set_gitdir_args args    = {NULL};
+    struct set_gitdir_args args    = { NULL };
     struct strvec          to_free = STRVEC_INIT;
 
     args.commondir    = getenv_safe(&to_free, GIT_COMMON_DIR_ENVIRONMENT);
@@ -2174,58 +2176,64 @@ const char *setup_git_directory_gently(int *nongit_ok)
         startup_info->have_repository = 1;
     }
 
-	/*
-	 * Not all paths through the setup code will call 'set_git_dir()' (which
-	 * directly sets up the environment) so in order to guarantee that the
-	 * environment is in a consistent state after setup, explicitly setup
-	 * the environment if we have a repository.
-	 *
-	 * NEEDSWORK: currently we allow bogus GIT_DIR values to be set in some
-	 * code paths so we also need to explicitly setup the environment if
-	 * the user has set GIT_DIR.  It may be beneficial to disallow bogus
-	 * GIT_DIR values at some point in the future.
-	 */
-	if (/* GIT_DIR_EXPLICIT, GIT_DIR_DISCOVERED, GIT_DIR_BARE */
-	    startup_info->have_repository ||
-	    /* GIT_DIR_EXPLICIT */
-	    getenv(GIT_DIR_ENVIRONMENT)) {
-		if (!the_repository->gitdir) {
-			const char *gitdir = getenv(GIT_DIR_ENVIRONMENT);
-			if (!gitdir)
-				gitdir = DEFAULT_GIT_DIR_ENVIRONMENT;
-			setup_git_env(gitdir);
-		}
-		if (startup_info->have_repository) {
-			repo_set_hash_algo(the_repository, repo_fmt.hash_algo);
-			repo_set_compat_hash_algo(the_repository,
-						  repo_fmt.compat_hash_algo);
-			repo_set_ref_storage_format(the_repository,
-						    repo_fmt.ref_storage_format);
-			the_repository->repository_format_worktree_config =
-				repo_fmt.worktree_config;
-			the_repository->repository_format_relative_worktrees =
-				repo_fmt.relative_worktrees;
-			/* take ownership of repo_fmt.partial_clone */
-			the_repository->repository_format_partial_clone =
-				repo_fmt.partial_clone;
-			repo_fmt.partial_clone = NULL;
-		}
-	}
-	/*
-	 * Since precompose_string_if_needed() needs to look at
-	 * the core.precomposeunicode configuration, this
-	 * has to happen after the above block that finds
-	 * out where the repository is, i.e. a preparation
-	 * for calling git_config_get_bool().
-	 */
-	if (prefix) {
-		prefix = precompose_string_if_needed(prefix);
-		startup_info->prefix = prefix;
-		setenv(GIT_PREFIX_ENVIRONMENT, prefix, 1);
-	} else {
-		startup_info->prefix = NULL;
-		setenv(GIT_PREFIX_ENVIRONMENT, "", 1);
-	}
+    /*
+     * Not all paths through the setup code will call 'set_git_dir()' (which
+     * directly sets up the environment) so in order to guarantee that the
+     * environment is in a consistent state after setup, explicitly setup
+     * the environment if we have a repository.
+     *
+     * NEEDSWORK: currently we allow bogus GIT_DIR values to be set in some
+     * code paths so we also need to explicitly setup the environment if
+     * the user has set GIT_DIR.  It may be beneficial to disallow bogus
+     * GIT_DIR values at some point in the future.
+     */
+    if (/* GIT_DIR_EXPLICIT, GIT_DIR_DISCOVERED, GIT_DIR_BARE */
+        startup_info->have_repository ||
+        /* GIT_DIR_EXPLICIT */
+        getenv(GIT_DIR_ENVIRONMENT))
+    {
+        if (!the_repository->gitdir)
+        {
+            const char *gitdir = getenv(GIT_DIR_ENVIRONMENT);
+            if (!gitdir)
+                gitdir = DEFAULT_GIT_DIR_ENVIRONMENT;
+            setup_git_env(gitdir);
+        }
+        if (startup_info->have_repository)
+        {
+            repo_set_hash_algo(the_repository, repo_fmt.hash_algo);
+            repo_set_compat_hash_algo(the_repository,
+                                      repo_fmt.compat_hash_algo);
+            repo_set_ref_storage_format(the_repository,
+                                        repo_fmt.ref_storage_format);
+            the_repository->repository_format_worktree_config =
+                repo_fmt.worktree_config;
+            the_repository->repository_format_relative_worktrees =
+                repo_fmt.relative_worktrees;
+            /* take ownership of repo_fmt.partial_clone */
+            the_repository->repository_format_partial_clone =
+                repo_fmt.partial_clone;
+            repo_fmt.partial_clone = NULL;
+        }
+    }
+    /*
+     * Since precompose_string_if_needed() needs to look at
+     * the core.precomposeunicode configuration, this
+     * has to happen after the above block that finds
+     * out where the repository is, i.e. a preparation
+     * for calling git_config_get_bool().
+     */
+    if (prefix)
+    {
+        prefix               = precompose_string_if_needed(prefix);
+        startup_info->prefix = prefix;
+        setenv(GIT_PREFIX_ENVIRONMENT, prefix, 1);
+    }
+    else
+    {
+        startup_info->prefix = NULL;
+        setenv(GIT_PREFIX_ENVIRONMENT, "", 1);
+    }
 
     setup_original_cwd();
 
@@ -2302,22 +2310,22 @@ int git_config_perm(const char *var, const char *value)
 
 void check_repository_format(struct repository_format *fmt)
 {
-	struct repository_format repo_fmt = REPOSITORY_FORMAT_INIT;
-	if (!fmt)
-		fmt = &repo_fmt;
-	check_repository_format_gently(repo_get_git_dir(the_repository), fmt, NULL);
-	startup_info->have_repository = 1;
-	repo_set_hash_algo(the_repository, fmt->hash_algo);
-	repo_set_compat_hash_algo(the_repository, fmt->compat_hash_algo);
-	repo_set_ref_storage_format(the_repository,
-				    fmt->ref_storage_format);
-	the_repository->repository_format_worktree_config =
-		fmt->worktree_config;
-	the_repository->repository_format_relative_worktrees =
-		fmt->relative_worktrees;
-	the_repository->repository_format_partial_clone =
-		xstrdup_or_null(fmt->partial_clone);
-	clear_repository_format(&repo_fmt);
+    struct repository_format repo_fmt = REPOSITORY_FORMAT_INIT;
+    if (!fmt)
+        fmt = &repo_fmt;
+    check_repository_format_gently(repo_get_git_dir(the_repository), fmt, NULL);
+    startup_info->have_repository = 1;
+    repo_set_hash_algo(the_repository, fmt->hash_algo);
+    repo_set_compat_hash_algo(the_repository, fmt->compat_hash_algo);
+    repo_set_ref_storage_format(the_repository,
+                                fmt->ref_storage_format);
+    the_repository->repository_format_worktree_config =
+        fmt->worktree_config;
+    the_repository->repository_format_relative_worktrees =
+        fmt->relative_worktrees;
+    the_repository->repository_format_partial_clone =
+        xstrdup_or_null(fmt->partial_clone);
+    clear_repository_format(&repo_fmt);
 }
 
 /*
@@ -2448,9 +2456,9 @@ const char *get_template_dir(const char *option_template)
 }
 
 #ifdef NO_TRUSTABLE_FILEMODE
-    #define TEST_FILEMODE 0
+ #define TEST_FILEMODE 0
 #else
-    #define TEST_FILEMODE 1
+ #define TEST_FILEMODE 1
 #endif
 
 #define GIT_DEFAULT_HASH_ENVIRONMENT "GIT_DEFAULT_HASH"
@@ -2626,19 +2634,18 @@ void initialize_repository_version(int                     hash_algo,
                                    enum ref_storage_format ref_storage_format,
                                    int                     reinit)
 {
-	struct strbuf repo_version = STRBUF_INIT;
-	int target_version = GIT_REPO_VERSION;
+    struct strbuf repo_version   = STRBUF_INIT;
+    int           target_version = GIT_REPO_VERSION;
 
-	/*
-	 * Note that we initialize the repository version to 1 when the ref
-	 * storage format is unknown. This is on purpose so that we can add the
-	 * correct object format to the config during git-clone(1). The format
-	 * version will get adjusted by git-clone(1) once it has learned about
-	 * the remote repository's format.
-	 */
-	if (hash_algo != GIT_HASH_SHA1 ||
-	    ref_storage_format != REF_STORAGE_FORMAT_FILES)
-		target_version = GIT_REPO_VERSION_READ;
+    /*
+     * Note that we initialize the repository version to 1 when the ref
+     * storage format is unknown. This is on purpose so that we can add the
+     * correct object format to the config during git-clone(1). The format
+     * version will get adjusted by git-clone(1) once it has learned about
+     * the remote repository's format.
+     */
+    if (hash_algo != GIT_HASH_SHA1 || ref_storage_format != REF_STORAGE_FORMAT_FILES)
+        target_version = GIT_REPO_VERSION_READ;
 
     if (hash_algo != GIT_HASH_SHA1 && hash_algo != GIT_HASH_UNKNOWN)
     {
@@ -2650,30 +2657,31 @@ void initialize_repository_version(int                     hash_algo,
         git_config_set_gently("extensions.objectformat", NULL);
     }
 
-	if (ref_storage_format != REF_STORAGE_FORMAT_FILES)
-		git_config_set("extensions.refstorage",
-			       ref_storage_format_to_name(ref_storage_format));
-	else if (reinit)
-		git_config_set_gently("extensions.refstorage", NULL);
+    if (ref_storage_format != REF_STORAGE_FORMAT_FILES)
+        git_config_set("extensions.refstorage",
+                       ref_storage_format_to_name(ref_storage_format));
+    else if (reinit)
+        git_config_set_gently("extensions.refstorage", NULL);
 
-	if (reinit) {
-		struct strbuf config = STRBUF_INIT;
-		struct repository_format repo_fmt = REPOSITORY_FORMAT_INIT;
+    if (reinit)
+    {
+        struct strbuf            config   = STRBUF_INIT;
+        struct repository_format repo_fmt = REPOSITORY_FORMAT_INIT;
 
-		strbuf_git_common_path(&config, the_repository, "config");
-		read_repository_format(&repo_fmt, config.buf);
+        strbuf_git_common_path(&config, the_repository, "config");
+        read_repository_format(&repo_fmt, config.buf);
 
-		if (repo_fmt.v1_only_extensions.nr)
-			target_version = GIT_REPO_VERSION_READ;
+        if (repo_fmt.v1_only_extensions.nr)
+            target_version = GIT_REPO_VERSION_READ;
 
-		strbuf_release(&config);
-		clear_repository_format(&repo_fmt);
-	}
+        strbuf_release(&config);
+        clear_repository_format(&repo_fmt);
+    }
 
-	strbuf_addf(&repo_version, "%d", target_version);
-	git_config_set("core.repositoryformatversion", repo_version.buf);
+    strbuf_addf(&repo_version, "%d", target_version);
+    git_config_set("core.repositoryformatversion", repo_version.buf);
 
-	strbuf_release(&repo_version);
+    strbuf_release(&repo_version);
 }
 
 static int is_reinit(void)
@@ -2787,7 +2795,7 @@ static int create_default_files(const char                     *template_path,
         adjust_shared_perm(repo_get_git_dir(the_repository));
     }
 
-	initialize_repository_version(fmt->hash_algo, fmt->ref_storage_format, reinit);
+    initialize_repository_version(fmt->hash_algo, fmt->ref_storage_format, reinit);
 
     /* Check filemode trustability */
     path     = git_path_buf(&buf, "config");
@@ -2964,21 +2972,16 @@ static void repository_format_configure(struct repository_format *repo_fmt,
      */
     env = getenv(GIT_DEFAULT_HASH_ENVIRONMENT);
     if (repo_fmt->version >= 0 && hash != GIT_HASH_UNKNOWN && hash != repo_fmt->hash_algo)
-    {
         die(_("attempt to reinitialize repository with different hash"));
-    }
     else if (hash != GIT_HASH_UNKNOWN)
-    {
         repo_fmt->hash_algo = hash;
-    }
     else if (env)
     {
         int env_algo = hash_algo_by_name(env);
         if (env_algo == GIT_HASH_UNKNOWN)
-        {
             die(_("unknown hash algorithm '%s'"), env);
-        }
-        repo_fmt->hash_algo = env_algo;
+        if (repo_fmt->version < 0 || repo_fmt->hash_algo == GIT_HASH_UNKNOWN)
+            repo_fmt->hash_algo = env_algo;
     }
     else if (cfg.hash != GIT_HASH_UNKNOWN)
     {
@@ -2999,10 +3002,9 @@ static void repository_format_configure(struct repository_format *repo_fmt,
     {
         ref_format = ref_storage_format_by_name(env);
         if (ref_format == REF_STORAGE_FORMAT_UNKNOWN)
-        {
             die(_("unknown ref storage format '%s'"), env);
-        }
-        repo_fmt->ref_storage_format = ref_format;
+        if (repo_fmt->version < 0 || repo_fmt->ref_storage_format == REF_STORAGE_FORMAT_UNKNOWN)
+            repo_fmt->ref_storage_format = ref_format;
     }
     else if (cfg.ref_format != REF_STORAGE_FORMAT_UNKNOWN)
     {

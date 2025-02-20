@@ -7,10 +7,10 @@
 
 #ifndef NO_UNIX_SOCKETS
 
-    #include "config.h"
-    #include "tempfile.h"
-    #include "credential.h"
-    #include "unix-socket.h"
+ #include "config.h"
+ #include "tempfile.h"
+ #include "credential.h"
+ #include "unix-socket.h"
 
 struct credential_cache_entry
 {
@@ -168,31 +168,19 @@ static void serve_one_client(FILE *in, FILE *out)
 
             fprintf(out, "capability[]=authtype\n");
             if (e->item.username)
-            {
                 fprintf(out, "username=%s\n", e->item.username);
-            }
             if (e->item.password)
-            {
                 fprintf(out, "password=%s\n", e->item.password);
-            }
-            if (credential_has_capability(&c.capa_authtype, CREDENTIAL_OP_HELPER) && e->item.authtype)
-            {
+            if (credential_has_capability(&c.capa_authtype, CREDENTIAL_OP_RESPONSE) && e->item.authtype)
                 fprintf(out, "authtype=%s\n", e->item.authtype);
-            }
-            if (credential_has_capability(&c.capa_authtype, CREDENTIAL_OP_HELPER) && e->item.credential)
-            {
+            if (credential_has_capability(&c.capa_authtype, CREDENTIAL_OP_RESPONSE) && e->item.credential)
                 fprintf(out, "credential=%s\n", e->item.credential);
-            }
             if (e->item.password_expiry_utc != TIME_MAX)
-            {
                 fprintf(out, "password_expiry_utc=%" PRItime "\n",
                         e->item.password_expiry_utc);
-            }
             if (e->item.oauth_refresh_token)
-            {
                 fprintf(out, "oauth_refresh_token=%s\n",
                         e->item.oauth_refresh_token);
-            }
         }
     }
     else if (!strcmp(action.buf, "exit"))
@@ -208,23 +196,15 @@ static void serve_one_client(FILE *in, FILE *out)
         exit(0);
     }
     else if (!strcmp(action.buf, "erase"))
-    {
         remove_credential(&c, 1);
-    }
     else if (!strcmp(action.buf, "store"))
     {
         if (timeout < 0)
-        {
             warning("cache client didn't specify a timeout");
-        }
         else if ((!c.username || !c.password) && (!c.authtype && !c.credential))
-        {
             warning("cache client gave us a partial credential");
-        }
         else if (c.ephemeral)
-        {
             warning("not storing ephemeral credential");
-        }
         else
         {
             remove_credential(&c, 0);
@@ -232,9 +212,7 @@ static void serve_one_client(FILE *in, FILE *out)
         }
     }
     else
-    {
         warning("cache client sent unknown action: %s", action.buf);
-    }
 
     credential_clear(&c);
     strbuf_release(&action);
@@ -379,12 +357,14 @@ int cmd_credential_cache_daemon(int                     argc,
     int                ignore_sighup = 0;
     static const char *usage[]       = {
               "git credential-cache--daemon [--debug] <socket-path>",
-              NULL};
+              NULL
+    };
     int                 debug     = 0;
     const struct option options[] = {
         OPT_BOOL(0, "debug", &debug,
                  N_("print debugging messages to stderr")),
-        OPT_END()};
+        OPT_END()
+    };
 
     git_config_get_bool("credentialcache.ignoresighup", &ignore_sighup);
 
@@ -430,8 +410,9 @@ int cmd_credential_cache_daemon(int                     argc,
         "git credential-cache--daemon [--debug] <socket-path>",
         "",
         "credential-cache--daemon is disabled in this build of Git",
-        NULL};
-    struct option options[] = {OPT_END()};
+        NULL
+    };
+    struct option options[] = { OPT_END() };
 
     argc = parse_options(argc, argv, prefix, options, usage, 0);
     die(_("credential-cache--daemon unavailable; no unix socket support"));

@@ -48,7 +48,7 @@ static void free_rerere_dirs(void)
     struct hashmap_iter  iter;
     struct strmap_entry *ent;
 
-    strmap_for_each_entry(&rerere_dirs, &iter, ent)
+    strmap_for_each_entry (&rerere_dirs, &iter, ent)
     {
         struct rerere_dir *rr_dir = ent->value;
         free(rr_dir->status);
@@ -423,7 +423,7 @@ static void rerere_strbuf_putconflict(struct strbuf *buf, int ch, size_t size)
 }
 
 static int handle_conflict(struct strbuf *out, struct rerere_io *io,
-                           int marker_size, git_hash_ctx *ctx)
+                           int marker_size, struct git_hash_ctx *ctx)
 {
     enum
     {
@@ -442,45 +442,31 @@ static int handle_conflict(struct strbuf *out, struct rerere_io *io,
         if (is_cmarker(buf.buf, '<', marker_size))
         {
             if (handle_conflict(&conflict, io, marker_size, NULL) < 0)
-            {
                 break;
-            }
             if (hunk == RR_SIDE_1)
-            {
                 strbuf_addbuf(&one, &conflict);
-            }
             else
-            {
                 strbuf_addbuf(&two, &conflict);
-            }
             strbuf_release(&conflict);
         }
         else if (is_cmarker(buf.buf, '|', marker_size))
         {
             if (hunk != RR_SIDE_1)
-            {
                 break;
-            }
             hunk = RR_ORIGINAL;
         }
         else if (is_cmarker(buf.buf, '=', marker_size))
         {
             if (hunk != RR_SIDE_1 && hunk != RR_ORIGINAL)
-            {
                 break;
-            }
             hunk = RR_SIDE_2;
         }
         else if (is_cmarker(buf.buf, '>', marker_size))
         {
             if (hunk != RR_SIDE_2)
-            {
                 break;
-            }
             if (strbuf_cmp(&one, &two) > 0)
-            {
                 strbuf_swap(&one, &two);
-            }
             has_conflicts = 1;
             rerere_strbuf_putconflict(out, '<', marker_size);
             strbuf_addbuf(out, &one);
@@ -489,25 +475,19 @@ static int handle_conflict(struct strbuf *out, struct rerere_io *io,
             rerere_strbuf_putconflict(out, '>', marker_size);
             if (ctx)
             {
-                the_hash_algo->update_fn(ctx, one.buf ? one.buf : "",
-                                         one.len + 1);
-                the_hash_algo->update_fn(ctx, two.buf ? two.buf : "",
-                                         two.len + 1);
+                git_hash_update(ctx, one.buf ? one.buf : "",
+                                one.len + 1);
+                git_hash_update(ctx, two.buf ? two.buf : "",
+                                two.len + 1);
             }
             break;
         }
         else if (hunk == RR_SIDE_1)
-        {
             strbuf_addbuf(&one, &buf);
-        }
         else if (hunk == RR_ORIGINAL)
-        {
             ; /* discard */
-        }
         else if (hunk == RR_SIDE_2)
-        {
             strbuf_addbuf(&two, &buf);
-        }
     }
     strbuf_release(&one);
     strbuf_release(&two);
@@ -530,14 +510,11 @@ static int handle_conflict(struct strbuf *out, struct rerere_io *io,
  */
 static int handle_path(unsigned char *hash, struct rerere_io *io, int marker_size)
 {
-    git_hash_ctx  ctx;
-    struct strbuf buf           = STRBUF_INIT;
-    struct strbuf out           = STRBUF_INIT;
-    int           has_conflicts = 0;
+    struct git_hash_ctx ctx;
+    struct strbuf       buf = STRBUF_INIT, out = STRBUF_INIT;
+    int                 has_conflicts = 0;
     if (hash)
-    {
         the_hash_algo->init_fn(&ctx);
-    }
 
     while (!io->getline(&buf, io))
     {
@@ -561,9 +538,7 @@ static int handle_path(unsigned char *hash, struct rerere_io *io, int marker_siz
     strbuf_release(&out);
 
     if (hash)
-    {
-        the_hash_algo->final_fn(hash, &ctx);
-    }
+        git_hash_final(hash, &ctx);
 
     return has_conflicts;
 }
@@ -764,8 +739,8 @@ static int try_merge(struct index_state     *istate,
                      mmfile_t *cur, mmbuffer_t *result)
 {
     enum ll_merge_result ret;
-    mmfile_t             base  = {NULL, 0};
-    mmfile_t             other = {NULL, 0};
+    mmfile_t             base  = { NULL, 0 };
+    mmfile_t             other = { NULL, 0 };
 
     if (read_mmfile(&base, rerere_path(id, "preimage")) || read_mmfile(&other, rerere_path(id, "postimage")))
     {
@@ -801,8 +776,8 @@ static int merge(struct index_state *istate, const struct rerere_id *id, const c
 {
     FILE      *f;
     int        ret;
-    mmfile_t   cur    = {NULL, 0};
-    mmbuffer_t result = {NULL, 0};
+    mmfile_t   cur    = { NULL, 0 };
+    mmbuffer_t result = { NULL, 0 };
 
     /*
      * Normalize the conflicts in path and write it out to
@@ -1163,8 +1138,8 @@ static int rerere_mem_getline(struct strbuf *sb, struct rerere_io *io_)
 static int handle_cache(struct index_state *istate,
                         const char *path, unsigned char *hash, const char *output)
 {
-    mmfile_t                  mmfile[3] = {{NULL}};
-    mmbuffer_t                result    = {NULL, 0};
+    mmfile_t                  mmfile[3] = { { NULL } };
+    mmbuffer_t                result    = { NULL, 0 };
     const struct cache_entry *ce;
     int                       pos;
     int                       len;
@@ -1282,8 +1257,8 @@ static int rerere_forget_one_path(struct index_state *istate,
          id->variant < id->collection->status_nr;
          id->variant++)
     {
-        mmfile_t   cur    = {NULL, 0};
-        mmbuffer_t result = {NULL, 0};
+        mmfile_t   cur    = { NULL, 0 };
+        mmbuffer_t result = { NULL, 0 };
         int        cleanly_resolved;
 
         if (!has_rerere_resolution(id))

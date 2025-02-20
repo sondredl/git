@@ -42,7 +42,7 @@ static char *sequence_editor(int ident_flag UNUSED)
 
 static char *pager(int ident_flag UNUSED)
 {
-	const char *pgm = git_pager(the_repository, 1);
+    const char *pgm = git_pager(the_repository, 1);
 
     if (!pgm)
     {
@@ -186,20 +186,24 @@ static void list_vars(void)
     struct git_var *ptr;
     char           *val;
 
-	for (ptr = git_vars; ptr->read; ptr++)
-		if ((val = ptr->read(0))) {
-			if (ptr->multivalued && *val) {
-				struct string_list list = STRING_LIST_INIT_DUP;
+    for (ptr = git_vars; ptr->read; ptr++)
+        if ((val = ptr->read(0)))
+        {
+            if (ptr->multivalued && *val)
+            {
+                struct string_list list = STRING_LIST_INIT_DUP;
 
-				string_list_split(&list, val, '\n', -1);
-				for (size_t i = 0; i < list.nr; i++)
-					printf("%s=%s\n", ptr->name, list.items[i].string);
-				string_list_clear(&list, 0);
-			} else {
-				printf("%s=%s\n", ptr->name, val);
-			}
-			free(val);
-		}
+                string_list_split(&list, val, '\n', -1);
+                for (size_t i = 0; i < list.nr; i++)
+                    printf("%s=%s\n", ptr->name, list.items[i].string);
+                string_list_clear(&list, 0);
+            }
+            else
+            {
+                printf("%s=%s\n", ptr->name, val);
+            }
+            free(val);
+        }
 }
 
 static const struct git_var *get_git_var(const char *var)
@@ -237,10 +241,9 @@ int cmd_var(int                     argc,
     const struct git_var *git_var;
     char                 *val;
 
+    show_usage_if_asked(argc, argv, var_usage);
     if (argc != 2)
-    {
         usage(var_usage);
-    }
 
     if (strcmp(argv[1], "-l") == 0)
     {

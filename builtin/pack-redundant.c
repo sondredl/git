@@ -1,10 +1,10 @@
 /*
-*
-* Copyright 2005, Lukas Sandstrom <lukass@etek.chalmers.se>
-*
-* This file is licensed under the GPL v2.
-*
-*/
+ *
+ * Copyright 2005, Lukas Sandstrom <lukass@etek.chalmers.se>
+ *
+ * This file is licensed under the GPL v2.
+ *
+ */
 
 #define USE_THE_REPOSITORY_VARIABLE
 
@@ -468,8 +468,8 @@ static int cmp_remaining_objects(const void *a, const void *b)
 /* Sort pack_list, greater size of remaining_objects first */
 static void sort_pack_list(struct pack_list **pl)
 {
-	struct pack_list **ary, *p;
-	size_t n = pack_list_size(*pl);
+    struct pack_list **ary, *p;
+    size_t             n = pack_list_size(*pl);
 
     if (n < 2)
     {
@@ -485,11 +485,11 @@ static void sort_pack_list(struct pack_list **pl)
 
     QSORT(ary, n, cmp_remaining_objects);
 
-	/* link them back again */
-	for (size_t i = 0; i < n - 1; i++)
-		ary[i]->next = ary[i + 1];
-	ary[n - 1]->next = NULL;
-	*pl = ary[0];
+    /* link them back again */
+    for (size_t i = 0; i < n - 1; i++)
+        ary[i]->next = ary[i + 1];
+    ary[n - 1]->next = NULL;
+    *pl              = ary[0];
 
     free(ary);
 }
@@ -710,16 +710,16 @@ static void load_all(void)
     }
 }
 
-int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED, struct repository *repo UNUSED) {
-	int i; int i_still_use_this = 0; struct pack_list *min = NULL, *red, *pl;
-	struct llist *ignore;
-	struct strbuf idx_name = STRBUF_INIT;
-	char buf[GIT_MAX_HEXSZ + 2]; /* hex hash + \n + \0 */
+int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED, struct repository *repo UNUSED)
+{
+    int               i;
+    int               i_still_use_this = 0;
+    struct pack_list *min              = NULL, *red, *pl;
+    struct llist     *ignore;
+    struct strbuf     idx_name = STRBUF_INIT;
+    char              buf[GIT_MAX_HEXSZ + 2]; /* hex hash + \n + \0 */
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage(pack_redundant_usage);
-    }
+    show_usage_if_asked(argc, argv, pack_redundant_usage);
 
     for (i = 1; i < argc; i++)
     {
@@ -818,37 +818,40 @@ int cmd_pack_redundant(int argc, const char **argv, const char *prefix UNUSED, s
 
     minimize(&min);
 
-	if (verbose) {
-		fprintf(stderr, "There are %lu packs available in alt-odbs.\n",
-			(unsigned long)pack_list_size(altodb_packs));
-		fprintf(stderr, "The smallest (bytewise) set of packs is:\n");
-		pl = min;
-		while (pl) {
-			fprintf(stderr, "\t%s\n", pl->pack->pack_name);
-			pl = pl->next;
-		}
-		fprintf(stderr, "containing %lu duplicate objects "
-				"with a total size of %lukb.\n",
-			(unsigned long)get_pack_redundancy(min),
-			(unsigned long)pack_set_bytecount(min)/1024);
-		fprintf(stderr, "A total of %lu unique objects were considered.\n",
-			(unsigned long)all_objects->size);
-		fprintf(stderr, "Redundant packs (with indexes):\n");
-	}
-	pl = red = pack_list_difference(local_packs, min);
-	while (pl) {
-		printf("%s\n%s\n",
-		       odb_pack_name(pl->pack->repo, &idx_name, pl->pack->hash, "idx"),
-		       pl->pack->pack_name);
-		pl = pl->next;
-	}
-	if (verbose)
-		fprintf(stderr, "%luMB of redundant packs in total.\n",
-			(unsigned long)pack_set_bytecount(red)/(1024*1024));
+    if (verbose)
+    {
+        fprintf(stderr, "There are %lu packs available in alt-odbs.\n",
+                (unsigned long)pack_list_size(altodb_packs));
+        fprintf(stderr, "The smallest (bytewise) set of packs is:\n");
+        pl = min;
+        while (pl)
+        {
+            fprintf(stderr, "\t%s\n", pl->pack->pack_name);
+            pl = pl->next;
+        }
+        fprintf(stderr, "containing %lu duplicate objects "
+                        "with a total size of %lukb.\n",
+                (unsigned long)get_pack_redundancy(min),
+                (unsigned long)pack_set_bytecount(min) / 1024);
+        fprintf(stderr, "A total of %lu unique objects were considered.\n",
+                (unsigned long)all_objects->size);
+        fprintf(stderr, "Redundant packs (with indexes):\n");
+    }
+    pl = red = pack_list_difference(local_packs, min);
+    while (pl)
+    {
+        printf("%s\n%s\n",
+               odb_pack_name(pl->pack->repo, &idx_name, pl->pack->hash, "idx"),
+               pl->pack->pack_name);
+        pl = pl->next;
+    }
+    if (verbose)
+        fprintf(stderr, "%luMB of redundant packs in total.\n",
+                (unsigned long)pack_set_bytecount(red) / (1024 * 1024));
 
-	pack_list_free(red);
-	pack_list_free(min);
-	llist_free(ignore);
-	strbuf_release(&idx_name);
-	return 0;
+    pack_list_free(red);
+    pack_list_free(min);
+    llist_free(ignore);
+    strbuf_release(&idx_name);
+    return 0;
 }

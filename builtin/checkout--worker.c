@@ -64,7 +64,7 @@ static void packet_to_pc_item(const char *buffer, int len,
 
 static void report_result(struct parallel_checkout_item *pc_item)
 {
-    struct pc_item_result res = {0};
+    struct pc_item_result res = { 0 };
     size_t                size;
 
     res.id     = pc_item->id;
@@ -130,7 +130,8 @@ static void worker_loop(struct checkout *state)
 
 static const char *const checkout_worker_usage[] = {
     N_("git checkout--worker [<options>]"),
-    NULL};
+    NULL
+};
 
 int cmd_checkout__worker(int                     argc,
                          const char            **argv,
@@ -141,13 +142,12 @@ int cmd_checkout__worker(int                     argc,
     struct option   checkout_worker_options[] = {
           OPT_STRING(0, "prefix", &state.base_dir, N_("string"),
                      N_("when creating files, prepend <string>")),
-          OPT_END()};
+          OPT_END()
+    };
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(checkout_worker_usage,
-                           checkout_worker_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     checkout_worker_usage,
+                                     checkout_worker_options);
 
     git_config(git_default_config, NULL);
     argc = parse_options(argc, argv, prefix, checkout_worker_options,

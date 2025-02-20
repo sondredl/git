@@ -25,19 +25,20 @@ static const char *const builtin_fsmonitor__daemon_usage[] = {
     N_("git fsmonitor--daemon run [<options>]"),
     "git fsmonitor--daemon stop",
     "git fsmonitor--daemon status",
-    NULL};
+    NULL
+};
 
 #ifdef HAVE_FSMONITOR_DAEMON_BACKEND
     /*
      * Global state loaded from config.
      */
-    #define FSMONITOR__IPC_THREADS "fsmonitor.ipcthreads"
+ #define FSMONITOR__IPC_THREADS "fsmonitor.ipcthreads"
 static int fsmonitor__ipc_threads = 8;
 
-    #define FSMONITOR__START_TIMEOUT "fsmonitor.starttimeout"
+ #define FSMONITOR__START_TIMEOUT "fsmonitor.starttimeout"
 static int fsmonitor__start_timeout_sec = 60;
 
-    #define FSMONITOR__ANNOUNCE_STARTUP "fsmonitor.announcestartup"
+ #define FSMONITOR__ANNOUNCE_STARTUP "fsmonitor.announcestartup"
 static int fsmonitor__announce_startup = 0;
 
 static int fsmonitor_config(const char *var, const char *value,
@@ -273,7 +274,7 @@ static void with_lock__abort_all_cookies(struct fsmonitor_daemon_state *state)
     struct fsmonitor_cookie_item *cookie;
     int                           nr_aborted = 0;
 
-    hashmap_for_each_entry(&state->cookies, &iter, cookie, entry)
+    hashmap_for_each_entry (&state->cookies, &iter, cookie, entry)
     {
         trace_printf_key(&trace_fsmonitor, "cookie-abort: '%s'",
                          cookie->name);
@@ -523,7 +524,7 @@ static void fsmonitor_batch__combine(struct fsmonitor_batch       *batch_dest,
      * Return the obsolete portion of the list after we have removed it from
      * the official list so that the caller can free it after leaving the lock.
      */
-    #define MY_TIME_DELAY_SECONDS (5 * 60) /* seconds */
+ #define MY_TIME_DELAY_SECONDS (5 * 60) /* seconds */
 
 static struct fsmonitor_batch *with_lock__truncate_old_batches(
     struct fsmonitor_daemon_state *state,
@@ -1023,9 +1024,9 @@ static int handle_client(void       *data,
     return result;
 }
 
-    #define FSMONITOR_DIR           "fsmonitor--daemon"
-    #define FSMONITOR_COOKIE_DIR    "cookies"
-    #define FSMONITOR_COOKIE_PREFIX (FSMONITOR_DIR "/" FSMONITOR_COOKIE_DIR "/")
+ #define FSMONITOR_DIR           "fsmonitor--daemon"
+ #define FSMONITOR_COOKIE_DIR    "cookies"
+ #define FSMONITOR_COOKIE_PREFIX (FSMONITOR_DIR "/" FSMONITOR_COOKIE_DIR "/")
 
 enum fsmonitor_path_type fsmonitor_classify_path_workdir_relative(
     const char *rel)
@@ -1113,7 +1114,7 @@ enum fsmonitor_path_type fsmonitor_classify_path_absolute(
      * to just keep growing and growing with realloc, so we insert an arbitrary
      * limit.
      */
-    #define MY_COMBINE_LIMIT (1024)
+ #define MY_COMBINE_LIMIT (1024)
 
 void fsmonitor_publish(struct fsmonitor_daemon_state *state,
                        struct fsmonitor_batch        *batch,
@@ -1241,7 +1242,8 @@ static int fsmonitor_run_daemon_1(struct fsmonitor_daemon_state *state)
          * it needs to when creating the server side of the
          * Unix domain socket.
          */
-        .uds_disallow_chdir = 0};
+        .uds_disallow_chdir = 0
+    };
     int health_started   = 0;
     int listener_started = 0;
     int err              = 0;
@@ -1488,10 +1490,10 @@ static int try_to_run_foreground_daemon(int detach_console MAYBE_UNUSED)
         fflush(stderr);
     }
 
-    #ifdef GIT_WINDOWS_NATIVE
+ #ifdef GIT_WINDOWS_NATIVE
     if (detach_console)
         FreeConsole();
-    #endif
+ #endif
 
     return !!fsmonitor_run_daemon();
 }
@@ -1596,7 +1598,8 @@ int cmd_fsmonitor__daemon(int                     argc,
                     &fsmonitor__start_timeout_sec,
                     N_("max seconds to wait for background daemon startup")),
 
-        OPT_END()};
+        OPT_END()
+    };
 
     git_config(fsmonitor_config, NULL);
 
@@ -1646,12 +1649,11 @@ int cmd_fsmonitor__daemon(int                     argc,
 int cmd_fsmonitor__daemon(int argc, const char **argv, const char *prefix UNUSED, struct repository *repo UNUSED)
 {
     struct option options[] = {
-        OPT_END()};
+        OPT_END()
+    };
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_fsmonitor__daemon_usage, options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_fsmonitor__daemon_usage, options);
 
     die(_("fsmonitor--daemon not supported on this platform"));
 }

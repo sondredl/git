@@ -19,6 +19,7 @@
 #include "convert.h"
 #include "environment.h"
 #include "gettext.h"
+#include "git-zlib.h"
 #include "ident.h"
 #include "repository.h"
 #include "lockfile.h"
@@ -65,16 +66,16 @@ struct config_source
     size_t                   total_len;
     struct strbuf            value;
     struct strbuf            var;
-    unsigned                 subsection_case_sensitive : 1;
+    unsigned                 subsection_case_sensitive:1;
 
     int (*do_fgetc)(struct config_source *c);
     int (*do_ungetc)(int c, struct config_source *conf);
     long (*do_ftell)(struct config_source *c);
 };
 #define CONFIG_SOURCE_INIT \
-    {                      \
-        0                  \
-    }
+ {                         \
+  0                        \
+ }
 
 static int pack_compression_seen;
 static int zlib_compression_seen;
@@ -150,9 +151,9 @@ struct config_include_data
     struct string_list *remote_urls;
 };
 #define CONFIG_INCLUDE_INIT \
-    {                       \
-        0                   \
-    }
+ {                          \
+  0                         \
+ }
 
 static int git_config_include(const char *var, const char *value,
                               const struct config_context *ctx, void *data);
@@ -431,7 +432,7 @@ static int at_least_one_url_matches_glob(const char *glob, int glob_len,
     int                      found = 0;
 
     strbuf_add(&pattern, glob, glob_len);
-    for_each_string_list_item(url_item, remote_urls)
+    for_each_string_list_item (url_item, remote_urls)
     {
         if (!wildmatch(pattern.buf, url_item->string, WM_PATHNAME))
         {
@@ -1259,7 +1260,8 @@ static int git_parse_source(struct config_source *cs, config_fn_t fn,
 
     /* For the parser event callback */
     struct parse_event_data event_data = {
-        CONFIG_EVENT_EOF, 0, opts};
+        CONFIG_EVENT_EOF, 0, opts
+    };
 
     for (;;)
     {
@@ -1519,17 +1521,17 @@ static const struct fsync_component_name
     const char          *name;
     enum fsync_component component_bits;
 } fsync_component_names[] = {
-    {"loose-object", FSYNC_COMPONENT_LOOSE_OBJECT},
-    {"pack", FSYNC_COMPONENT_PACK},
-    {"pack-metadata", FSYNC_COMPONENT_PACK_METADATA},
-    {"commit-graph", FSYNC_COMPONENT_COMMIT_GRAPH},
-    {"index", FSYNC_COMPONENT_INDEX},
-    {"objects", FSYNC_COMPONENTS_OBJECTS},
-    {"reference", FSYNC_COMPONENT_REFERENCE},
-    {"derived-metadata", FSYNC_COMPONENTS_DERIVED_METADATA},
-    {"committed", FSYNC_COMPONENTS_COMMITTED},
-    {"added", FSYNC_COMPONENTS_ADDED},
-    {"all", FSYNC_COMPONENTS_ALL},
+    { "loose-object", FSYNC_COMPONENT_LOOSE_OBJECT },
+    { "pack", FSYNC_COMPONENT_PACK },
+    { "pack-metadata", FSYNC_COMPONENT_PACK_METADATA },
+    { "commit-graph", FSYNC_COMPONENT_COMMIT_GRAPH },
+    { "index", FSYNC_COMPONENT_INDEX },
+    { "objects", FSYNC_COMPONENTS_OBJECTS },
+    { "reference", FSYNC_COMPONENT_REFERENCE },
+    { "derived-metadata", FSYNC_COMPONENTS_DERIVED_METADATA },
+    { "committed", FSYNC_COMPONENTS_COMMITTED },
+    { "added", FSYNC_COMPONENTS_ADDED },
+    { "all", FSYNC_COMPONENTS_ALL },
 };
 
 static enum fsync_component parse_fsync_components(const char *var, const char *string)
@@ -1817,19 +1819,22 @@ static int git_default_core_config(const char *var, const char *value,
         return 0;
     }
 
-	if (!strcmp(var, "core.bigfilethreshold")) {
-		big_file_threshold = git_config_ulong(var, value, ctx->kvi);
-		return 0;
-	}
+    if (!strcmp(var, "core.bigfilethreshold"))
+    {
+        big_file_threshold = git_config_ulong(var, value, ctx->kvi);
+        return 0;
+    }
 
-	if (!strcmp(var, "core.autocrlf")) {
-		if (value && !strcasecmp(value, "input")) {
-			auto_crlf = AUTO_CRLF_INPUT;
-			return 0;
-		}
-		auto_crlf = git_config_bool(var, value);
-		return 0;
-	}
+    if (!strcmp(var, "core.autocrlf"))
+    {
+        if (value && !strcasecmp(value, "input"))
+        {
+            auto_crlf = AUTO_CRLF_INPUT;
+            return 0;
+        }
+        auto_crlf = git_config_bool(var, value);
+        return 0;
+    }
 
     if (!strcmp(var, "core.safecrlf"))
     {
@@ -2644,7 +2649,7 @@ static void configset_iter(struct config_set *set, config_fn_t fn, void *data)
 
 void read_early_config(struct repository *repo, config_fn_t cb, void *data)
 {
-    struct config_options opts      = {0};
+    struct config_options opts      = { 0 };
     struct strbuf         commondir = STRBUF_INIT;
     struct strbuf         gitdir    = STRBUF_INIT;
 
@@ -2677,7 +2682,7 @@ void read_early_config(struct repository *repo, config_fn_t cb, void *data)
 
 void read_very_early_config(config_fn_t cb, void *data)
 {
-    struct config_options opts = {0};
+    struct config_options opts = { 0 };
 
     opts.respect_includes = 1;
     opts.ignore_repo      = 1;
@@ -2787,8 +2792,8 @@ void git_configset_clear(struct config_set *set)
         return;
     }
 
-    hashmap_for_each_entry(&set->config_hash, &iter, entry,
-                           ent /* member name */)
+    hashmap_for_each_entry (&set->config_hash, &iter, entry,
+                            ent /* member name */)
     {
         free(entry->key);
         string_list_clear(&entry->value_list, 1);
@@ -3005,7 +3010,7 @@ int git_configset_get_pathname(struct config_set *set, const char *key, char **d
 /* Functions use to read configuration from a repository */
 static void repo_read_config(struct repository *repo)
 {
-    struct config_options opts = {0};
+    struct config_options opts = { 0 };
 
     opts.respect_includes = 1;
     opts.commondir        = repo->commondir;
@@ -3344,12 +3349,12 @@ struct config_store_data
         int                 is_keys_section;
     } * parsed;
     unsigned int parsed_nr, parsed_alloc, *seen, seen_nr, seen_alloc;
-    unsigned int key_seen : 1, section_seen : 1, is_keys_section : 1;
+    unsigned int key_seen:1, section_seen:1, is_keys_section:1;
 };
 #define CONFIG_STORE_INIT \
-    {                     \
-        0                 \
-    }
+ {                        \
+  0                       \
+ }
 
 static void config_store_data_clear(struct config_store_data *store)
 {

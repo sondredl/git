@@ -48,7 +48,8 @@
 
 static const char *const builtin_gc_usage[] = {
     N_("git gc [<options>]"),
-    NULL};
+    NULL
+};
 
 static timestamp_t gc_log_expire_time;
 
@@ -135,45 +136,48 @@ static int gc_config_is_timestamp_never(const char *var)
     return 0;
 }
 
-struct gc_config {
-	int pack_refs;
-	int prune_reflogs;
-	int cruft_packs;
-	unsigned long max_cruft_size;
-	int aggressive_depth;
-	int aggressive_window;
-	int gc_auto_threshold;
-	int gc_auto_pack_limit;
-	int detach_auto;
-	char *gc_log_expire;
-	char *prune_expire;
-	char *prune_worktrees_expire;
-	char *repack_filter;
-	char *repack_filter_to;
-	unsigned long big_pack_threshold;
-	unsigned long max_delta_cache_size;
-	/*
-	 * Remove this member from gc_config once repo_settings is passed
-	 * through the callchain.
-	 */
-	size_t delta_base_cache_limit;
+struct gc_config
+{
+    int           pack_refs;
+    int           prune_reflogs;
+    int           cruft_packs;
+    unsigned long max_cruft_size;
+    int           aggressive_depth;
+    int           aggressive_window;
+    int           gc_auto_threshold;
+    int           gc_auto_pack_limit;
+    int           detach_auto;
+    char         *gc_log_expire;
+    char         *prune_expire;
+    char         *prune_worktrees_expire;
+    char         *repack_filter;
+    char         *repack_filter_to;
+    char         *repack_expire_to;
+    unsigned long big_pack_threshold;
+    unsigned long max_delta_cache_size;
+    /*
+     * Remove this member from gc_config once repo_settings is passed
+     * through the callchain.
+     */
+    size_t delta_base_cache_limit;
 };
 
-#define GC_CONFIG_INIT { \
-	.pack_refs = 1, \
-	.prune_reflogs = 1, \
-	.cruft_packs = 1, \
-	.aggressive_depth = 50, \
-	.aggressive_window = 250, \
-	.gc_auto_threshold = 6700, \
-	.gc_auto_pack_limit = 50, \
-	.detach_auto = 1, \
-	.gc_log_expire = xstrdup("1.day.ago"), \
-	.prune_expire = xstrdup("2.weeks.ago"), \
-	.prune_worktrees_expire = xstrdup("3.months.ago"), \
-	.max_delta_cache_size = DEFAULT_DELTA_CACHE_SIZE, \
-	.delta_base_cache_limit = DEFAULT_DELTA_BASE_CACHE_LIMIT, \
-}
+#define GC_CONFIG_INIT                                      \
+ {                                                          \
+  .pack_refs              = 1,                              \
+  .prune_reflogs          = 1,                              \
+  .cruft_packs            = 1,                              \
+  .aggressive_depth       = 50,                             \
+  .aggressive_window      = 250,                            \
+  .gc_auto_threshold      = 6700,                           \
+  .gc_auto_pack_limit     = 50,                             \
+  .detach_auto            = 1,                              \
+  .gc_log_expire          = xstrdup("1.day.ago"),           \
+  .prune_expire           = xstrdup("2.weeks.ago"),         \
+  .prune_worktrees_expire = xstrdup("3.months.ago"),        \
+  .max_delta_cache_size   = DEFAULT_DELTA_CACHE_SIZE,       \
+  .delta_base_cache_limit = DEFAULT_DELTA_BASE_CACHE_LIMIT, \
+ }
 
 static void gc_config_release(struct gc_config *cfg)
 {
@@ -186,9 +190,9 @@ static void gc_config_release(struct gc_config *cfg)
 
 static void gc_config(struct gc_config *cfg)
 {
-	const char *value;
-	char *owned = NULL;
-	unsigned long ulongval;
+    const char   *value;
+    char         *owned = NULL;
+    unsigned long ulongval;
 
     if (!git_config_get_value("gc.packrefs", &value))
     {
@@ -230,13 +234,14 @@ static void gc_config(struct gc_config *cfg)
     git_config_get_ulong("gc.bigpackthreshold", &cfg->big_pack_threshold);
     git_config_get_ulong("pack.deltacachesize", &cfg->max_delta_cache_size);
 
-	if (!git_config_get_ulong("core.deltabasecachelimit", &ulongval))
-		cfg->delta_base_cache_limit = ulongval;
+    if (!git_config_get_ulong("core.deltabasecachelimit", &ulongval))
+        cfg->delta_base_cache_limit = ulongval;
 
-	if (!git_config_get_string("gc.repackfilter", &owned)) {
-		free(cfg->repack_filter);
-		cfg->repack_filter = owned;
-	}
+    if (!git_config_get_string("gc.repackfilter", &owned))
+    {
+        free(cfg->repack_filter);
+        cfg->repack_filter = owned;
+    }
 
     if (!git_config_get_string("gc.repackfilterto", &owned))
     {
@@ -284,9 +289,9 @@ struct maintenance_run_opts
     enum schedule_priority schedule;
 };
 #define MAINTENANCE_RUN_OPTS_INIT \
-    {                             \
-        .detach = -1,             \
-    }
+ {                                \
+  .detach = -1,                   \
+ }
 
 static int pack_refs_condition(UNUSED struct gc_config *cfg)
 {
@@ -420,11 +425,11 @@ static uint64_t total_ram(void)
     size_t  length;
 
     mib[0] = CTL_HW;
-    #if defined(HW_MEMSIZE)
+ #if defined(HW_MEMSIZE)
     mib[1] = HW_MEMSIZE;
-    #else
+ #else
     mib[1] = HW_PHYSMEM;
-    #endif
+ #endif
     length = sizeof(int64_t);
     if (!sysctl(mib, 2, &physical_memory, &length, NULL, 0))
         return physical_memory;
@@ -450,36 +455,36 @@ static uint64_t estimate_repack_memory(struct gc_config  *cfg,
         return 0;
     }
 
-	/*
-	 * First we have to scan through at least one pack.
-	 * Assume enough room in OS file cache to keep the entire pack
-	 * or we may accidentally evict data of other processes from
-	 * the cache.
-	 */
-	os_cache = pack->pack_size + pack->index_size;
-	/* then pack-objects needs lots more for book keeping */
-	heap = sizeof(struct object_entry) * nr_objects;
-	/*
-	 * internal rev-list --all --objects takes up some memory too,
-	 * let's say half of it is for blobs
-	 */
-	heap += sizeof(struct blob) * nr_objects / 2;
-	/*
-	 * and the other half is for trees (commits and tags are
-	 * usually insignificant)
-	 */
-	heap += sizeof(struct tree) * nr_objects / 2;
-	/* and then obj_hash[], underestimated in fact */
-	heap += sizeof(struct object *) * nr_objects;
-	/* revindex is used also */
-	heap += (sizeof(off_t) + sizeof(uint32_t)) * nr_objects;
-	/*
-	 * read_sha1_file() (either at delta calculation phase, or
-	 * writing phase) also fills up the delta base cache
-	 */
-	heap += cfg->delta_base_cache_limit;
-	/* and of course pack-objects has its own delta cache */
-	heap += cfg->max_delta_cache_size;
+    /*
+     * First we have to scan through at least one pack.
+     * Assume enough room in OS file cache to keep the entire pack
+     * or we may accidentally evict data of other processes from
+     * the cache.
+     */
+    os_cache = pack->pack_size + pack->index_size;
+    /* then pack-objects needs lots more for book keeping */
+    heap = sizeof(struct object_entry) * nr_objects;
+    /*
+     * internal rev-list --all --objects takes up some memory too,
+     * let's say half of it is for blobs
+     */
+    heap += sizeof(struct blob) * nr_objects / 2;
+    /*
+     * and the other half is for trees (commits and tags are
+     * usually insignificant)
+     */
+    heap += sizeof(struct tree) * nr_objects / 2;
+    /* and then obj_hash[], underestimated in fact */
+    heap += sizeof(struct object *) * nr_objects;
+    /* revindex is used also */
+    heap += (sizeof(off_t) + sizeof(uint32_t)) * nr_objects;
+    /*
+     * read_sha1_file() (either at delta calculation phase, or
+     * writing phase) also fills up the delta base cache
+     */
+    heap += cfg->delta_base_cache_limit;
+    /* and of course pack-objects has its own delta cache */
+    heap += cfg->max_delta_cache_size;
 
     return os_cache + heap;
 }
@@ -493,7 +498,8 @@ static int keep_one_pack(struct string_list_item *item, void *data UNUSED)
 static void add_repack_all_option(struct gc_config   *cfg,
                                   struct string_list *keep_pack)
 {
-    if (cfg->prune_expire && !strcmp(cfg->prune_expire, "now"))
+    if (cfg->prune_expire && !strcmp(cfg->prune_expire, "now")
+        && !(cfg->cruft_packs && cfg->repack_expire_to))
         strvec_push(&repack, "-a");
     else if (cfg->cruft_packs)
     {
@@ -503,6 +509,8 @@ static void add_repack_all_option(struct gc_config   *cfg,
         if (cfg->max_cruft_size)
             strvec_pushf(&repack, "--max-cruft-size=%lu",
                          cfg->max_cruft_size);
+        if (cfg->repack_expire_to)
+            strvec_pushf(&repack, "--expire-to=%s", cfg->repack_expire_to);
     }
     else
     {
@@ -774,31 +782,31 @@ int cmd_gc(int                     argc,
     const char                 *prune_expire_sentinel = "sentinel";
     const char                 *prune_expire_arg      = prune_expire_sentinel;
     int                         ret;
+    struct option               builtin_gc_options[] = {
+                      OPT__QUIET(&quiet, N_("suppress progress reporting")),
+                      { OPTION_STRING, 0, "prune", &prune_expire_arg, N_("date"),
+                        N_("prune unreferenced objects"),
+                        PARSE_OPT_OPTARG, NULL, (intptr_t)prune_expire_arg },
+                      OPT_BOOL(0, "cruft", &cfg.cruft_packs, N_("pack unreferenced objects separately")),
+                      OPT_MAGNITUDE(0, "max-cruft-size", &cfg.max_cruft_size,
+                                    N_("with --cruft, limit the size of new cruft packs")),
+                      OPT_BOOL(0, "aggressive", &aggressive, N_("be more thorough (increased runtime)")),
+                      OPT_BOOL_F(0, "auto", &opts.auto_flag, N_("enable auto-gc mode"),
+                                 PARSE_OPT_NOCOMPLETE),
+                      OPT_BOOL(0, "detach", &opts.detach,
+                               N_("perform garbage collection in the background")),
+                      OPT_BOOL_F(0, "force", &force,
+                                 N_("force running gc even if there may be another gc running"),
+                                 PARSE_OPT_NOCOMPLETE),
+                      OPT_BOOL(0, "keep-largest-pack", &keep_largest_pack,
+                               N_("repack all other packs except the largest pack")),
+                      OPT_STRING(0, "expire-to", &cfg.repack_expire_to, N_("dir"),
+                                 N_("pack prefix to store a pack containing pruned objects")),
+                      OPT_END()
+    };
 
-    struct option builtin_gc_options[] = {
-        OPT__QUIET(&quiet, N_("suppress progress reporting")),
-        {OPTION_STRING, 0, "prune", &prune_expire_arg, N_("date"),
-         N_("prune unreferenced objects"),
-         PARSE_OPT_OPTARG, NULL, (intptr_t)prune_expire_arg},
-        OPT_BOOL(0, "cruft", &cfg.cruft_packs, N_("pack unreferenced objects separately")),
-        OPT_MAGNITUDE(0, "max-cruft-size", &cfg.max_cruft_size,
-                      N_("with --cruft, limit the size of new cruft packs")),
-        OPT_BOOL(0, "aggressive", &aggressive, N_("be more thorough (increased runtime)")),
-        OPT_BOOL_F(0, "auto", &opts.auto_flag, N_("enable auto-gc mode"),
-                   PARSE_OPT_NOCOMPLETE),
-        OPT_BOOL(0, "detach", &opts.detach,
-                 N_("perform garbage collection in the background")),
-        OPT_BOOL_F(0, "force", &force,
-                   N_("force running gc even if there may be another gc running"),
-                   PARSE_OPT_NOCOMPLETE),
-        OPT_BOOL(0, "keep-largest-pack", &keep_largest_pack,
-                 N_("repack all other packs except the largest pack")),
-        OPT_END()};
-
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_gc_usage, builtin_gc_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_gc_usage, builtin_gc_options);
 
     strvec_pushl(&reflog, "reflog", "expire", "--all", NULL);
     strvec_pushl(&repack, "repack", "-d", "-l", NULL);
@@ -1016,7 +1024,8 @@ out:
 
 static const char *const builtin_maintenance_run_usage[] = {
     N_("git maintenance run [--auto] [--[no-]quiet] [--task=<task>] [--schedule]"),
-    NULL};
+    NULL
+};
 
 static int maintenance_opt_schedule(const struct option *opt, const char *arg,
                                     int unset)
@@ -1563,7 +1572,7 @@ struct maintenance_task
     const char          *name;
     maintenance_task_fn *fn;
     maintenance_auto_fn *auto_condition;
-    unsigned             enabled : 1;
+    unsigned             enabled:1;
 
     enum schedule_priority schedule;
 
@@ -1803,7 +1812,7 @@ static int task_option_parse(const struct option *opt UNUSED,
 }
 
 static int maintenance_run(int argc, const char **argv, const char *prefix,
-			   struct repository *repo UNUSED)
+                           struct repository *repo UNUSED)
 {
     int                         i;
     struct maintenance_run_opts opts                              = MAINTENANCE_RUN_OPTS_INIT;
@@ -1821,7 +1830,8 @@ static int maintenance_run(int argc, const char **argv, const char *prefix,
                       OPT_CALLBACK_F(0, "task", NULL, N_("task"),
                                      N_("run a specific task"),
                                      PARSE_OPT_NONEG, task_option_parse),
-                      OPT_END()};
+                      OPT_END()
+    };
     int ret;
 
     opts.quiet = !isatty(2);
@@ -1864,10 +1874,11 @@ static char *get_maintpath(void)
 
 static char const *const builtin_maintenance_register_usage[] = {
     "git maintenance register [--config-file <path>]",
-    NULL};
+    NULL
+};
 
 static int maintenance_register(int argc, const char **argv, const char *prefix,
-				struct repository *repo UNUSED)
+                                struct repository *repo UNUSED)
 {
     char         *config_file = NULL;
     struct option options[]   = {
@@ -1899,7 +1910,7 @@ static int maintenance_register(int argc, const char **argv, const char *prefix,
 
     if (!git_config_get_string_multi(key, &list))
     {
-        for_each_string_list_item(item, list)
+        for_each_string_list_item (item, list)
         {
             if (!strcmp(maintpath, item->string))
             {
@@ -1941,10 +1952,11 @@ static int maintenance_register(int argc, const char **argv, const char *prefix,
 
 static char const *const builtin_maintenance_unregister_usage[] = {
     "git maintenance unregister [--config-file <path>] [--force]",
-    NULL};
+    NULL
+};
 
 static int maintenance_unregister(int argc, const char **argv, const char *prefix,
-				  struct repository *repo UNUSED)
+                                  struct repository *repo UNUSED)
 {
     int           force       = 0;
     char         *config_file = NULL;
@@ -1960,7 +1972,7 @@ static int maintenance_unregister(int argc, const char **argv, const char *prefi
     int                       found     = 0;
     struct string_list_item  *item;
     const struct string_list *list;
-    struct config_set         cs = {{0}};
+    struct config_set         cs = { { 0 } };
 
     argc = parse_options(argc, argv, prefix, options,
                          builtin_maintenance_unregister_usage, 0);
@@ -1979,7 +1991,7 @@ static int maintenance_unregister(int argc, const char **argv, const char *prefi
               ? git_configset_get_string_multi(&cs, key, &list)
               : git_config_get_string_multi(key, &list)))
     {
-        for_each_string_list_item(item, list)
+        for_each_string_list_item (item, list)
         {
             if (!strcmp(maintpath, item->string))
             {
@@ -2042,7 +2054,8 @@ static const char *get_frequency(enum schedule_priority schedule)
 static const char *extraconfig[] = {
     "credential.interactive=false",
     "core.askPass=true", /* 'true' returns success, but no output. */
-    NULL};
+    NULL
+};
 
 static const char *get_extra_config_parameters(void)
 {
@@ -2136,7 +2149,7 @@ static int get_schedule_cmd(const char *cmd, int *is_available, char **out)
     }
 
     string_list_split_in_place(&list, testing, ",", -1);
-    for_each_string_list_item(item, &list)
+    for_each_string_list_item (item, &list)
     {
         struct string_list pair = STRING_LIST_INIT_NODUP;
 
@@ -2175,7 +2188,7 @@ static int get_random_minute(void)
         return 13;
     }
 
-	return git_rand(0) % 60;
+    return git_rand(0) % 60;
 }
 
 static int is_launchctl_available(void)
@@ -3247,19 +3260,20 @@ static int update_background_schedule(const struct maintenance_start_opts *opts,
     struct lock_file lk;
     char            *lock_path = xstrfmt("%s/schedule", the_repository->objects->odb->path);
 
-	if (hold_lock_file_for_update(&lk, lock_path, LOCK_NO_DEREF) < 0) {
-		if (errno == EEXIST)
-			error(_("unable to create '%s.lock': %s.\n\n"
-			    "Another scheduled git-maintenance(1) process seems to be running in this\n"
-			    "repository. Please make sure no other maintenance processes are running and\n"
-			    "then try again. If it still fails, a git-maintenance(1) process may have\n"
-			    "crashed in this repository earlier: remove the file manually to continue."),
-			    absolute_path(lock_path), strerror(errno));
-		else
-			error_errno(_("cannot acquire lock for scheduled background maintenance"));
-		free(lock_path);
-		return -1;
-	}
+    if (hold_lock_file_for_update(&lk, lock_path, LOCK_NO_DEREF) < 0)
+    {
+        if (errno == EEXIST)
+            error(_("unable to create '%s.lock': %s.\n\n"
+                    "Another scheduled git-maintenance(1) process seems to be running in this\n"
+                    "repository. Please make sure no other maintenance processes are running and\n"
+                    "then try again. If it still fails, a git-maintenance(1) process may have\n"
+                    "crashed in this repository earlier: remove the file manually to continue."),
+                  absolute_path(lock_path), strerror(errno));
+        else
+            error_errno(_("cannot acquire lock for scheduled background maintenance"));
+        free(lock_path);
+        return -1;
+    }
 
     for (i = 1; i < ARRAY_SIZE(scheduler_fn); i++)
     {
@@ -3288,19 +3302,21 @@ static int update_background_schedule(const struct maintenance_start_opts *opts,
 
 static const char *const builtin_maintenance_start_usage[] = {
     N_("git maintenance start [--scheduler=<scheduler>]"),
-    NULL};
+    NULL
+};
 
 static int maintenance_start(int argc, const char **argv, const char *prefix,
-			     struct repository *repo)
+                             struct repository *repo)
 {
-    struct maintenance_start_opts opts      = {0};
+    struct maintenance_start_opts opts      = { 0 };
     struct option                 options[] = {
                         OPT_CALLBACK_F(
                             0, "scheduler", &opts.scheduler, N_("scheduler"),
                             N_("scheduler to trigger git maintenance run"),
                             PARSE_OPT_NONEG, maintenance_opt_scheduler),
-                        OPT_END()};
-    const char *register_args[] = {"register", NULL};
+                        OPT_END()
+    };
+    const char *register_args[] = { "register", NULL };
 
     argc = parse_options(argc, argv, prefix, options,
                          builtin_maintenance_start_usage, 0);
@@ -3317,20 +3333,22 @@ static int maintenance_start(int argc, const char **argv, const char *prefix,
         die(_("failed to set up maintenance schedule"));
     }
 
-	if (maintenance_register(ARRAY_SIZE(register_args)-1, register_args, NULL, repo))
-		warning(_("failed to add repo to global config"));
-	return 0;
+    if (maintenance_register(ARRAY_SIZE(register_args) - 1, register_args, NULL, repo))
+        warning(_("failed to add repo to global config"));
+    return 0;
 }
 
 static const char *const builtin_maintenance_stop_usage[] = {
     "git maintenance stop",
-    NULL};
+    NULL
+};
 
 static int maintenance_stop(int argc, const char **argv, const char *prefix,
-			    struct repository *repo UNUSED)
+                            struct repository *repo UNUSED)
 {
     struct option options[] = {
-        OPT_END()};
+        OPT_END()
+    };
     argc = parse_options(argc, argv, prefix, options,
                          builtin_maintenance_stop_usage, 0);
     if (argc)
@@ -3345,10 +3363,10 @@ static const char *const builtin_maintenance_usage[] = {
     NULL,
 };
 
-int cmd_maintenance(int argc,
-		    const char **argv,
-		    const char *prefix,
-		    struct repository *repo)
+int cmd_maintenance(int                argc,
+                    const char       **argv,
+                    const char        *prefix,
+                    struct repository *repo)
 {
     parse_opt_subcommand_fn *fn                            = NULL;
     struct option            builtin_maintenance_options[] = {
@@ -3360,7 +3378,7 @@ int cmd_maintenance(int argc,
                    OPT_END(),
     };
 
-	argc = parse_options(argc, argv, prefix, builtin_maintenance_options,
-			     builtin_maintenance_usage, 0);
-	return fn(argc, argv, prefix, repo);
+    argc = parse_options(argc, argv, prefix, builtin_maintenance_options,
+                         builtin_maintenance_usage, 0);
+    return fn(argc, argv, prefix, repo);
 }

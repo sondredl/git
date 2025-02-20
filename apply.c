@@ -245,8 +245,8 @@ struct fragment
      * but some codepaths store an allocated buffer.
      */
     const char *patch;
-    unsigned    free_patch : 1,
-        rejected : 1;
+    unsigned    free_patch:1,
+        rejected:1;
     int              size;
     int              linenr;
     struct fragment *next;
@@ -308,8 +308,8 @@ static void free_patch_list(struct patch *list)
 struct line
 {
     size_t   len;
-    unsigned hash : 24;
-    unsigned flag : 8;
+    unsigned hash:24;
+    unsigned flag:8;
 #define LINE_COMMON  1
 #define LINE_PATCHED 2
 };
@@ -323,10 +323,10 @@ struct image
     struct line  *line;
     size_t        line_nr, line_alloc;
 };
-#define IMAGE_INIT          \
-    {                       \
-        .buf = STRBUF_INIT, \
-    }
+#define IMAGE_INIT    \
+ {                    \
+  .buf = STRBUF_INIT, \
+ }
 
 static void image_init(struct image *image)
 {
@@ -1629,23 +1629,23 @@ int parse_git_diff_header(struct strbuf *root,
             const char *str;
             int (*fn)(struct gitdiff_data *, const char *, struct patch *);
         } optable[] = {
-            {"@@ -", gitdiff_hdrend},
-            {"--- ", gitdiff_oldname},
-            {"+++ ", gitdiff_newname},
-            {"old mode ", gitdiff_oldmode},
-            {"new mode ", gitdiff_newmode},
-            {"deleted file mode ", gitdiff_delete},
-            {"new file mode ", gitdiff_newfile},
-            {"copy from ", gitdiff_copysrc},
-            {"copy to ", gitdiff_copydst},
-            {"rename old ", gitdiff_renamesrc},
-            {"rename new ", gitdiff_renamedst},
-            {"rename from ", gitdiff_renamesrc},
-            {"rename to ", gitdiff_renamedst},
-            {"similarity index ", gitdiff_similarity},
-            {"dissimilarity index ", gitdiff_dissimilarity},
-            {"index ", gitdiff_index},
-            {"", gitdiff_unrecognized},
+            { "@@ -", gitdiff_hdrend },
+            { "--- ", gitdiff_oldname },
+            { "+++ ", gitdiff_newname },
+            { "old mode ", gitdiff_oldmode },
+            { "new mode ", gitdiff_newmode },
+            { "deleted file mode ", gitdiff_delete },
+            { "new file mode ", gitdiff_newfile },
+            { "copy from ", gitdiff_copysrc },
+            { "copy to ", gitdiff_copydst },
+            { "rename old ", gitdiff_renamesrc },
+            { "rename new ", gitdiff_renamedst },
+            { "rename from ", gitdiff_renamesrc },
+            { "rename to ", gitdiff_renamedst },
+            { "similarity index ", gitdiff_similarity },
+            { "dissimilarity index ", gitdiff_dissimilarity },
+            { "index ", gitdiff_index },
+            { "", gitdiff_unrecognized },
         };
         int i;
 
@@ -1712,10 +1712,11 @@ static int parse_num(const char *line, unsigned long *p)
     char *ptr;
 
     if (!isdigit(*line))
-    {
         return 0;
-    }
-    *p = strtoul(line, &ptr, 10);
+    errno = 0;
+    *p    = strtoul(line, &ptr, 10);
+    if (errno)
+        return 0;
     return ptr - line;
 }
 
@@ -3554,7 +3555,6 @@ static int apply_one_fragment(struct apply_state *state,
 
     for (;;)
     {
-
         applied_pos = find_pos(state, img, &preimage, &postimage, pos,
                                ws_rule, match_beginning, match_end);
 
@@ -4131,7 +4131,7 @@ static int three_way_merge(struct apply_state     *state,
 {
     mmfile_t                base_file, our_file, their_file;
     struct ll_merge_options merge_opts = LL_MERGE_OPTIONS_INIT;
-    mmbuffer_t              result     = {NULL};
+    mmbuffer_t              result     = { NULL };
     enum ll_merge_result    status;
 
     /* resolve trivial cases first */
@@ -5692,7 +5692,7 @@ static int write_out_results(struct apply_state *state, struct patch *list)
         string_list_sort(&cpath);
         if (state->apply_verbosity > verbosity_silent)
         {
-            for_each_string_list_item(item, &cpath)
+            for_each_string_list_item (item, &cpath)
                 fprintf(stderr, "U %s\n", item->string);
         }
         string_list_clear(&cpath, 0);
@@ -6186,7 +6186,8 @@ int apply_parse_options(int argc, const char **argv,
                      apply_option_parse_directory),
         OPT_BOOL(0, "allow-empty", &state->allow_empty,
                  N_("don't return error for empty patches")),
-        OPT_END()};
+        OPT_END()
+    };
 
     argc = parse_options(argc, argv, state->prefix, builtin_apply_options, apply_usage, 0);
 

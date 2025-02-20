@@ -20,12 +20,12 @@ uint64_t block_source_size(struct reftable_block_source *source)
     return source->ops->size(source->arg);
 }
 
-int block_source_read_block(struct reftable_block_source *source,
-                            struct reftable_block *dest, uint64_t off,
-                            uint32_t size)
+ssize_t block_source_read_block(struct reftable_block_source *source,
+                                struct reftable_block *dest, uint64_t off,
+                                uint32_t size)
 {
-    int result   = source->ops->read_block(source->arg, dest, off, size);
-    dest->source = *source;
+    ssize_t result = source->ops->read_block(source->arg, dest, off, size);
+    dest->source   = *source;
     return result;
 }
 
@@ -59,17 +59,17 @@ static int reader_get_block(struct reftable_reader *r,
                             struct reftable_block *dest, uint64_t off,
                             uint32_t sz)
 {
+    ssize_t bytes_read;
     if (off >= r->size)
-    {
         return 0;
-    }
-
     if (off + sz > r->size)
-    {
         sz = r->size - off;
-    }
 
-    return block_source_read_block(&r->source, dest, off, sz);
+    bytes_read = block_source_read_block(&r->source, dest, off, sz);
+    if (bytes_read < 0)
+        return (int)bytes_read;
+
+    return 0;
 }
 
 enum reftable_hash reftable_reader_hash_id(struct reftable_reader *r)
@@ -113,23 +113,27 @@ static int parse_footer(struct reftable_reader *r, uint8_t *footer,
     r->max_update_index = get_be64(f);
     f += 8;
 
-	if (r->version == 1) {
-		r->hash_id = REFTABLE_HASH_SHA1;
-	} else {
-		switch (get_be32(f)) {
-		case REFTABLE_FORMAT_ID_SHA1:
-			r->hash_id = REFTABLE_HASH_SHA1;
-			break;
-		case REFTABLE_FORMAT_ID_SHA256:
-			r->hash_id = REFTABLE_HASH_SHA256;
-			break;
-		default:
-			err = REFTABLE_FORMAT_ERROR;
-			goto done;
-		}
+    if (r->version == 1)
+    {
+        r->hash_id = REFTABLE_HASH_SHA1;
+    }
+    else
+    {
+        switch (get_be32(f))
+        {
+            case REFTABLE_FORMAT_ID_SHA1:
+                r->hash_id = REFTABLE_HASH_SHA1;
+                break;
+            case REFTABLE_FORMAT_ID_SHA256:
+                r->hash_id = REFTABLE_HASH_SHA256;
+                break;
+            default:
+                err = REFTABLE_FORMAT_ERROR;
+                goto done;
+        }
 
-		f += 4;
-	}
+        f += 4;
+    }
 
     r->ref_offsets.index_offset = get_be64(f);
     f += 8;
@@ -232,7 +236,7 @@ int reader_init_block_reader(struct reftable_reader *r, struct block_reader *br,
                              uint64_t next_off, uint8_t want_typ)
 {
     int32_t               guess_block_size = r->block_size ? r->block_size : DEFAULT_BLOCK_SIZE;
-    struct reftable_block block            = {NULL};
+    struct reftable_block block            = { NULL };
     uint8_t               block_typ        = 0;
     int                   err              = 0;
     uint32_t              header_off       = next_off ? 0 : header_size(r->version);
@@ -480,10 +484,11 @@ static int table_iter_seek_indexed(struct table_iter      *ti,
                                    struct reftable_record *rec)
 {
     struct reftable_record want_index = {
-        .type = BLOCK_TYPE_INDEX, .u.idx = {.last_key = REFTABLE_BUF_INIT}};
+        .type = BLOCK_TYPE_INDEX, .u.idx = { .last_key = REFTABLE_BUF_INIT }
+    };
     struct reftable_record index_result = {
         .type  = BLOCK_TYPE_INDEX,
-        .u.idx = {.last_key = REFTABLE_BUF_INIT},
+        .u.idx = { .last_key = REFTABLE_BUF_INIT },
     };
     int err;
 
@@ -662,11 +667,12 @@ int reftable_reader_init_log_iterator(struct reftable_reader   *r,
 int reftable_reader_new(struct reftable_reader      **out,
                         struct reftable_block_source *source, char const *name)
 {
-    struct reftable_block   footer = {0};
-    struct reftable_block   header = {0};
+    struct reftable_block   footer = { 0 };
+    struct reftable_block   header = { 0 };
     struct reftable_reader *r;
     uint64_t                file_size = block_source_size(source);
     uint32_t                read_size;
+    ssize_t                 bytes_read;
     int                     err;
 
     REFTABLE_CALLOC_ARRAY(r, 1);
@@ -687,8 +693,8 @@ int reftable_reader_new(struct reftable_reader      **out,
         goto done;
     }
 
-    err = block_source_read_block(source, &header, 0, read_size);
-    if (err != read_size)
+    bytes_read = block_source_read_block(source, &header, 0, read_size);
+    if (bytes_read < 0 || (size_t)bytes_read != read_size)
     {
         err = REFTABLE_IO_ERROR;
         goto done;
@@ -717,9 +723,9 @@ int reftable_reader_new(struct reftable_reader      **out,
     r->hash_id  = 0;
     r->refcount = 1;
 
-    err = block_source_read_block(source, &footer, r->size,
-                                  footer_size(r->version));
-    if (err != footer_size(r->version))
+    bytes_read = block_source_read_block(source, &footer, r->size,
+                                         footer_size(r->version));
+    if (bytes_read < 0 || (size_t)bytes_read != footer_size(r->version))
     {
         err = REFTABLE_IO_ERROR;
         goto done;
@@ -773,10 +779,10 @@ static int reftable_reader_refs_for_indexed(struct reftable_reader   *r,
             .hash_prefix_len = r->object_id_len,
         },
     };
-    struct reftable_iterator oit = {NULL};
+    struct reftable_iterator oit = { NULL };
     struct reftable_record   got = {
           .type  = BLOCK_TYPE_OBJ,
-          .u.obj = {0},
+          .u.obj = { 0 },
     };
     int                            err = 0;
     struct indexed_table_ref_iter *itr = NULL;
@@ -826,7 +832,7 @@ static int reftable_reader_refs_for_unindexed(struct reftable_reader   *r,
     struct table_iter             *ti;
     struct filtering_ref_iterator *filter  = NULL;
     struct filtering_ref_iterator  empty   = FILTERING_REF_ITERATOR_INIT;
-    int                            oid_len = hash_size(r->hash_id);
+    uint32_t                       oid_len = hash_size(r->hash_id);
     int                            err;
 
     REFTABLE_ALLOC_ARRAY(ti, 1);
@@ -909,9 +915,9 @@ int reftable_reader_print_blocks(const char *tablename)
             .type = BLOCK_TYPE_LOG,
         },
     };
-    struct reftable_block_source src = {0};
+    struct reftable_block_source src = { 0 };
     struct reftable_reader      *r   = NULL;
-    struct table_iter            ti  = {0};
+    struct table_iter            ti  = { 0 };
     size_t                       i;
     int                          err;
 

@@ -149,12 +149,12 @@ static int set_recommended_config(int reconfigure)
 {
     struct scalar_config config[] = {
         /* Required */
-        {"am.keepCR", "true", 1},
-        {"core.FSCache", "true", 1},
-        {"core.multiPackIndex", "true", 1},
-        {"core.preloadIndex", "true", 1},
+        { "am.keepCR", "true", 1 },
+        { "core.FSCache", "true", 1 },
+        { "core.multiPackIndex", "true", 1 },
+        { "core.preloadIndex", "true", 1 },
 #ifndef WIN32
-        {"core.untrackedCache", "true", 1},
+        { "core.untrackedCache", "true", 1 },
 #else
         /*
          * Unfortunately, Scalar's Functional Tests demonstrated
@@ -168,35 +168,35 @@ static int set_recommended_config(int reconfigure)
          * Therefore, with a sad heart, we disable this very useful
          * feature on Windows.
          */
-        {"core.untrackedCache", "false", 1},
+        { "core.untrackedCache", "false", 1 },
 #endif
-        {"core.logAllRefUpdates", "true", 1},
-        {"credential.https://dev.azure.com.useHttpPath", "true", 1},
-        {"credential.validate", "false", 1}, /* GCM4W-only */
-        {"gc.auto", "0", 1},
-        {"gui.GCWarning", "false", 1},
-        {"index.skipHash", "false", 1},
-        {"index.threads", "true", 1},
-        {"index.version", "4", 1},
-        {"merge.stat", "false", 1},
-        {"merge.renames", "true", 1},
-        {"pack.useBitmaps", "false", 1},
-        {"pack.useSparse", "true", 1},
-        {"receive.autoGC", "false", 1},
-        {"feature.manyFiles", "false", 1},
-        {"feature.experimental", "false", 1},
-        {"fetch.unpackLimit", "1", 1},
-        {"fetch.writeCommitGraph", "false", 1},
+        { "core.logAllRefUpdates", "true", 1 },
+        { "credential.https://dev.azure.com.useHttpPath", "true", 1 },
+        { "credential.validate", "false", 1 }, /* GCM4W-only */
+        { "gc.auto", "0", 1 },
+        { "gui.GCWarning", "false", 1 },
+        { "index.skipHash", "false", 1 },
+        { "index.threads", "true", 1 },
+        { "index.version", "4", 1 },
+        { "merge.stat", "false", 1 },
+        { "merge.renames", "true", 1 },
+        { "pack.useBitmaps", "false", 1 },
+        { "pack.useSparse", "true", 1 },
+        { "receive.autoGC", "false", 1 },
+        { "feature.manyFiles", "false", 1 },
+        { "feature.experimental", "false", 1 },
+        { "fetch.unpackLimit", "1", 1 },
+        { "fetch.writeCommitGraph", "false", 1 },
 #ifdef WIN32
-        {"http.sslBackend", "schannel", 1},
+        { "http.sslBackend", "schannel", 1 },
 #endif
         /* Optional */
-        {"status.aheadBehind", "false"},
-        {"commitGraph.generationVersion", "1"},
-        {"core.autoCRLF", "false"},
-        {"core.safeCRLF", "false"},
-        {"fetch.showForcedUpdates", "false"},
-        {NULL, NULL},
+        { "status.aheadBehind", "false" },
+        { "commitGraph.generationVersion", "1" },
+        { "core.autoCRLF", "false" },
+        { "core.safeCRLF", "false" },
+        { "fetch.showForcedUpdates", "false" },
+        { NULL, NULL },
     };
     int   i;
     char *value;
@@ -212,7 +212,7 @@ static int set_recommended_config(int reconfigure)
 
     if (have_fsmonitor_support())
     {
-        struct scalar_config fsmonitor = {"core.fsmonitor", "true"};
+        struct scalar_config fsmonitor = { "core.fsmonitor", "true" };
         if (set_scalar_config(&fsmonitor, reconfigure))
         {
             return error(_("could not configure %s=%s"),
@@ -438,20 +438,21 @@ static int delete_enlistment(struct strbuf *enlistment)
         return error(_("failed to unregister repository"));
     }
 
-	/*
-	 * Change the current directory to one outside of the enlistment so
-	 * that we may delete everything underneath it.
-	 */
-	offset = offset_1st_component(enlistment->buf);
-	path_sep = find_last_dir_sep(enlistment->buf + offset);
-	strbuf_add(&parent, enlistment->buf,
-		   path_sep ? (size_t) (path_sep - enlistment->buf) : offset);
-	if (chdir(parent.buf) < 0) {
-		int res = error_errno(_("could not switch to '%s'"), parent.buf);
-		strbuf_release(&parent);
-		return res;
-	}
-	strbuf_release(&parent);
+    /*
+     * Change the current directory to one outside of the enlistment so
+     * that we may delete everything underneath it.
+     */
+    offset   = offset_1st_component(enlistment->buf);
+    path_sep = find_last_dir_sep(enlistment->buf + offset);
+    strbuf_add(&parent, enlistment->buf,
+               path_sep ? (size_t)(path_sep - enlistment->buf) : offset);
+    if (chdir(parent.buf) < 0)
+    {
+        int res = error_errno(_("could not switch to '%s'"), parent.buf);
+        strbuf_release(&parent);
+        return res;
+    }
+    strbuf_release(&parent);
 
     if (have_fsmonitor_support() && stop_fsmonitor_daemon())
     {
@@ -478,7 +479,8 @@ void load_builtin_commands(const char *prefix    UNUSED,
 
 static int cmd_clone(int argc, const char **argv)
 {
-    const char   *branch     = NULL;
+    const char   *branch         = NULL;
+    char         *branch_to_free = NULL;
     int           full_clone = 0, single_branch = 0, show_progress = isatty(2);
     int           src = 1, tags = 1;
     struct option clone_options[] = {
@@ -498,7 +500,8 @@ static int cmd_clone(int argc, const char **argv)
     const char *const clone_usage[] = {
         N_("scalar clone [--single-branch] [--branch <main-branch>] [--full-clone]\n"
            "\t[--[no-]src] [--[no-]tags] <url> [<enlistment>]"),
-        NULL};
+        NULL
+    };
     const char   *url;
     char         *enlistment = NULL, *dir = NULL;
     struct strbuf buf = STRBUF_INIT;
@@ -579,7 +582,7 @@ static int cmd_clone(int argc, const char **argv)
     /* common-main already logs `argv` */
     trace2_def_repo(the_repository);
 
-    if (!branch && !(branch = remote_default_branch(url)))
+    if (!branch && !(branch = branch_to_free = remote_default_branch(url)))
     {
         res = error(_("failed to get default branch for '%s'"), url);
         goto cleanup;
@@ -651,6 +654,7 @@ static int cmd_clone(int argc, const char **argv)
     res = register_dir();
 
 cleanup:
+    free(branch_to_free);
     free(enlistment);
     free(dir);
     strbuf_release(&buf);
@@ -664,7 +668,8 @@ static int cmd_diagnose(int argc, const char **argv)
     };
     const char *const usage[] = {
         N_("scalar diagnose [<enlistment>]"),
-        NULL};
+        NULL
+    };
     struct strbuf diagnostics_root = STRBUF_INIT;
     int           res              = 0;
 
@@ -702,7 +707,8 @@ static int cmd_register(int argc, const char **argv)
     };
     const char *const usage[] = {
         N_("scalar register [<enlistment>]"),
-        NULL};
+        NULL
+    };
 
     argc = parse_options(argc, argv, NULL, options,
                          usage, 0);
@@ -752,19 +758,19 @@ static int remove_deleted_enlistment(struct strbuf *path)
 
 static int cmd_reconfigure(int argc, const char **argv)
 {
-	int all = 0;
-	struct option options[] = {
-		OPT_BOOL('a', "all", &all,
-			 N_("reconfigure all registered enlistments")),
-		OPT_END(),
-	};
-	const char * const usage[] = {
-		N_("scalar reconfigure [--all | <enlistment>]"),
-		NULL
-	};
-	struct string_list scalar_repos = STRING_LIST_INIT_DUP;
-	int res = 0;
-	struct strbuf commondir = STRBUF_INIT, gitdir = STRBUF_INIT;
+    int           all       = 0;
+    struct option options[] = {
+        OPT_BOOL('a', "all", &all,
+                 N_("reconfigure all registered enlistments")),
+        OPT_END(),
+    };
+    const char *const usage[] = {
+        N_("scalar reconfigure [--all | <enlistment>]"),
+        NULL
+    };
+    struct string_list scalar_repos = STRING_LIST_INIT_DUP;
+    int                res          = 0;
+    struct strbuf      commondir = STRBUF_INIT, gitdir = STRBUF_INIT;
 
     argc = parse_options(argc, argv, NULL, options,
                          usage, 0);
@@ -784,10 +790,11 @@ static int cmd_reconfigure(int argc, const char **argv)
 
     git_config(get_scalar_repos, &scalar_repos);
 
-	for (size_t i = 0; i < scalar_repos.nr; i++) {
-		int succeeded = 0;
-		struct repository *old_repo, r = { NULL };
-		const char *dir = scalar_repos.items[i].string;
+    for (size_t i = 0; i < scalar_repos.nr; i++)
+    {
+        int                succeeded = 0;
+        struct repository *old_repo, r = { NULL };
+        const char        *dir = scalar_repos.items[i].string;
 
         strbuf_reset(&commondir);
         strbuf_reset(&gitdir);
@@ -886,14 +893,15 @@ static int cmd_run(int argc, const char **argv)
     {
         const char *arg, *task;
     } tasks[] = {
-        {"config", NULL},
-        {"commit-graph", "commit-graph"},
-        {"fetch", "prefetch"},
-        {"loose-objects", "loose-objects"},
-        {"pack-files", "incremental-repack"},
-        {NULL, NULL}};
+        { "config", NULL },
+        { "commit-graph", "commit-graph" },
+        { "fetch", "prefetch" },
+        { "loose-objects", "loose-objects" },
+        { "pack-files", "incremental-repack" },
+        { NULL, NULL }
+    };
     struct strbuf buf        = STRBUF_INIT;
-    const char   *usagestr[] = {NULL, NULL};
+    const char   *usagestr[] = { NULL, NULL };
     int           i;
 
     strbuf_addstr(&buf, N_("scalar run <task> [<enlistment>]\nTasks:\n"));
@@ -967,7 +975,8 @@ static int cmd_unregister(int argc, const char **argv)
     };
     const char *const usage[] = {
         N_("scalar unregister [<enlistment>]"),
-        NULL};
+        NULL
+    };
 
     argc = parse_options(argc, argv, NULL, options,
                          usage, 0);
@@ -1016,7 +1025,8 @@ static int cmd_delete(int argc, const char **argv)
     };
     const char *const usage[] = {
         N_("scalar delete <enlistment>"),
-        NULL};
+        NULL
+    };
     struct strbuf enlistment = STRBUF_INIT;
     int           res        = 0;
 
@@ -1052,7 +1062,8 @@ static int cmd_help(int argc, const char **argv)
     };
     const char *const usage[] = {
         "scalar help",
-        NULL};
+        NULL
+    };
 
     argc = parse_options(argc, argv, NULL, options,
                          usage, 0);
@@ -1077,7 +1088,8 @@ static int cmd_version(int argc, const char **argv)
     };
     const char *const usage[] = {
         N_("scalar verbose [-v | --verbose] [--build-options]"),
-        NULL};
+        NULL
+    };
     struct strbuf buf = STRBUF_INIT;
 
     argc = parse_options(argc, argv, NULL, options,
@@ -1100,17 +1112,17 @@ static struct
     const char *name;
     int (*fn)(int, const char **);
 } builtins[] = {
-    {"clone", cmd_clone},
-    {"list", cmd_list},
-    {"register", cmd_register},
-    {"unregister", cmd_unregister},
-    {"run", cmd_run},
-    {"reconfigure", cmd_reconfigure},
-    {"delete", cmd_delete},
-    {"help", cmd_help},
-    {"version", cmd_version},
-    {"diagnose", cmd_diagnose},
-    {NULL, NULL},
+    { "clone", cmd_clone },
+    { "list", cmd_list },
+    { "register", cmd_register },
+    { "unregister", cmd_unregister },
+    { "run", cmd_run },
+    { "reconfigure", cmd_reconfigure },
+    { "delete", cmd_delete },
+    { "help", cmd_help },
+    { "version", cmd_version },
+    { "diagnose", cmd_diagnose },
+    { NULL, NULL },
 };
 
 int cmd_main(int argc, const char **argv)

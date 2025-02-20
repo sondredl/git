@@ -44,7 +44,7 @@
 #include "trailer.h"
 
 static const char *const builtin_commit_usage[] = {
-    N_("git commit [-a | --interactive | --patch] [-s] [-v] [-u<mode>] [--amend]\n"
+    N_("git commit [-a | --interactive | --patch] [-s] [-v] [-u[<mode>]] [--amend]\n"
        "           [--dry-run] [(-c | -C | --squash) <commit> | --fixup [(amend|reword):]<commit>]\n"
        "           [-F <file> | -m <msg>] [--reset-author] [--allow-empty]\n"
        "           [--allow-empty-message] [--no-verify] [-e] [--author=<author>]\n"
@@ -52,11 +52,13 @@ static const char *const builtin_commit_usage[] = {
        "           [-i | -o] [--pathspec-from-file=<file> [--pathspec-file-nul]]\n"
        "           [(--trailer <token>[(=|:)<value>])...] [-S[<keyid>]]\n"
        "           [--] [<pathspec>...]"),
-    NULL};
+    NULL
+};
 
 static const char *const builtin_status_usage[] = {
     N_("git status [<options>] [--] [<pathspec>...]"),
-    NULL};
+    NULL
+};
 
 static const char empty_amend_advice[] =
     N_("You asked to amend the most recent commit, but doing so would make\n"
@@ -137,7 +139,7 @@ static struct strvec trailer_args = STRVEC_INIT;
  * is specified explicitly.
  */
 static enum commit_msg_cleanup_mode cleanup_mode;
-static char *cleanup_config;
+static char                        *cleanup_config;
 
 static enum commit_whence whence;
 static int                use_editor = 1, include_status = 1;
@@ -871,9 +873,9 @@ static void prepare_amend_commit(struct commit *commit, struct strbuf *sb,
 
 static void change_data_free(void *util, const char *str UNUSED)
 {
-	struct wt_status_change_data *d = util;
-	free(d->rename_source);
-	free(d);
+    struct wt_status_change_data *d = util;
+    free(d->rename_source);
+    free(d);
 }
 
 static int prepare_to_commit(const char *index_file, const char *prefix,
@@ -911,7 +913,7 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
         }
         else
         {
-            struct pretty_print_context ctx = {0};
+            struct pretty_print_context ctx = { 0 };
             struct commit              *c;
             c = lookup_commit_reference_by_name(squash_message);
             if (!c)
@@ -964,7 +966,7 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
     }
     else if (fixup_message)
     {
-        struct pretty_print_context ctx = {0};
+        struct pretty_print_context ctx = { 0 };
         struct commit              *commit;
         char                       *fmt;
         commit = lookup_commit_reference_by_name(fixup_commit);
@@ -1215,14 +1217,16 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 
         status_printf_ln(s, GIT_COLOR_NORMAL, "%s", ""); /* Add new line for clarity */
 
-		saved_color_setting = s->use_color;
-		s->use_color = 0;
-		committable = run_status(s->fp, index_file, prefix, 1, s);
-		s->use_color = saved_color_setting;
-		string_list_clear_func(&s->change, change_data_free);
-	} else {
-		struct object_id oid;
-		const char *parent = "HEAD";
+        saved_color_setting = s->use_color;
+        s->use_color        = 0;
+        committable         = run_status(s->fp, index_file, prefix, 1, s);
+        s->use_color        = saved_color_setting;
+        string_list_clear_func(&s->change, change_data_free);
+    }
+    else
+    {
+        struct object_id oid;
+        const char      *parent = "HEAD";
 
         if (!the_repository->index->initialized && repo_read_index(the_repository) < 0)
         {
@@ -1388,7 +1392,7 @@ static const char *find_author_by_nickname(const char *name)
     commit = get_revision(&revs);
     if (commit)
     {
-        struct pretty_print_context ctx = {0};
+        struct pretty_print_context ctx = { 0 };
         ctx.date_mode.type              = DATE_NORMAL;
         strbuf_release(&buf);
         repo_format_commit_message(the_repository, commit,
@@ -1722,7 +1726,7 @@ static int parse_and_validate_options(int argc, const char *argv[],
         use_editor = edit_flag;
     }
 
-	handle_untracked_files_arg(s);
+    handle_untracked_files_arg(s);
 
     if (all && argc > 0)
     {
@@ -1751,7 +1755,7 @@ static int dry_run_commit(const char **argv, const char *prefix,
     return committable ? 0 : 1;
 }
 
-define_list_config_array_extra(color_status_slots, {"added"});
+define_list_config_array_extra(color_status_slots, { "added" });
 
 static int parse_status_slot(const char *slot)
 {
@@ -1909,17 +1913,17 @@ int cmd_status(int                     argc,
                        STATUS_FORMAT_LONG),
            OPT_BOOL('z', "null", &s.null_termination,
                     N_("terminate entries with NUL")),
-           {OPTION_STRING, 'u', "untracked-files", &untracked_files_arg,
-            N_("mode"),
-            N_("show untracked files, optional modes: all, normal, no. (Default: all)"),
-            PARSE_OPT_OPTARG, NULL, (intptr_t) "all"},
-           {OPTION_STRING, 0, "ignored", &ignored_arg,
-            N_("mode"),
-            N_("show ignored files, optional modes: traditional, matching, no. (Default: traditional)"),
-            PARSE_OPT_OPTARG, NULL, (intptr_t) "traditional"},
-           {OPTION_STRING, 0, "ignore-submodules", &ignore_submodule_arg, N_("when"),
-            N_("ignore changes to submodules, optional when: all, dirty, untracked. (Default: all)"),
-            PARSE_OPT_OPTARG, NULL, (intptr_t) "all"},
+           { OPTION_STRING, 'u', "untracked-files", &untracked_files_arg,
+             N_("mode"),
+             N_("show untracked files, optional modes: all, normal, no. (Default: all)"),
+             PARSE_OPT_OPTARG, NULL, (intptr_t) "all" },
+           { OPTION_STRING, 0, "ignored", &ignored_arg,
+             N_("mode"),
+             N_("show ignored files, optional modes: traditional, matching, no. (Default: traditional)"),
+             PARSE_OPT_OPTARG, NULL, (intptr_t) "traditional" },
+           { OPTION_STRING, 0, "ignore-submodules", &ignore_submodule_arg, N_("when"),
+             N_("ignore changes to submodules, optional when: all, dirty, untracked. (Default: all)"),
+             PARSE_OPT_OPTARG, NULL, (intptr_t) "all" },
            OPT_COLUMN(0, "column", &s.colopts, N_("list untracked files in columns")),
            OPT_BOOL(0, "no-renames", &no_renames, N_("do not detect renames")),
            OPT_CALLBACK_F('M', "find-renames", &rename_score_arg,
@@ -1928,10 +1932,8 @@ int cmd_status(int                     argc,
            OPT_END(),
     };
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_status_usage, builtin_status_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_status_usage, builtin_status_options);
 
     prepare_repo_settings(the_repository);
     the_repository->settings.command_requires_full_index = 0;
@@ -2021,26 +2023,30 @@ static int git_commit_config(const char *k, const char *v,
 {
     struct wt_status *s = cb;
 
-	if (!strcmp(k, "commit.template"))
-		return git_config_pathname(&template_file, k, v);
-	if (!strcmp(k, "commit.status")) {
-		include_status = git_config_bool(k, v);
-		return 0;
-	}
-	if (!strcmp(k, "commit.cleanup")) {
-		FREE_AND_NULL(cleanup_config);
-		return git_config_string(&cleanup_config, k, v);
-	}
-	if (!strcmp(k, "commit.gpgsign")) {
-		sign_commit = git_config_bool(k, v) ? "" : NULL;
-		return 0;
-	}
-	if (!strcmp(k, "commit.verbose")) {
-		int is_bool;
-		config_commit_verbose = git_config_bool_or_int(k, v, ctx->kvi,
-							       &is_bool);
-		return 0;
-	}
+    if (!strcmp(k, "commit.template"))
+        return git_config_pathname(&template_file, k, v);
+    if (!strcmp(k, "commit.status"))
+    {
+        include_status = git_config_bool(k, v);
+        return 0;
+    }
+    if (!strcmp(k, "commit.cleanup"))
+    {
+        FREE_AND_NULL(cleanup_config);
+        return git_config_string(&cleanup_config, k, v);
+    }
+    if (!strcmp(k, "commit.gpgsign"))
+    {
+        sign_commit = git_config_bool(k, v) ? "" : NULL;
+        return 0;
+    }
+    if (!strcmp(k, "commit.verbose"))
+    {
+        int is_bool;
+        config_commit_verbose = git_config_bool_or_int(k, v, ctx->kvi,
+                                                       &is_bool);
+        return 0;
+    }
 
     return git_status_config(k, v, ctx, s);
 }
@@ -2050,11 +2056,11 @@ int cmd_commit(int                     argc,
                const char             *prefix,
                struct repository *repo UNUSED)
 {
-	static struct wt_status s;
-	static const char *cleanup_arg = NULL;
-	static struct option builtin_commit_options[] = {
-		OPT__QUIET(&quiet, N_("suppress summary after successful commit")),
-		OPT__VERBOSE(&verbose, N_("show diff in commit message template")),
+    static struct wt_status s;
+    static const char      *cleanup_arg              = NULL;
+    static struct option    builtin_commit_options[] = {
+           OPT__QUIET(&quiet, N_("suppress summary after successful commit")),
+           OPT__VERBOSE(&verbose, N_("show diff in commit message template")),
 
            OPT_GROUP(N_("Commit message options")),
            OPT_FILENAME('F', "file", &logfile, N_("read message from file")),
@@ -2076,8 +2082,8 @@ int cmd_commit(int                     argc,
            OPT_BOOL('e', "edit", &edit_flag, N_("force edit of commit")),
            OPT_CLEANUP(&cleanup_arg),
            OPT_BOOL(0, "status", &include_status, N_("include status in commit message template")),
-           {OPTION_STRING, 'S', "gpg-sign", &sign_commit, N_("key-id"),
-            N_("GPG sign commit"), PARSE_OPT_OPTARG, NULL, (intptr_t) ""},
+           { OPTION_STRING, 'S', "gpg-sign", &sign_commit, N_("key-id"),
+             N_("GPG sign commit"), PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
            /* end commit message options */
 
            OPT_GROUP(N_("Commit contents options")),
@@ -2102,7 +2108,7 @@ int cmd_commit(int                     argc,
                     N_("terminate entries with NUL")),
            OPT_BOOL(0, "amend", &amend, N_("amend previous commit")),
            OPT_BOOL(0, "no-post-rewrite", &no_post_rewrite, N_("bypass post-rewrite hook")),
-           {OPTION_STRING, 'u', "untracked-files", &untracked_files_arg, N_("mode"), N_("show untracked files, optional modes: all, normal, no. (Default: all)"), PARSE_OPT_OPTARG, NULL, (intptr_t) "all"},
+           { OPTION_STRING, 'u', "untracked-files", &untracked_files_arg, N_("mode"), N_("show untracked files, optional modes: all, normal, no. (Default: all)"), PARSE_OPT_OPTARG, NULL, (intptr_t) "all" },
            OPT_PATHSPEC_FROM_FILE(&pathspec_from_file),
            OPT_PATHSPEC_FILE_NUL(&pathspec_file_nul),
            /* end commit contents options */
@@ -2112,7 +2118,8 @@ int cmd_commit(int                     argc,
            OPT_HIDDEN_BOOL(0, "allow-empty-message", &allow_empty_message,
                            N_("ok to record a change with an empty message")),
 
-           OPT_END()};
+           OPT_END()
+    };
 
     struct strbuf               sb           = STRBUF_INIT;
     struct strbuf               author_ident = STRBUF_INIT;
@@ -2126,10 +2133,8 @@ int cmd_commit(int                     argc,
     struct strbuf               err          = STRBUF_INIT;
     int                         ret          = 0;
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_commit_usage, builtin_commit_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_commit_usage, builtin_commit_options);
 
     prepare_repo_settings(the_repository);
     the_repository->settings.command_requires_full_index = 0;
@@ -2160,15 +2165,16 @@ int cmd_commit(int                     argc,
         verbose = (config_commit_verbose < 0) ? 0 : config_commit_verbose;
     }
 
-	if (cleanup_arg) {
-		free(cleanup_config);
-		cleanup_config = xstrdup(cleanup_arg);
-	}
-	cleanup_mode = get_cleanup_mode(cleanup_config, use_editor);
+    if (cleanup_arg)
+    {
+        free(cleanup_config);
+        cleanup_config = xstrdup(cleanup_arg);
+    }
+    cleanup_mode = get_cleanup_mode(cleanup_config, use_editor);
 
-	if (dry_run)
-		return dry_run_commit(argv, prefix, current_head, &s);
-	index_file = prepare_index(argv, prefix, current_head, 0);
+    if (dry_run)
+        return dry_run_commit(argv, prefix, current_head, &s);
+    index_file = prepare_index(argv, prefix, current_head, 0);
 
     /* Set up everything for writing the commit object.  This includes
        running hooks, writing the trees, and interacting with the user.  */
@@ -2292,7 +2298,7 @@ int cmd_commit(int                     argc,
 
     if (amend)
     {
-        const char *exclude_gpgsig[3] = {"gpgsig", "gpgsig-sha256", NULL};
+        const char *exclude_gpgsig[3] = { "gpgsig", "gpgsig-sha256", NULL };
         extra                         = read_commit_extra_headers(current_head, exclude_gpgsig);
     }
     else

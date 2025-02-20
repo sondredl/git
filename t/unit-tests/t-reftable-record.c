@@ -16,27 +16,27 @@ static void t_copy(struct reftable_record *rec)
     struct reftable_record copy;
     uint8_t                typ;
 
-	typ = reftable_record_type(rec);
-	reftable_record_init(&copy, typ);
-	reftable_record_copy_from(&copy, rec, REFTABLE_HASH_SIZE_SHA1);
-	/* do it twice to catch memory leaks */
-	reftable_record_copy_from(&copy, rec, REFTABLE_HASH_SIZE_SHA1);
-	check(reftable_record_equal(rec, &copy, REFTABLE_HASH_SIZE_SHA1));
+    typ = reftable_record_type(rec);
+    reftable_record_init(&copy, typ);
+    reftable_record_copy_from(&copy, rec, REFTABLE_HASH_SIZE_SHA1);
+    /* do it twice to catch memory leaks */
+    reftable_record_copy_from(&copy, rec, REFTABLE_HASH_SIZE_SHA1);
+    check(reftable_record_equal(rec, &copy, REFTABLE_HASH_SIZE_SHA1));
 
     reftable_record_release(&copy);
 }
 
 static void t_varint_roundtrip(void)
 {
-    uint64_t inputs[] = {0,
-                         1,
-                         27,
-                         127,
-                         128,
-                         257,
-                         4096,
-                         ((uint64_t)1 << 63),
-                         ((uint64_t)1 << 63) + ((uint64_t)1 << 63) - 1};
+    uint64_t inputs[] = { 0,
+                          1,
+                          27,
+                          127,
+                          128,
+                          257,
+                          4096,
+                          ((uint64_t)1 << 63),
+                          ((uint64_t)1 << 63) + ((uint64_t)1 << 63) - 1 };
 
     for (size_t i = 0; i < ARRAY_SIZE(inputs); i++)
     {
@@ -59,10 +59,33 @@ static void t_varint_roundtrip(void)
     }
 }
 
+static void t_varint_overflow(void)
+{
+    unsigned char buf[] = {
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x00,
+    };
+    struct string_view view = {
+        .buf = buf,
+        .len = sizeof(buf),
+    };
+    uint64_t value;
+    int      err = get_var_int(&value, &view);
+    check_int(err, ==, -1);
+}
+
 static void set_hash(uint8_t *h, int j)
 {
-	for (int i = 0; i < hash_size(REFTABLE_HASH_SHA1); i++)
-		h[i] = (j >> i) & 0xff;
+    for (size_t i = 0; i < hash_size(REFTABLE_HASH_SHA1); i++)
+        h[i] = (j >> i) & 0xff;
 }
 
 static void t_reftable_ref_record_comparison(void)
@@ -86,23 +109,23 @@ static void t_reftable_ref_record_comparison(void)
         },
     };
 
-	check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 
-	check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
-	check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
+    check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
+    check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
 
-	in[1].u.ref.value_type = in[0].u.ref.value_type;
-	check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    in[1].u.ref.value_type = in[0].u.ref.value_type;
+    check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 }
 
 static void t_reftable_ref_record_compare_name(void)
 {
     struct reftable_ref_record recs[3] = {
-        {.refname = (char *)"refs/heads/a"},
-        {.refname = (char *)"refs/heads/b"},
-        {.refname = (char *)"refs/heads/a"},
+        { .refname = (char *)"refs/heads/a" },
+        { .refname = (char *)"refs/heads/b" },
+        { .refname = (char *)"refs/heads/a" },
     };
 
     check_int(reftable_ref_record_compare_name(&recs[0], &recs[1]), <, 0);
@@ -120,9 +143,9 @@ static void t_reftable_ref_record_roundtrip(void)
             .type             = BLOCK_TYPE_REF,
             .u.ref.value_type = i,
         };
-        struct reftable_record out          = {.type = BLOCK_TYPE_REF};
+        struct reftable_record out          = { .type = BLOCK_TYPE_REF };
         struct reftable_buf    key          = REFTABLE_BUF_INIT;
-        uint8_t                buffer[1024] = {0};
+        uint8_t                buffer[1024] = { 0 };
         struct string_view     dest         = {
                         .buf = buffer,
                         .len = sizeof(buffer),
@@ -152,17 +175,17 @@ static void t_reftable_ref_record_roundtrip(void)
         check_int(reftable_record_val_type(&in), ==, i);
         check_int(reftable_record_is_deletion(&in), ==, i == REFTABLE_REF_DELETION);
 
-		reftable_record_key(&in, &key);
-		n = reftable_record_encode(&in, dest, REFTABLE_HASH_SIZE_SHA1);
-		check_int(n, >, 0);
+        reftable_record_key(&in, &key);
+        n = reftable_record_encode(&in, dest, REFTABLE_HASH_SIZE_SHA1);
+        check_int(n, >, 0);
 
-		/* decode into a non-zero reftable_record to test for leaks. */
-		m = reftable_record_decode(&out, key, i, dest, REFTABLE_HASH_SIZE_SHA1, &scratch);
-		check_int(n, ==, m);
+        /* decode into a non-zero reftable_record to test for leaks. */
+        m = reftable_record_decode(&out, key, i, dest, REFTABLE_HASH_SIZE_SHA1, &scratch);
+        check_int(n, ==, m);
 
-		check(reftable_ref_record_equal(&in.u.ref, &out.u.ref,
-						 REFTABLE_HASH_SIZE_SHA1));
-		reftable_record_release(&in);
+        check(reftable_ref_record_equal(&in.u.ref, &out.u.ref,
+                                        REFTABLE_HASH_SIZE_SHA1));
+        reftable_record_release(&in);
 
         reftable_buf_release(&key);
         reftable_record_release(&out);
@@ -191,16 +214,16 @@ static void t_reftable_log_record_comparison(void)
         },
     };
 
-	check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
-	check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
-	/* comparison should be reversed for equal keys, because
-	 * comparison is now performed on the basis of update indices */
-	check_int(reftable_record_cmp(&in[0], &in[1]), <, 0);
+    check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
+    check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
+    /* comparison should be reversed for equal keys, because
+     * comparison is now performed on the basis of update indices */
+    check_int(reftable_record_cmp(&in[0], &in[1]), <, 0);
 
-	in[1].u.log.update_index = in[0].u.log.update_index;
-	check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    in[1].u.log.update_index = in[0].u.log.update_index;
+    check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 }
 
 static void t_reftable_log_record_compare_key(void)
@@ -235,18 +258,18 @@ static void t_reftable_log_record_compare_key(void)
 static void t_reftable_log_record_roundtrip(void)
 {
     struct reftable_log_record in[] = {
-        {.refname      = xstrdup("refs/heads/master"),
-         .update_index = 42,
-         .value_type   = REFTABLE_LOG_UPDATE,
-         .value        = {
-                    .update = {
-                        .name      = xstrdup("han-wen"),
-                        .email     = xstrdup("hanwen@google.com"),
-                        .message   = xstrdup("test"),
-                        .time      = 1577123507,
-                        .tz_offset = 100,
-             },
-         }},
+        { .refname      = xstrdup("refs/heads/master"),
+          .update_index = 42,
+          .value_type   = REFTABLE_LOG_UPDATE,
+          .value        = {
+                     .update = {
+                         .name      = xstrdup("han-wen"),
+                         .email     = xstrdup("hanwen@google.com"),
+                         .message   = xstrdup("test"),
+                         .time      = 1577123507,
+                         .tz_offset = 100,
+              },
+          } },
         {
             .refname      = xstrdup("refs/heads/master"),
             .update_index = 22,
@@ -256,7 +279,8 @@ static void t_reftable_log_record_roundtrip(void)
             .refname      = xstrdup("branch"),
             .update_index = 33,
             .value_type   = REFTABLE_LOG_UPDATE,
-        }};
+        }
+    };
     struct reftable_buf scratch = REFTABLE_BUF_INIT;
     set_hash(in[0].value.update.new_hash, 1);
     set_hash(in[0].value.update.old_hash, 2);
@@ -269,9 +293,9 @@ static void t_reftable_log_record_roundtrip(void)
 
     for (size_t i = 0; i < ARRAY_SIZE(in); i++)
     {
-        struct reftable_record rec          = {.type = BLOCK_TYPE_LOG};
+        struct reftable_record rec          = { .type = BLOCK_TYPE_LOG };
         struct reftable_buf    key          = REFTABLE_BUF_INIT;
-        uint8_t                buffer[1024] = {0};
+        uint8_t                buffer[1024] = { 0 };
         struct string_view     dest         = {
                         .buf = buffer,
                         .len = sizeof(buffer),
@@ -299,26 +323,26 @@ static void t_reftable_log_record_roundtrip(void)
 
         reftable_record_key(&rec, &key);
 
-		n = reftable_record_encode(&rec, dest, REFTABLE_HASH_SIZE_SHA1);
-		check_int(n, >=, 0);
-		valtype = reftable_record_val_type(&rec);
-		m = reftable_record_decode(&out, key, valtype, dest,
-					   REFTABLE_HASH_SIZE_SHA1, &scratch);
-		check_int(n, ==, m);
+        n = reftable_record_encode(&rec, dest, REFTABLE_HASH_SIZE_SHA1);
+        check_int(n, >=, 0);
+        valtype = reftable_record_val_type(&rec);
+        m       = reftable_record_decode(&out, key, valtype, dest,
+                                         REFTABLE_HASH_SIZE_SHA1, &scratch);
+        check_int(n, ==, m);
 
-		check(reftable_log_record_equal(&in[i], &out.u.log,
-						 REFTABLE_HASH_SIZE_SHA1));
-		reftable_log_record_release(&in[i]);
-		reftable_buf_release(&key);
-		reftable_record_release(&out);
-	}
+        check(reftable_log_record_equal(&in[i], &out.u.log,
+                                        REFTABLE_HASH_SIZE_SHA1));
+        reftable_log_record_release(&in[i]);
+        reftable_buf_release(&key);
+        reftable_record_release(&out);
+    }
 
     reftable_buf_release(&scratch);
 }
 
 static void t_key_roundtrip(void)
 {
-    uint8_t            buffer[1024] = {0};
+    uint8_t            buffer[1024] = { 0 };
     struct string_view dest         = {
                 .buf = buffer,
                 .len = sizeof(buffer),
@@ -351,9 +375,8 @@ static void t_key_roundtrip(void)
 
 static void t_reftable_obj_record_comparison(void)
 {
-
-    uint8_t                id_bytes[] = {0, 1, 2, 3, 4, 5, 6};
-    uint64_t               offsets[]  = {0, 16, 32, 48, 64, 80, 96, 112};
+    uint8_t                id_bytes[] = { 0, 1, 2, 3, 4, 5, 6 };
+    uint64_t               offsets[]  = { 0, 16, 32, 48, 64, 80, 96, 112 };
     struct reftable_record in[3]      = {
              {
                  .type                  = BLOCK_TYPE_OBJ,
@@ -376,44 +399,44 @@ static void t_reftable_obj_record_comparison(void)
         },
     };
 
-	check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 
-	check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
-	check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
+    check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
+    check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
 
-	in[1].u.obj.offset_len = in[0].u.obj.offset_len;
-	check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    in[1].u.obj.offset_len = in[0].u.obj.offset_len;
+    check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 }
 
 static void t_reftable_obj_record_roundtrip(void)
 {
-	uint8_t testHash1[REFTABLE_HASH_SIZE_SHA1] = { 1, 2, 3, 4, 0 };
-	uint64_t till9[] = { 1, 2, 3, 4, 500, 600, 700, 800, 9000 };
-	struct reftable_obj_record recs[3] = {
-		{
-			.hash_prefix = testHash1,
-			.hash_prefix_len = 5,
-			.offsets = till9,
-			.offset_len = 3,
-		},
-		{
-			.hash_prefix = testHash1,
-			.hash_prefix_len = 5,
-			.offsets = till9,
-			.offset_len = 9,
-		},
-		{
-			.hash_prefix = testHash1,
-			.hash_prefix_len = 5,
-		},
-	};
-	struct reftable_buf scratch = REFTABLE_BUF_INIT;
+    uint8_t                    testHash1[REFTABLE_HASH_SIZE_SHA1] = { 1, 2, 3, 4, 0 };
+    uint64_t                   till9[]                            = { 1, 2, 3, 4, 500, 600, 700, 800, 9000 };
+    struct reftable_obj_record recs[3]                            = {
+                                   {
+                                       .hash_prefix     = testHash1,
+                                       .hash_prefix_len = 5,
+                                       .offsets         = till9,
+                                       .offset_len      = 3,
+        },
+                                   {
+                                       .hash_prefix     = testHash1,
+                                       .hash_prefix_len = 5,
+                                       .offsets         = till9,
+                                       .offset_len      = 9,
+        },
+                                   {
+                                       .hash_prefix     = testHash1,
+                                       .hash_prefix_len = 5,
+        },
+    };
+    struct reftable_buf scratch = REFTABLE_BUF_INIT;
 
     for (size_t i = 0; i < ARRAY_SIZE(recs); i++)
     {
-        uint8_t            buffer[1024] = {0};
+        uint8_t            buffer[1024] = { 0 };
         struct string_view dest         = {
                     .buf = buffer,
                     .len = sizeof(buffer),
@@ -425,24 +448,24 @@ static void t_reftable_obj_record_roundtrip(void)
             },
         };
         struct reftable_buf    key = REFTABLE_BUF_INIT;
-        struct reftable_record out = {.type = BLOCK_TYPE_OBJ};
+        struct reftable_record out = { .type = BLOCK_TYPE_OBJ };
         int                    n, m;
         uint8_t                extra;
 
-		check(!reftable_record_is_deletion(&in));
-		t_copy(&in);
-		reftable_record_key(&in, &key);
-		n = reftable_record_encode(&in, dest, REFTABLE_HASH_SIZE_SHA1);
-		check_int(n, >, 0);
-		extra = reftable_record_val_type(&in);
-		m = reftable_record_decode(&out, key, extra, dest,
-					   REFTABLE_HASH_SIZE_SHA1, &scratch);
-		check_int(n, ==, m);
+        check(!reftable_record_is_deletion(&in));
+        t_copy(&in);
+        reftable_record_key(&in, &key);
+        n = reftable_record_encode(&in, dest, REFTABLE_HASH_SIZE_SHA1);
+        check_int(n, >, 0);
+        extra = reftable_record_val_type(&in);
+        m     = reftable_record_decode(&out, key, extra, dest,
+                                       REFTABLE_HASH_SIZE_SHA1, &scratch);
+        check_int(n, ==, m);
 
-		check(reftable_record_equal(&in, &out, REFTABLE_HASH_SIZE_SHA1));
-		reftable_buf_release(&key);
-		reftable_record_release(&out);
-	}
+        check(reftable_record_equal(&in, &out, REFTABLE_HASH_SIZE_SHA1));
+        reftable_buf_release(&key);
+        reftable_record_release(&out);
+    }
 
     reftable_buf_release(&scratch);
 }
@@ -470,15 +493,15 @@ static void t_reftable_index_record_comparison(void)
     check(!reftable_buf_addstr(&in[1].u.idx.last_key, "refs/heads/master"));
     check(!reftable_buf_addstr(&in[2].u.idx.last_key, "refs/heads/branch"));
 
-	check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    check(!reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 
-	check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
-	check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
+    check(!reftable_record_equal(&in[1], &in[2], REFTABLE_HASH_SIZE_SHA1));
+    check_int(reftable_record_cmp(&in[1], &in[2]), >, 0);
 
-	in[1].u.idx.offset = in[0].u.idx.offset;
-	check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
-	check(!reftable_record_cmp(&in[0], &in[1]));
+    in[1].u.idx.offset = in[0].u.idx.offset;
+    check(reftable_record_equal(&in[0], &in[1], REFTABLE_HASH_SIZE_SHA1));
+    check(!reftable_record_cmp(&in[0], &in[1]));
 
     for (size_t i = 0; i < ARRAY_SIZE(in); i++)
         reftable_record_release(&in[i]);
@@ -493,7 +516,7 @@ static void t_reftable_index_record_roundtrip(void)
             .last_key = REFTABLE_BUF_INIT,
         },
     };
-    uint8_t            buffer[1024] = {0};
+    uint8_t            buffer[1024] = { 0 };
     struct string_view dest         = {
                 .buf = buffer,
                 .len = sizeof(buffer),
@@ -502,7 +525,7 @@ static void t_reftable_index_record_roundtrip(void)
     struct reftable_buf    key     = REFTABLE_BUF_INIT;
     struct reftable_record out     = {
             .type  = BLOCK_TYPE_INDEX,
-            .u.idx = {.last_key = REFTABLE_BUF_INIT},
+            .u.idx = { .last_key = REFTABLE_BUF_INIT },
     };
     int     n, m;
     uint8_t extra;
@@ -511,17 +534,17 @@ static void t_reftable_index_record_roundtrip(void)
     reftable_record_key(&in, &key);
     t_copy(&in);
 
-	check(!reftable_record_is_deletion(&in));
-	check(!reftable_buf_cmp(&key, &in.u.idx.last_key));
-	n = reftable_record_encode(&in, dest, REFTABLE_HASH_SIZE_SHA1);
-	check_int(n, >, 0);
+    check(!reftable_record_is_deletion(&in));
+    check(!reftable_buf_cmp(&key, &in.u.idx.last_key));
+    n = reftable_record_encode(&in, dest, REFTABLE_HASH_SIZE_SHA1);
+    check_int(n, >, 0);
 
-	extra = reftable_record_val_type(&in);
-	m = reftable_record_decode(&out, key, extra, dest, REFTABLE_HASH_SIZE_SHA1,
-				   &scratch);
-	check_int(m, ==, n);
+    extra = reftable_record_val_type(&in);
+    m     = reftable_record_decode(&out, key, extra, dest, REFTABLE_HASH_SIZE_SHA1,
+                                   &scratch);
+    check_int(m, ==, n);
 
-	check(reftable_record_equal(&in, &out, REFTABLE_HASH_SIZE_SHA1));
+    check(reftable_record_equal(&in, &out, REFTABLE_HASH_SIZE_SHA1));
 
     reftable_record_release(&out);
     reftable_buf_release(&key);
@@ -540,6 +563,7 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
     TEST(t_reftable_log_record_roundtrip(), "record operations work on log record");
     TEST(t_reftable_ref_record_roundtrip(), "record operations work on ref record");
     TEST(t_varint_roundtrip(), "put_var_int and get_var_int work");
+    TEST(t_varint_overflow(), "get_var_int notices an integer overflow");
     TEST(t_key_roundtrip(), "reftable_encode_key and reftable_decode_key work");
     TEST(t_reftable_obj_record_roundtrip(), "record operations work on obj record");
     TEST(t_reftable_index_record_roundtrip(), "record operations work on index record");

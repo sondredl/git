@@ -19,6 +19,7 @@
 /git-apply
 /git-archimport
 /git-archive
+/git-backfill
 /git-bisect
 /git-blame
 /git-branch
@@ -250,4 +251,5 @@ Release/
 /git.VC.db
 *.dSYM
 /contrib/buildsystems/out
-o/
+/contrib/libgit-rs/target
+/contrib/libgit-sys/target

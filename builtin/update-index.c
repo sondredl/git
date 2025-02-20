@@ -389,7 +389,6 @@ static int process_directory(const char *path, int len, struct stat *st)
         const struct cache_entry *ce = the_repository->index->cache[pos];
         if (S_ISGITLINK(ce->ce_mode))
         {
-
             /* Do nothing to the index if there is no HEAD! */
             if (repo_resolve_gitlink_ref(the_repository, path,
                                          "HEAD", &oid)
@@ -716,7 +715,8 @@ static void read_index_info(int nul_term_line)
 
 static const char *const update_index_usage[] = {
     N_("git update-index [<options>] [--] [<file>...]"),
-    NULL};
+    NULL
+};
 
 static struct cache_entry *read_one_ent(const char       *which,
                                         struct object_id *ent, const char *path,
@@ -1083,7 +1083,7 @@ int cmd_update_index(int                     argc,
     int                    prefix_length          = prefix ? strlen(prefix) : 0;
     int                    preferred_index_format = 0;
     char                   set_executable_bit     = 0;
-    struct refresh_params  refresh_args           = {0, &has_errors};
+    struct refresh_params  refresh_args           = { 0, &has_errors };
     int                    lock_error             = 0;
     int                    split_index            = -1;
     int                    force_write            = 0;
@@ -1117,29 +1117,29 @@ int cmd_update_index(int                     argc,
                                      N_("like --refresh, but ignore assume-unchanged setting"),
                                      PARSE_OPT_NOARG | PARSE_OPT_NONEG,
                                      really_refresh_callback),
-                      {OPTION_LOWLEVEL_CALLBACK, 0, "cacheinfo", NULL,
-                       N_("<mode>,<object>,<path>"),
-                       N_("add the specified entry to the index"),
-                       PARSE_OPT_NOARG | /* disallow --cacheinfo=<mode> form */
-                           PARSE_OPT_NONEG | PARSE_OPT_LITERAL_ARGHELP,
-                       NULL, 0,
-                       cacheinfo_callback},
+                      { OPTION_LOWLEVEL_CALLBACK, 0, "cacheinfo", NULL,
+                        N_("<mode>,<object>,<path>"),
+                        N_("add the specified entry to the index"),
+                        PARSE_OPT_NOARG | /* disallow --cacheinfo=<mode> form */
+                            PARSE_OPT_NONEG | PARSE_OPT_LITERAL_ARGHELP,
+                        NULL, 0,
+                        cacheinfo_callback },
                       OPT_CALLBACK_F(0, "chmod", &set_executable_bit, "(+|-)x",
                                      N_("override the executable bit of the listed files"),
                                      PARSE_OPT_NONEG,
                                      chmod_callback),
-                      {OPTION_SET_INT, 0, "assume-unchanged", &mark_valid_only, NULL,
-                       N_("mark files as \"not changing\""),
-                       PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG},
-                      {OPTION_SET_INT, 0, "no-assume-unchanged", &mark_valid_only, NULL,
-                       N_("clear assumed-unchanged bit"),
-                       PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG},
-                      {OPTION_SET_INT, 0, "skip-worktree", &mark_skip_worktree_only, NULL,
-                       N_("mark files as \"index-only\""),
-                       PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG},
-                      {OPTION_SET_INT, 0, "no-skip-worktree", &mark_skip_worktree_only, NULL,
-                       N_("clear skip-worktree bit"),
-                       PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG},
+                      { OPTION_SET_INT, 0, "assume-unchanged", &mark_valid_only, NULL,
+                        N_("mark files as \"not changing\""),
+                        PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG },
+                      { OPTION_SET_INT, 0, "no-assume-unchanged", &mark_valid_only, NULL,
+                        N_("clear assumed-unchanged bit"),
+                        PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG },
+                      { OPTION_SET_INT, 0, "skip-worktree", &mark_skip_worktree_only, NULL,
+                        N_("mark files as \"index-only\""),
+                        PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG },
+                      { OPTION_SET_INT, 0, "no-skip-worktree", &mark_skip_worktree_only, NULL,
+                        N_("clear skip-worktree bit"),
+                        PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG },
                       OPT_BOOL(0, "ignore-skip-worktree-entries", &ignore_skip_worktree_entries,
                                N_("do not touch index-only entries")),
                       OPT_SET_INT(0, "info-only", &info_only,
@@ -1148,22 +1148,22 @@ int cmd_update_index(int                     argc,
                                   N_("remove named paths even if present in worktree"), 1),
                       OPT_BOOL('z', NULL, &nul_term_line,
                                N_("with --stdin: input lines are terminated by null bytes")),
-                      {OPTION_LOWLEVEL_CALLBACK, 0, "stdin", &read_from_stdin, NULL,
-                       N_("read list of paths to be updated from standard input"),
-                       PARSE_OPT_NONEG | PARSE_OPT_NOARG,
-                       NULL, 0, stdin_callback},
-                      {OPTION_LOWLEVEL_CALLBACK, 0, "index-info", &nul_term_line, NULL,
-                       N_("add entries from standard input to the index"),
-                       PARSE_OPT_NONEG | PARSE_OPT_NOARG,
-                       NULL, 0, stdin_cacheinfo_callback},
-                      {OPTION_LOWLEVEL_CALLBACK, 0, "unresolve", &has_errors, NULL,
-                       N_("repopulate stages #2 and #3 for the listed paths"),
-                       PARSE_OPT_NONEG | PARSE_OPT_NOARG,
-                       NULL, 0, unresolve_callback},
-                      {OPTION_LOWLEVEL_CALLBACK, 'g', "again", &has_errors, NULL,
-                       N_("only update entries that differ from HEAD"),
-                       PARSE_OPT_NONEG | PARSE_OPT_NOARG,
-                       NULL, 0, reupdate_callback},
+                      { OPTION_LOWLEVEL_CALLBACK, 0, "stdin", &read_from_stdin, NULL,
+                        N_("read list of paths to be updated from standard input"),
+                        PARSE_OPT_NONEG | PARSE_OPT_NOARG,
+                        NULL, 0, stdin_callback },
+                      { OPTION_LOWLEVEL_CALLBACK, 0, "index-info", &nul_term_line, NULL,
+                        N_("add entries from standard input to the index"),
+                        PARSE_OPT_NONEG | PARSE_OPT_NOARG,
+                        NULL, 0, stdin_cacheinfo_callback },
+                      { OPTION_LOWLEVEL_CALLBACK, 0, "unresolve", &has_errors, NULL,
+                        N_("repopulate stages #2 and #3 for the listed paths"),
+                        PARSE_OPT_NONEG | PARSE_OPT_NOARG,
+                        NULL, 0, unresolve_callback },
+                      { OPTION_LOWLEVEL_CALLBACK, 'g', "again", &has_errors, NULL,
+                        N_("only update entries that differ from HEAD"),
+                        PARSE_OPT_NONEG | PARSE_OPT_NOARG,
+                        NULL, 0, reupdate_callback },
                       OPT_BIT(0, "ignore-missing", &refresh_args.flags,
                               N_("ignore files missing from worktree"),
                               REFRESH_IGNORE_MISSING),
@@ -1189,18 +1189,17 @@ int cmd_update_index(int                     argc,
                                   N_("write out the index even if is not flagged as changed"), 1),
                       OPT_BOOL(0, "fsmonitor", &fsmonitor,
                                N_("enable or disable file system monitor")),
-                      {OPTION_SET_INT, 0, "fsmonitor-valid", &mark_fsmonitor_only, NULL,
-                       N_("mark files as fsmonitor valid"),
-                       PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG},
-                      {OPTION_SET_INT, 0, "no-fsmonitor-valid", &mark_fsmonitor_only, NULL,
-                       N_("clear fsmonitor valid bit"),
-                       PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG},
-                      OPT_END()};
+                      { OPTION_SET_INT, 0, "fsmonitor-valid", &mark_fsmonitor_only, NULL,
+                        N_("mark files as fsmonitor valid"),
+                        PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, MARK_FLAG },
+                      { OPTION_SET_INT, 0, "no-fsmonitor-valid", &mark_fsmonitor_only, NULL,
+                        N_("clear fsmonitor valid bit"),
+                        PARSE_OPT_NOARG | PARSE_OPT_NONEG, NULL, UNMARK_FLAG },
+                      OPT_END()
+    };
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(update_index_usage, options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     update_index_usage, options);
 
     git_config(git_default_config, NULL);
 

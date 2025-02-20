@@ -86,7 +86,7 @@ static void refspec_append_mapped(struct refspec *refspec, const char *ref,
             .src = matched->name,
         };
 
-        if (!query_refspecs(&remote->push, &query) && query.dst)
+        if (!refspec_find_match(&remote->push, &query) && query.dst)
         {
             refspec_appendf(refspec, "%s%s:%s",
                             query.force ? "+" : "",
@@ -511,32 +511,36 @@ static int do_push(int                       flags,
                    const struct string_list *push_options,
                    struct remote            *remote)
 {
-	int errs;
-	struct strvec *url;
-	struct refspec *push_refspec = &rs;
+    int             errs;
+    struct strvec  *url;
+    struct refspec *push_refspec = &rs;
 
     if (push_options->nr)
     {
         flags |= TRANSPORT_PUSH_OPTIONS;
     }
 
-	if (!push_refspec->nr && !(flags & TRANSPORT_PUSH_ALL)) {
-		if (remote->push.nr) {
-			push_refspec = &remote->push;
-		} else if (!(flags & TRANSPORT_PUSH_MIRROR))
-			setup_default_push_refspecs(&flags, remote);
-	}
-	errs = 0;
-	url = push_url_of_remote(remote);
-	for (size_t i = 0; i < url->nr; i++) {
-		struct transport *transport =
-			transport_get(remote, url->v[i]);
-		if (flags & TRANSPORT_PUSH_OPTIONS)
-			transport->push_options = push_options;
-		if (push_with_options(transport, push_refspec, flags))
-			errs++;
-	}
-	return !!errs;
+    if (!push_refspec->nr && !(flags & TRANSPORT_PUSH_ALL))
+    {
+        if (remote->push.nr)
+        {
+            push_refspec = &remote->push;
+        }
+        else if (!(flags & TRANSPORT_PUSH_MIRROR))
+            setup_default_push_refspecs(&flags, remote);
+    }
+    errs = 0;
+    url  = push_url_of_remote(remote);
+    for (size_t i = 0; i < url->nr; i++)
+    {
+        struct transport *transport =
+            transport_get(remote, url->v[i]);
+        if (flags & TRANSPORT_PUSH_OPTIONS)
+            transport->push_options = push_options;
+        if (push_with_options(transport, push_refspec, flags))
+            errs++;
+    }
+    return !!errs;
 }
 
 static int option_parse_recurse_submodules(const struct option *opt,
@@ -712,7 +716,8 @@ int cmd_push(int                           argc,
         OPT_BIT(0, "atomic", &flags, N_("request atomic transaction on remote side"), TRANSPORT_PUSH_ATOMIC),
         OPT_STRING_LIST('o', "push-option", &push_options_cmdline, N_("server-specific"), N_("option to transmit")),
         OPT_IPVERSION(&family),
-        OPT_END()};
+        OPT_END()
+    };
 
     packet_trace_identity("push");
     git_config(git_push_config, &flags);
@@ -802,10 +807,11 @@ int cmd_push(int                           argc,
         cas.use_force_if_includes = 1;
     }
 
-    for_each_string_list_item(item, push_options) if (strchr(item->string, '\n'))
-    {
-        die(_("push options must not have new line characters"));
-    }
+    for_each_string_list_item (item, push_options)
+        if (strchr(item->string, '\n'))
+        {
+            die(_("push options must not have new line characters"));
+        }
 
     rc = do_push(flags, push_options, remote);
     string_list_clear(&push_options_cmdline, 0);

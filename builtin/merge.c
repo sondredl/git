@@ -68,7 +68,8 @@ static const char *const builtin_merge_usage[] = {
     N_("git merge [<options>] [<commit>...]"),
     "git merge --abort",
     "git merge --continue",
-    NULL};
+    NULL
+};
 
 static int               show_diffstat = 1, shortlog_len = -1, squash;
 static int               option_commit     = -1;
@@ -97,12 +98,12 @@ static int               no_verify;
 static char             *into_name;
 
 static struct strategy all_strategy[] = {
-    {"recursive", NO_TRIVIAL},
-    {"octopus", DEFAULT_OCTOPUS},
-    {"ort", DEFAULT_TWOHEAD | NO_TRIVIAL},
-    {"resolve", 0},
-    {"ours", NO_FAST_FORWARD | NO_TRIVIAL},
-    {"subtree", NO_FAST_FORWARD | NO_TRIVIAL},
+    { "recursive", NO_TRIVIAL },
+    { "octopus", DEFAULT_OCTOPUS },
+    { "ort", DEFAULT_TWOHEAD | NO_TRIVIAL },
+    { "resolve", 0 },
+    { "ours", NO_FAST_FORWARD | NO_TRIVIAL },
+    { "subtree", NO_FAST_FORWARD | NO_TRIVIAL },
 };
 
 static char *pull_twohead, *pull_octopus;
@@ -190,8 +191,8 @@ static struct strategy *get_strategy(const char *name)
 {
     int                    i;
     struct strategy       *ret;
-    static struct cmdnames main_cmds  = {0};
-    static struct cmdnames other_cmds = {0};
+    static struct cmdnames main_cmds  = { 0 };
+    static struct cmdnames other_cmds = { 0 };
     static int             loaded;
     char                  *default_strategy = getenv("GIT_TEST_MERGE_ALGORITHM");
 
@@ -215,7 +216,7 @@ static struct strategy *get_strategy(const char *name)
 
     if (!loaded)
     {
-        struct cmdnames not_strategies = {0};
+        struct cmdnames not_strategies = { 0 };
         loaded                         = 1;
 
         load_command_list("git-merge-", &main_cmds, &other_cmds);
@@ -294,9 +295,9 @@ static struct option builtin_merge_options[] = {
     OPT_BOOL(0, "stat", &show_diffstat,
              N_("show a diffstat at the end of the merge")),
     OPT_BOOL(0, "summary", &show_diffstat, N_("(synonym to --stat)")),
-    {OPTION_INTEGER, 0, "log", &shortlog_len, N_("n"),
-     N_("add (at most <n>) entries from shortlog to merge commit message"),
-     PARSE_OPT_OPTARG, NULL, DEFAULT_MERGE_LOG_LEN},
+    { OPTION_INTEGER, 0, "log", &shortlog_len, N_("n"),
+      N_("add (at most <n>) entries from shortlog to merge commit message"),
+      PARSE_OPT_OPTARG, NULL, DEFAULT_MERGE_LOG_LEN },
     OPT_BOOL(0, "squash", &squash,
              N_("create a single commit instead of doing a merge")),
     OPT_BOOL(0, "commit", &option_commit,
@@ -318,9 +319,9 @@ static struct option builtin_merge_options[] = {
     OPT_CALLBACK('m', "message", &merge_msg, N_("message"),
                  N_("merge commit message (for a non-fast-forward merge)"),
                  option_parse_message),
-    {OPTION_LOWLEVEL_CALLBACK, 'F', "file", &merge_msg, N_("path"),
-     N_("read message from file"), PARSE_OPT_NONEG,
-     NULL, 0, option_read_message},
+    { OPTION_LOWLEVEL_CALLBACK, 'F', "file", &merge_msg, N_("path"),
+      N_("read message from file"), PARSE_OPT_NONEG,
+      NULL, 0, option_read_message },
     OPT_STRING(0, "into-name", &into_name, N_("name"),
                N_("use <name> instead of the real target")),
     OPT__VERBOSITY(&verbosity),
@@ -333,13 +334,14 @@ static struct option builtin_merge_options[] = {
     OPT_BOOL(0, "allow-unrelated-histories", &allow_unrelated_histories,
              N_("allow merging unrelated histories")),
     OPT_SET_INT(0, "progress", &show_progress, N_("force progress reporting"), 1),
-    {OPTION_STRING, 'S', "gpg-sign", &sign_commit, N_("key-id"),
-     N_("GPG sign commit"), PARSE_OPT_OPTARG, NULL, (intptr_t) ""},
+    { OPTION_STRING, 'S', "gpg-sign", &sign_commit, N_("key-id"),
+      N_("GPG sign commit"), PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
     OPT_AUTOSTASH(&autostash),
     OPT_BOOL(0, "overwrite-ignore", &overwrite_ignore, N_("update ignored files (default)")),
     OPT_BOOL(0, "signoff", &signoff, N_("add a Signed-off-by trailer")),
     OPT_BOOL(0, "no-verify", &no_verify, N_("bypass pre-merge-commit and commit-msg hooks")),
-    OPT_END()};
+    OPT_END()
+};
 
 static int save_state(struct object_id *stash)
 {
@@ -469,7 +471,7 @@ static void squash_message(struct commit *commit, struct commit_list *remotehead
     struct rev_info             rev;
     struct strbuf               out = STRBUF_INIT;
     struct commit_list         *j;
-    struct pretty_print_context ctx = {0};
+    struct pretty_print_context ctx = { 0 };
 
     printf(_("Squash commit -- not updating HEAD\n"));
 
@@ -587,8 +589,8 @@ static void merge_name(const char *remote, struct strbuf *msg)
     int                       len;
     int                       early;
 
-	copy_branchname(&bname, remote, 0);
-	remote = bname.buf;
+    copy_branchname(&bname, remote, 0);
+    remote = bname.buf;
 
     oidclr(&branch_head, the_repository->hash_algo);
     remote_head = get_merge_parent(remote);
@@ -906,16 +908,16 @@ static int try_merge_strategy(const char *strategy, struct commit_list *common,
             commit_list_insert(j->item, &reversed);
         }
 
-		repo_hold_locked_index(the_repository, &lock,
-				       LOCK_DIE_ON_ERROR);
-		if (!strcmp(strategy, "ort"))
-			clean = merge_ort_recursive(&o, head, remoteheads->item,
-						    reversed, &result);
-		else
-			clean = merge_recursive(&o, head, remoteheads->item,
-						reversed, &result);
-		free_commit_list(reversed);
-		strbuf_release(&o.obuf);
+        repo_hold_locked_index(the_repository, &lock,
+                               LOCK_DIE_ON_ERROR);
+        if (!strcmp(strategy, "ort"))
+            clean = merge_ort_recursive(&o, head, remoteheads->item,
+                                        reversed, &result);
+        else
+            clean = merge_recursive(&o, head, remoteheads->item,
+                                    reversed, &result);
+        free_commit_list(reversed);
+        strbuf_release(&o.obuf);
 
         if (clean < 0)
         {
@@ -968,7 +970,7 @@ static void add_strategies(const char *string, unsigned attr)
         struct string_list       list = STRING_LIST_INIT_DUP;
         struct string_list_item *item;
         string_list_split(&list, string, ' ', -1);
-        for_each_string_list_item(item, &list)
+        for_each_string_list_item (item, &list)
             append_strategy(get_strategy(item->string));
         string_list_clear(&list, 0);
         return;
@@ -1562,10 +1564,8 @@ int cmd_merge(int                     argc,
     void               *branch_to_free;
     int                 orig_argc = argc;
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_merge_usage, builtin_merge_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_merge_usage, builtin_merge_options);
 
     prepare_repo_settings(the_repository);
     the_repository->settings.command_requires_full_index = 0;
@@ -1622,9 +1622,9 @@ int cmd_merge(int                     argc,
     if (abort_current_merge)
     {
         int              nargc   = 2;
-        const char      *nargv[] = {"reset", "--merge", NULL};
+        const char      *nargv[] = { "reset", "--merge", NULL };
         char             stash_oid_hex[GIT_MAX_HEXSZ + 1];
-        struct object_id stash_oid = {0};
+        struct object_id stash_oid = { 0 };
 
         if (orig_argc != 2)
         {
@@ -1672,7 +1672,7 @@ int cmd_merge(int                     argc,
     if (continue_current_merge)
     {
         int         nargc   = 1;
-        const char *nargv[] = {"commit", NULL};
+        const char *nargv[] = { "commit", NULL };
 
         if (orig_argc != 2)
         {

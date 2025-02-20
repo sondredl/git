@@ -38,7 +38,8 @@ static const char *const builtin_branch_usage[] = {
     N_("git branch [<options>] (-c | -C) [<old-branch>] <new-branch>"),
     N_("git branch [<options>] [-r | -a] [--points-at]"),
     N_("git branch [<options>] [-r | -a] [--format]"),
-    NULL};
+    NULL
+};
 
 static const char      *head;
 static struct object_id head_oid;
@@ -299,9 +300,9 @@ static int delete_branches(int argc, const char **argv, int force, int kinds,
         char *target = NULL;
         int   flags  = 0;
 
-		copy_branchname(&bname, argv[i], allowed_interpret);
-		free(name);
-		name = mkpathdup(fmt, bname.buf);
+        copy_branchname(&bname, argv[i], allowed_interpret);
+        free(name);
+        name = mkpathdup(fmt, bname.buf);
 
         if (kinds == FILTER_REFS_BRANCHES)
         {
@@ -376,7 +377,7 @@ static int delete_branches(int argc, const char **argv, int force, int kinds,
         ret = 1;
     }
 
-    for_each_string_list_item(item, &refs_to_delete)
+    for_each_string_list_item (item, &refs_to_delete)
     {
         char *describe_ref = item->util;
         char *name         = item->string;
@@ -561,7 +562,7 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
         die(_("unable to parse format string"));
     }
 
-    filter_ahead_behind(the_repository, format, &array);
+    filter_ahead_behind(the_repository, &array);
     ref_array_sort(sorting, &array);
 
     if (column_active(colopts))
@@ -704,20 +705,22 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
     int               oldref_usage        = 0;
     struct worktree **worktrees           = get_worktrees();
 
-	if (check_branch_ref(&oldref, oldname)) {
-		/*
-		 * Bad name --- this could be an attempt to rename a
-		 * ref that we used to allow to be created by accident.
-		 */
-		if (refs_ref_exists(get_main_ref_store(the_repository), oldref.buf))
-			recovery = 1;
-		else {
-			int code = die_message(_("invalid branch name: '%s'"), oldname);
-			advise_if_enabled(ADVICE_REF_SYNTAX,
-					  _("See `man git check-ref-format`"));
-			exit(code);
-		}
-	}
+    if (check_branch_ref(&oldref, oldname))
+    {
+        /*
+         * Bad name --- this could be an attempt to rename a
+         * ref that we used to allow to be created by accident.
+         */
+        if (refs_ref_exists(get_main_ref_store(the_repository), oldref.buf))
+            recovery = 1;
+        else
+        {
+            int code = die_message(_("invalid branch name: '%s'"), oldname);
+            advise_if_enabled(ADVICE_REF_SYNTAX,
+                              _("See `man git check-ref-format`"));
+            exit(code);
+        }
+    }
 
     for (int i = 0; worktrees[i]; i++)
     {
@@ -867,20 +870,20 @@ int cmd_branch(int                     argc,
                const char             *prefix,
                struct repository *repo UNUSED)
 {
-	/* possible actions */
-	int delete = 0, rename = 0, copy = 0, list = 0,
-	    unset_upstream = 0, show_current = 0, edit_description = 0;
-	const char *new_upstream = NULL;
-	int noncreate_actions = 0;
-	/* possible options */
-	int reflog = 0, quiet = 0, icase = 0, force = 0,
-	    recurse_submodules_explicit = 0;
-	enum branch_track track;
-	struct ref_filter filter = REF_FILTER_INIT;
-	static struct ref_sorting *sorting;
-	struct string_list sorting_options = STRING_LIST_INIT_DUP;
-	struct ref_format format = REF_FORMAT_INIT;
-	int ret;
+    /* possible actions */
+    int delete = 0, rename = 0, copy = 0, list = 0,
+        unset_upstream = 0, show_current = 0, edit_description = 0;
+    const char *new_upstream      = NULL;
+    int         noncreate_actions = 0;
+    /* possible options */
+    int reflog = 0, quiet = 0, icase = 0, force = 0,
+        recurse_submodules_explicit = 0;
+    enum branch_track          track;
+    struct ref_filter          filter = REF_FILTER_INIT;
+    static struct ref_sorting *sorting;
+    struct string_list         sorting_options = STRING_LIST_INIT_DUP;
+    struct ref_format          format          = REF_FORMAT_INIT;
+    int                        ret;
 
     struct option options[] = {
         OPT_GROUP(N_("Generic options")),
@@ -940,10 +943,8 @@ int cmd_branch(int                     argc,
     filter.kind   = FILTER_REFS_BRANCHES;
     filter.abbrev = -1;
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(builtin_branch_usage, options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_branch_usage, options);
 
     /*
      * Try to set sort keys from config. If config does not set any,
@@ -1034,97 +1035,119 @@ int cmd_branch(int                     argc,
         setup_auto_pager("branch", 1);
     }
 
-	if (delete) {
-		if (!argc)
-			die(_("branch name required"));
-		ret = delete_branches(argc, argv, delete > 1, filter.kind, quiet);
-		goto out;
-	} else if (show_current) {
-		print_current_branch_name();
-		ret = 0;
-		goto out;
-	} else if (list) {
-		/*  git branch --list also shows HEAD when it is detached */
-		if ((filter.kind & FILTER_REFS_BRANCHES) && filter.detached)
-			filter.kind |= FILTER_REFS_DETACHED_HEAD;
-		filter.name_patterns = argv;
-		/*
-		 * If no sorting parameter is given then we default to sorting
-		 * by 'refname'. This would give us an alphabetically sorted
-		 * array with the 'HEAD' ref at the beginning followed by
-		 * local branches 'refs/heads/...' and finally remote-tracking
-		 * branches 'refs/remotes/...'.
-		 */
-		sorting = ref_sorting_options(&sorting_options);
-		ref_sorting_set_sort_flags_all(sorting, REF_SORTING_ICASE, icase);
-		ref_sorting_set_sort_flags_all(
-			sorting, REF_SORTING_DETACHED_HEAD_FIRST, 1);
-		print_ref_list(&filter, sorting, &format, &output);
-		print_columns(&output, colopts, NULL);
-		string_list_clear(&output, 0);
-		ref_sorting_release(sorting);
-		ref_filter_clear(&filter);
-		ref_format_clear(&format);
+    if (delete)
+    {
+        if (!argc)
+            die(_("branch name required"));
+        ret = delete_branches(argc, argv, delete > 1, filter.kind, quiet);
+        goto out;
+    }
+    else if (show_current)
+    {
+        print_current_branch_name();
+        ret = 0;
+        goto out;
+    }
+    else if (list)
+    {
+        /*  git branch --list also shows HEAD when it is detached */
+        if ((filter.kind & FILTER_REFS_BRANCHES) && filter.detached)
+            filter.kind |= FILTER_REFS_DETACHED_HEAD;
+        filter.name_patterns = argv;
+        /*
+         * If no sorting parameter is given then we default to sorting
+         * by 'refname'. This would give us an alphabetically sorted
+         * array with the 'HEAD' ref at the beginning followed by
+         * local branches 'refs/heads/...' and finally remote-tracking
+         * branches 'refs/remotes/...'.
+         */
+        sorting = ref_sorting_options(&sorting_options);
+        ref_sorting_set_sort_flags_all(sorting, REF_SORTING_ICASE, icase);
+        ref_sorting_set_sort_flags_all(
+            sorting, REF_SORTING_DETACHED_HEAD_FIRST, 1);
+        print_ref_list(&filter, sorting, &format, &output);
+        print_columns(&output, colopts, NULL);
+        string_list_clear(&output, 0);
+        ref_sorting_release(sorting);
+        ref_filter_clear(&filter);
 
-		ret = 0;
-		goto out;
-	} else if (edit_description) {
-		const char *branch_name;
-		struct strbuf branch_ref = STRBUF_INIT;
-		struct strbuf buf = STRBUF_INIT;
+        ret = 0;
+        goto out;
+    }
+    else if (edit_description)
+    {
+        const char   *branch_name;
+        struct strbuf branch_ref = STRBUF_INIT;
+        struct strbuf buf        = STRBUF_INIT;
 
-		if (!argc) {
-			if (filter.detached)
-				die(_("cannot give description to detached HEAD"));
-			branch_name = head;
-		} else if (argc == 1) {
-			copy_branchname(&buf, argv[0], INTERPRET_BRANCH_LOCAL);
-			branch_name = buf.buf;
-		} else {
-			die(_("cannot edit description of more than one branch"));
-		}
+        if (!argc)
+        {
+            if (filter.detached)
+                die(_("cannot give description to detached HEAD"));
+            branch_name = head;
+        }
+        else if (argc == 1)
+        {
+            copy_branchname(&buf, argv[0], INTERPRET_BRANCH_LOCAL);
+            branch_name = buf.buf;
+        }
+        else
+        {
+            die(_("cannot edit description of more than one branch"));
+        }
 
-		strbuf_addf(&branch_ref, "refs/heads/%s", branch_name);
-		if (!refs_ref_exists(get_main_ref_store(the_repository), branch_ref.buf)) {
-			error((!argc || branch_checked_out(branch_ref.buf))
-			      ? _("no commit on branch '%s' yet")
-			      : _("no branch named '%s'"),
-			      branch_name);
-			ret = 1;
-		} else if (!edit_branch_description(branch_name)) {
-			ret = 0; /* happy */
-		} else {
-			ret = 1;
-		}
+        strbuf_addf(&branch_ref, "refs/heads/%s", branch_name);
+        if (!refs_ref_exists(get_main_ref_store(the_repository), branch_ref.buf))
+        {
+            error((!argc || branch_checked_out(branch_ref.buf))
+                      ? _("no commit on branch '%s' yet")
+                      : _("no branch named '%s'"),
+                  branch_name);
+            ret = 1;
+        }
+        else if (!edit_branch_description(branch_name))
+        {
+            ret = 0; /* happy */
+        }
+        else
+        {
+            ret = 1;
+        }
 
         strbuf_release(&branch_ref);
         strbuf_release(&buf);
 
-		goto out;
-	} else if (copy || rename) {
-		if (!argc)
-			die(_("branch name required"));
-		else if ((argc == 1) && filter.detached)
-			die(copy? _("cannot copy the current branch while not on any")
-				: _("cannot rename the current branch while not on any"));
-		else if (argc == 1)
-			copy_or_rename_branch(head, argv[0], copy, copy + rename > 1);
-		else if (argc == 2)
-			copy_or_rename_branch(argv[0], argv[1], copy, copy + rename > 1);
-		else
-			die(copy? _("too many branches for a copy operation")
-				: _("too many arguments for a rename operation"));
-	} else if (new_upstream) {
-		struct branch *branch;
-		struct strbuf buf = STRBUF_INIT;
+        goto out;
+    }
+    else if (copy || rename)
+    {
+        if (!argc)
+            die(_("branch name required"));
+        else if ((argc == 1) && filter.detached)
+            die(copy ? _("cannot copy the current branch while not on any")
+                     : _("cannot rename the current branch while not on any"));
+        else if (argc == 1)
+            copy_or_rename_branch(head, argv[0], copy, copy + rename > 1);
+        else if (argc == 2)
+            copy_or_rename_branch(argv[0], argv[1], copy, copy + rename > 1);
+        else
+            die(copy ? _("too many branches for a copy operation")
+                     : _("too many arguments for a rename operation"));
+    }
+    else if (new_upstream)
+    {
+        struct branch *branch;
+        struct strbuf  buf = STRBUF_INIT;
 
-		if (!argc)
-			branch = branch_get(NULL);
-		else if (argc == 1) {
-			copy_branchname(&buf, argv[0], INTERPRET_BRANCH_LOCAL);
-			branch = branch_get(buf.buf);
-		} else
-			die(_("too many arguments to set new upstream"));
+        if (!argc)
+            branch = branch_get(NULL);
+        else if (argc == 1)
+        {
+            copy_branchname(&buf, argv[0], INTERPRET_BRANCH_LOCAL);
+            branch = branch_get(buf.buf);
+        }
+        else
+            die(_("too many arguments to set new upstream"));
 
         if (!branch)
         {
@@ -1152,13 +1175,15 @@ int cmd_branch(int                     argc,
         struct branch *branch;
         struct strbuf  buf = STRBUF_INIT;
 
-		if (!argc)
-			branch = branch_get(NULL);
-		else if (argc == 1) {
-			copy_branchname(&buf, argv[0], INTERPRET_BRANCH_LOCAL);
-			branch = branch_get(buf.buf);
-		} else
-			die(_("too many arguments to unset upstream"));
+        if (!argc)
+            branch = branch_get(NULL);
+        else if (argc == 1)
+        {
+            copy_branchname(&buf, argv[0], INTERPRET_BRANCH_LOCAL);
+            branch = branch_get(buf.buf);
+        }
+        else
+            die(_("too many arguments to unset upstream"));
 
         if (!branch)
         {
@@ -1193,21 +1218,23 @@ int cmd_branch(int                     argc,
         if (track == BRANCH_TRACK_OVERRIDE)
             die(_("the '--set-upstream' option is no longer supported. Please use '--track' or '--set-upstream-to' instead"));
 
-		if (recurse_submodules) {
-			create_branches_recursively(the_repository, branch_name,
-						    start_name, NULL, force,
-						    reflog, quiet, track, 0);
-			ret = 0;
-			goto out;
-		}
-		create_branch(the_repository, branch_name, start_name, force, 0,
-			      reflog, quiet, track, 0);
-	} else
-		usage_with_options(builtin_branch_usage, options);
+        if (recurse_submodules)
+        {
+            create_branches_recursively(the_repository, branch_name,
+                                        start_name, NULL, force,
+                                        reflog, quiet, track, 0);
+            ret = 0;
+            goto out;
+        }
+        create_branch(the_repository, branch_name, start_name, force, 0,
+                      reflog, quiet, track, 0);
+    }
+    else
+        usage_with_options(builtin_branch_usage, options);
 
-	ret = 0;
+    ret = 0;
 
 out:
-	string_list_clear(&sorting_options, 0);
-	return ret;
+    string_list_clear(&sorting_options, 0);
+    return ret;
 }

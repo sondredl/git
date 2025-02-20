@@ -1,5 +1,4 @@
 #define USE_THE_REPOSITORY_VARIABLE
-#define DISABLE_SIGN_COMPARE_WARNINGS
 
 #include "git-compat-util.h"
 #include "config.h"
@@ -91,7 +90,7 @@ static NORETURN void die_initial_contact(int unexpected)
 /* Checks if the server supports the capability 'c' */
 int server_supports_v2(const char *c)
 {
-    int i;
+    size_t i;
 
     for (i = 0; i < server_capabilities_v2.nr; i++)
     {
@@ -114,7 +113,7 @@ void ensure_server_supports_v2(const char *c)
 
 int server_feature_v2(const char *c, const char **v)
 {
-    int i;
+    size_t i;
 
     for (i = 0; i < server_capabilities_v2.nr; i++)
     {
@@ -131,7 +130,7 @@ int server_feature_v2(const char *c, const char **v)
 int server_supports_feature(const char *c, const char *feature,
                             int die_on_error)
 {
-    int i;
+    size_t i;
 
     for (i = 0; i < server_capabilities_v2.nr; i++)
     {
@@ -272,16 +271,14 @@ static void annotate_refs_with_symref_info(struct ref *ref)
     string_list_clear(&symref, 0);
 }
 
-static void process_capabilities(struct packet_reader *reader, int *linelen)
+static void process_capabilities(struct packet_reader *reader, size_t *linelen)
 {
     const char *feat_val;
     size_t      feat_len;
     const char *line         = reader->line;
-    int         nul_location = strlen(line);
+    size_t      nul_location = strlen(line);
     if (nul_location == *linelen)
-    {
         return;
-    }
     server_capabilities_v1 = xstrdup(line + nul_location + 1);
     *linelen               = nul_location;
 
@@ -321,7 +318,7 @@ static int process_dummy_ref(const struct packet_reader *reader)
     return oideq(reader->hash_algo->null_oid, &oid) && !strcmp(name, "capabilities^{}");
 }
 
-static void check_no_capabilities(const char *line, int len)
+static void check_no_capabilities(const char *line, size_t len)
 {
     if (strlen(line) != len)
     {
@@ -330,7 +327,7 @@ static void check_no_capabilities(const char *line, int len)
     }
 }
 
-static int process_ref(const struct packet_reader *reader, int len,
+static int process_ref(const struct packet_reader *reader, size_t len,
                        struct ref ***list, unsigned int flags,
                        struct oid_array *extra_have)
 {
@@ -367,7 +364,7 @@ static int process_ref(const struct packet_reader *reader, int len,
     return 1;
 }
 
-static int process_shallow(const struct packet_reader *reader, int len,
+static int process_shallow(const struct packet_reader *reader, size_t len,
                            struct oid_array *shallow_points)
 {
     const char      *line = reader->line;
@@ -409,7 +406,7 @@ struct ref **get_remote_heads(struct packet_reader *reader,
                               struct oid_array *shallow_points)
 {
     struct ref                **orig_list = list;
-    int                         len       = 0;
+    size_t                      len       = 0;
     enum get_remote_heads_state state     = EXPECTING_FIRST_REF;
 
     *list = NULL;
@@ -470,7 +467,7 @@ static int process_ref_v2(struct packet_reader *reader, struct ref ***list,
                           const char **unborn_head_target)
 {
     int                ret = 1;
-    int                i   = 0;
+    size_t             i   = 0;
     struct object_id   old_oid;
     struct ref        *ref;
     struct string_list line_sections = STRING_LIST_INIT_DUP;
@@ -654,7 +651,7 @@ struct ref **get_remote_refs(int fd_out, struct packet_reader *reader,
                              const struct string_list         *server_options,
                              int                               stateless_rpc)
 {
-    int            i;
+    size_t         i;
     struct strvec *ref_prefixes       = transport_options ? &transport_options->ref_prefixes : NULL;
     const char   **unborn_head_target = transport_options ? &transport_options->unborn_head_target : NULL;
     *list                             = NULL;

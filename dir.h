@@ -187,10 +187,10 @@ struct untracked_cache_dir
     struct stat_data             stat_data;
     unsigned int                 untracked_alloc, dirs_nr, dirs_alloc;
     unsigned int                 untracked_nr;
-    unsigned int                 check_only : 1;
+    unsigned int                 check_only:1;
     /* all data except 'dirs' in this struct are good */
-    unsigned int valid : 1;
-    unsigned int recurse : 1;
+    unsigned int valid:1;
+    unsigned int recurse:1;
     /* null object ID means this directory does not have .gitignore */
     struct object_id exclude_oid;
     char             name[FLEX_ARRAY];
@@ -215,7 +215,7 @@ struct untracked_cache
     int dir_invalidated;
     int dir_opened;
     /* fsmonitor invalidation data */
-    unsigned int use_fsmonitor : 1;
+    unsigned int use_fsmonitor:1;
 };
 
 /**
@@ -225,11 +225,9 @@ struct untracked_cache
  */
 struct dir_struct
 {
-
     /* bit-field of options */
     enum
     {
-
         /**
          * Return just ignored files in `entries[]`, not untracked files.
          * This flag is mutually exclusive with `DIR_SHOW_IGNORED_TOO`.
@@ -370,9 +368,9 @@ struct dir_struct
 };
 
 #define DIR_INIT \
-    {            \
-        0        \
-    }
+ {               \
+  0              \
+ }
 
 struct dirent *readdir_skip_dot_and_dotdot(DIR *dirp);
 
@@ -483,6 +481,9 @@ void                 add_patterns_from_file(struct dir_struct *, const char *fna
 int                  add_patterns_from_blob_to_list(struct object_id *oid,
                                                     const char *base, int baselen,
                                                     struct pattern_list *pl);
+int                  add_patterns_from_buffer(char *buf, size_t size,
+                                              const char *base, int baselen,
+                                              struct pattern_list *pl);
 void                 parse_path_pattern(const char **string, int *patternlen, unsigned *flags, int *nowildcardlen);
 void                 add_pattern(const char *string, const char *base,
                                  int baselen, struct pattern_list *pl, int srcpos);

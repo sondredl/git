@@ -22,8 +22,10 @@ enum
 {
     REMOTE_UNCONFIGURED = 0,
     REMOTE_CONFIG,
+#ifndef WITH_BREAKING_CHANGES
     REMOTE_REMOTES,
     REMOTE_BRANCHES
+#endif /* WITH_BREAKING_CHANGES */
 };
 
 struct rewrite
@@ -63,15 +65,17 @@ struct remote_state
 void                 remote_state_clear(struct remote_state *remote_state);
 struct remote_state *remote_state_new(void);
 
-	enum follow_remote_head_settings {
-		FOLLOW_REMOTE_NEVER = -1,
-		FOLLOW_REMOTE_CREATE = 0,
-		FOLLOW_REMOTE_WARN = 1,
-		FOLLOW_REMOTE_ALWAYS = 2,
-	};
+enum follow_remote_head_settings
+{
+    FOLLOW_REMOTE_NEVER  = -1,
+    FOLLOW_REMOTE_CREATE = 0,
+    FOLLOW_REMOTE_WARN   = 1,
+    FOLLOW_REMOTE_ALWAYS = 2,
+};
 
-struct remote {
-	struct hashmap_entry ent;
+struct remote
+{
+    struct hashmap_entry ent;
 
     /* The user's nickname for the remote */
     const char *name;
@@ -117,10 +121,10 @@ struct remote {
     /* The method used for authenticating against `http_proxy`. */
     char *http_proxy_authmethod;
 
-	struct string_list server_options;
+    struct string_list server_options;
 
-	enum follow_remote_head_settings follow_remote_head;
-	const char *no_warn_branch;
+    enum follow_remote_head_settings follow_remote_head;
+    const char                      *no_warn_branch;
 };
 
 /**
@@ -147,7 +151,7 @@ struct ref_push_report
     char                   *ref_name;
     struct object_id       *old_oid;
     struct object_id       *new_oid;
-    unsigned int            forced_update : 1;
+    unsigned int            forced_update:1;
     struct ref_push_report *next;
 };
 
@@ -162,18 +166,18 @@ struct ref
     char            *symref;
     char            *tracking_ref;
     unsigned int
-        force : 1,
-        forced_update : 1,
-        expect_old_sha1 : 1,
-        exact_oid : 1,
-        deletion : 1,
+        force:1,
+        forced_update:1,
+        expect_old_sha1:1,
+        exact_oid:1,
+        deletion:1,
         /* Need to check if local reflog reaches the remote tip. */
-        check_reachable : 1,
+        check_reachable:1,
         /*
          * Store the result of the check enabled by "check_reachable";
          * implies the local reflog does not reach the remote tip.
          */
-        unreachable : 1;
+        unreachable:1;
 
     enum
     {
@@ -228,6 +232,11 @@ struct ref *alloc_ref(const char *name);
 struct ref *copy_ref(const struct ref *ref);
 struct ref *copy_ref_list(const struct ref *ref);
 int         count_refspec_match(const char *, struct ref *refs, struct ref **matched_ref);
+/*
+ * Put a ref in the tail and prepare tail for adding another one.
+ * *tail is the pointer to the tail of the list of refs.
+ */
+void tail_link_ref(struct ref *ref, struct ref ***tail);
 
 int check_ref_type(const struct ref *ref, int flags);
 
@@ -269,21 +278,6 @@ int resolve_remote_symref(struct ref *ref, struct ref *list);
  * pointer to the head of the resulting list.
  */
 struct ref *ref_remove_duplicates(struct ref *ref_map);
-
-/*
- * Check whether a name matches any negative refspec in rs. Returns 1 if the
- * name matches at least one negative refspec, and 0 otherwise.
- */
-int omit_name_by_refspec(const char *name, struct refspec *rs);
-
-/*
- * Remove all entries in the input list which match any negative refspec in
- * the refspec list.
- */
-struct ref *apply_negative_refspecs(struct ref *ref_map, struct refspec *rs);
-
-int   query_refspecs(struct refspec *rs, struct refspec_item *query);
-char *apply_refspecs(struct refspec *rs, const char *name);
 
 int  check_push_refs(struct ref *src, struct refspec *rs);
 int  match_push_refs(struct ref *src, struct ref **dst,
@@ -425,12 +419,12 @@ struct ref *get_stale_heads(struct refspec *rs, struct ref *fetch_map);
  */
 struct push_cas_option
 {
-    unsigned use_tracking_for_rest : 1;
-    unsigned use_force_if_includes : 1;
+    unsigned use_tracking_for_rest:1;
+    unsigned use_force_if_includes:1;
     struct push_cas
     {
         struct object_id expect;
-        unsigned         use_tracking : 1;
+        unsigned         use_tracking:1;
         char            *refname;
     } * entry;
     int nr;
@@ -474,5 +468,7 @@ void apply_push_cas(struct push_cas_option *, struct remote *, struct ref *);
  */
 char *relative_url(const char *remote_url, const char *url,
                    const char *up_path);
+
+int valid_remote_name(const char *name);
 
 #endif

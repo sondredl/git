@@ -28,8 +28,8 @@ static struct
     int         version;
     const char *signature;
 } bundle_sigs[] = {
-    {2, v2_bundle_signature},
-    {3, v3_bundle_signature},
+    { 2, v2_bundle_signature },
+    { 3, v3_bundle_signature },
 };
 
 void bundle_header_init(struct bundle_header *header)
@@ -490,20 +490,21 @@ static int write_bundle_refs(int bundle_fd, struct rev_info *revs)
             goto skip_write_ref;
         }
 
-		/*
-		 * Make sure the refs we wrote out is correct; --max-count and
-		 * other limiting options could have prevented all the tips
-		 * from getting output.
-		 *
-		 * Non commit objects such as tags and blobs do not have
-		 * this issue as they are not affected by those extra
-		 * constraints.
-		 */
-		if (!(e->item->flags & SHOWN) && e->item->type == OBJ_COMMIT) {
-			warning(_("ref '%s' is excluded by the rev-list options"),
-				e->name);
-			goto skip_write_ref;
-		}
+        /*
+         * Make sure the refs we wrote out is correct; --max-count and
+         * other limiting options could have prevented all the tips
+         * from getting output.
+         *
+         * Non commit objects such as tags and blobs do not have
+         * this issue as they are not affected by those extra
+         * constraints.
+         */
+        if (!(e->item->flags & SHOWN) && e->item->type == OBJ_COMMIT)
+        {
+            warning(_("ref '%s' is excluded by the rev-list options"),
+                    e->name);
+            goto skip_write_ref;
+        }
 
         ref_count++;
         write_or_die(bundle_fd, oid_to_hex(&e->item->oid), the_hash_algo->hexsz);
@@ -529,7 +530,7 @@ static void write_bundle_prerequisites(struct commit *commit, void *data)
 {
     struct bundle_prerequisites_info *bpi = data;
     struct object                    *object;
-    struct pretty_print_context       ctx = {0};
+    struct pretty_print_context       ctx = { 0 };
     struct strbuf                     buf = STRBUF_INIT;
 
     if (!(commit->object.flags & BOUNDARY))
@@ -714,17 +715,20 @@ out:
 }
 
 int unbundle(struct repository *r, struct bundle_header *header,
-	     int bundle_fd, struct strvec *extra_index_pack_args,
-	     struct unbundle_opts *opts)
+             int bundle_fd, struct strvec *extra_index_pack_args,
+             struct unbundle_opts *opts)
 {
-	struct child_process ip = CHILD_PROCESS_INIT;
-	struct unbundle_opts opts_fallback = { 0 };
+    struct child_process ip            = CHILD_PROCESS_INIT;
+    struct unbundle_opts opts_fallback = { 0 };
 
-	if (!opts)
-		opts = &opts_fallback;
+    if (!opts)
+        opts = &opts_fallback;
 
-	if (verify_bundle(r, header, opts->flags))
-		return -1;
+    if (verify_bundle(r, header, opts->flags))
+    {
+        close(bundle_fd);
+        return -1;
+    }
 
     strvec_pushl(&ip.args, "index-pack", "--fix-thin", "--stdin", NULL);
 
@@ -734,9 +738,9 @@ int unbundle(struct repository *r, struct bundle_header *header,
         strvec_push(&ip.args, "--promisor=from-bundle");
     }
 
-	if (opts->flags & VERIFY_BUNDLE_FSCK)
-		strvec_pushf(&ip.args, "--fsck-objects%s",
-			     opts->fsck_msg_types ? opts->fsck_msg_types : "");
+    if (opts->flags & VERIFY_BUNDLE_FSCK)
+        strvec_pushf(&ip.args, "--fsck-objects%s",
+                     opts->fsck_msg_types ? opts->fsck_msg_types : "");
 
     if (extra_index_pack_args)
         strvec_pushv(&ip.args, extra_index_pack_args->v);

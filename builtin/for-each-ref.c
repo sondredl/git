@@ -14,7 +14,8 @@ static char const *const for_each_ref_usage[] = {
     N_("git for-each-ref [--points-at <object>]"),
     N_("git for-each-ref [--merged [<commit>]] [--no-merged [<commit>]]"),
     N_("git for-each-ref [--contains [<commit>]] [--no-contains [<commit>]]"),
-    NULL};
+    NULL
+};
 
 int cmd_for_each_ref(int                     argc,
                      const char            **argv,
@@ -122,7 +123,6 @@ int cmd_for_each_ref(int                     argc,
     filter_and_format_refs(&filter, flags, sorting, &format);
 
     ref_filter_clear(&filter);
-    ref_format_clear(&format);
     ref_sorting_release(sorting);
     strvec_clear(&vec);
     return 0;

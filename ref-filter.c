@@ -45,7 +45,8 @@ static struct ref_msg
     "gone",
     "ahead %d",
     "behind %d",
-    "ahead %d, behind %d"};
+    "ahead %d, behind %d"
+};
 
 void setup_ref_filter_porcelain_msg(void)
 {
@@ -84,9 +85,9 @@ struct if_then_else
 {
     cmp_status   cmp_status;
     const char  *str;
-    unsigned int then_atom_seen : 1,
-        else_atom_seen : 1,
-        condition_satisfied : 1;
+    unsigned int then_atom_seen:1,
+        else_atom_seen:1,
+        condition_satisfied:1;
 };
 
 struct refname_atom
@@ -235,7 +236,7 @@ static struct used_atom
                 RR_REMOTE_REF
             } option;
             struct refname_atom refname;
-            unsigned int        nobracket : 1, push : 1, push_remote : 1;
+            unsigned int        nobracket:1, push:1, push_remote:1;
         } remote_ref;
         struct
         {
@@ -317,6 +318,11 @@ static struct used_atom
                 S_TRUST_LEVEL
             } option;
         } signature;
+        struct
+        {
+            char          *name;
+            struct commit *commit;
+        } base;
         struct strvec       describe_args;
         struct refname_atom refname;
         char               *head;
@@ -1191,39 +1197,30 @@ static int rest_atom_parser(struct ref_format *format UNUSED,
     return 0;
 }
 
-static int ahead_behind_atom_parser(struct ref_format     *format,
-                                    struct used_atom *atom UNUSED,
+static int ahead_behind_atom_parser(struct ref_format *format UNUSED,
+                                    struct used_atom         *atom,
                                     const char *arg, struct strbuf *err)
 {
-    struct string_list_item *item;
-
     if (!arg)
-    {
         return strbuf_addf_ret(err, -1, _("expected format: %%(ahead-behind:<committish>)"));
-    }
 
-    item       = string_list_append(&format->bases, arg);
-    item->util = lookup_commit_reference_by_name(arg);
-    if (!item->util)
-    {
+    atom->u.base.commit = lookup_commit_reference_by_name(arg);
+    if (!atom->u.base.commit)
         die("failed to find '%s'", arg);
-    }
 
     return 0;
 }
 
-static int is_base_atom_parser(struct ref_format     *format,
-                               struct used_atom *atom UNUSED,
+static int is_base_atom_parser(struct ref_format *format UNUSED,
+                               struct used_atom         *atom,
                                const char *arg, struct strbuf *err)
 {
-    struct string_list_item *item;
-
     if (!arg)
         return strbuf_addf_ret(err, -1, _("expected format: %%(is-base:<committish>)"));
 
-    item       = string_list_append(&format->is_base_tips, arg);
-    item->util = lookup_commit_reference_by_name(arg);
-    if (!item->util)
+    atom->u.base.name   = xstrdup(arg);
+    atom->u.base.commit = lookup_commit_reference_by_name(arg);
+    if (!atom->u.base.commit)
         die("failed to find '%s'", arg);
 
     return 0;
@@ -1251,53 +1248,53 @@ static struct
     int (*parser)(struct ref_format *format, struct used_atom *atom,
                   const char *arg, struct strbuf *err);
 } valid_atom[] = {
-    [ATOM_REFNAME]        = {"refname", SOURCE_NONE, FIELD_STR, refname_atom_parser},
-    [ATOM_OBJECTTYPE]     = {"objecttype", SOURCE_OTHER, FIELD_STR, objecttype_atom_parser},
-    [ATOM_OBJECTSIZE]     = {"objectsize", SOURCE_OTHER, FIELD_ULONG, objectsize_atom_parser},
-    [ATOM_OBJECTNAME]     = {"objectname", SOURCE_OTHER, FIELD_STR, oid_atom_parser},
-    [ATOM_DELTABASE]      = {"deltabase", SOURCE_OTHER, FIELD_STR, deltabase_atom_parser},
-    [ATOM_TREE]           = {"tree", SOURCE_OBJ, FIELD_STR, oid_atom_parser},
-    [ATOM_PARENT]         = {"parent", SOURCE_OBJ, FIELD_STR, oid_atom_parser},
-    [ATOM_NUMPARENT]      = {"numparent", SOURCE_OBJ, FIELD_ULONG},
-    [ATOM_OBJECT]         = {"object", SOURCE_OBJ},
-    [ATOM_TYPE]           = {"type", SOURCE_OBJ},
-    [ATOM_TAG]            = {"tag", SOURCE_OBJ},
-    [ATOM_AUTHOR]         = {"author", SOURCE_OBJ},
-    [ATOM_AUTHORNAME]     = {"authorname", SOURCE_OBJ, FIELD_STR, person_name_atom_parser},
-    [ATOM_AUTHOREMAIL]    = {"authoremail", SOURCE_OBJ, FIELD_STR, person_email_atom_parser},
-    [ATOM_AUTHORDATE]     = {"authordate", SOURCE_OBJ, FIELD_TIME},
-    [ATOM_COMMITTER]      = {"committer", SOURCE_OBJ},
-    [ATOM_COMMITTERNAME]  = {"committername", SOURCE_OBJ, FIELD_STR, person_name_atom_parser},
-    [ATOM_COMMITTEREMAIL] = {"committeremail", SOURCE_OBJ, FIELD_STR, person_email_atom_parser},
-    [ATOM_COMMITTERDATE]  = {"committerdate", SOURCE_OBJ, FIELD_TIME},
-    [ATOM_TAGGER]         = {"tagger", SOURCE_OBJ},
-    [ATOM_TAGGERNAME]     = {"taggername", SOURCE_OBJ, FIELD_STR, person_name_atom_parser},
-    [ATOM_TAGGEREMAIL]    = {"taggeremail", SOURCE_OBJ, FIELD_STR, person_email_atom_parser},
-    [ATOM_TAGGERDATE]     = {"taggerdate", SOURCE_OBJ, FIELD_TIME},
-    [ATOM_CREATOR]        = {"creator", SOURCE_OBJ},
-    [ATOM_CREATORDATE]    = {"creatordate", SOURCE_OBJ, FIELD_TIME},
-    [ATOM_DESCRIBE]       = {"describe", SOURCE_OBJ, FIELD_STR, describe_atom_parser},
-    [ATOM_SUBJECT]        = {"subject", SOURCE_OBJ, FIELD_STR, subject_atom_parser},
-    [ATOM_BODY]           = {"body", SOURCE_OBJ, FIELD_STR, body_atom_parser},
-    [ATOM_TRAILERS]       = {"trailers", SOURCE_OBJ, FIELD_STR, trailers_atom_parser},
-    [ATOM_CONTENTS]       = {"contents", SOURCE_OBJ, FIELD_STR, contents_atom_parser},
-    [ATOM_SIGNATURE]      = {"signature", SOURCE_OBJ, FIELD_STR, signature_atom_parser},
-    [ATOM_RAW]            = {"raw", SOURCE_OBJ, FIELD_STR, raw_atom_parser},
-    [ATOM_UPSTREAM]       = {"upstream", SOURCE_NONE, FIELD_STR, remote_ref_atom_parser},
-    [ATOM_PUSH]           = {"push", SOURCE_NONE, FIELD_STR, remote_ref_atom_parser},
-    [ATOM_SYMREF]         = {"symref", SOURCE_NONE, FIELD_STR, refname_atom_parser},
-    [ATOM_FLAG]           = {"flag", SOURCE_NONE},
-    [ATOM_HEAD]           = {"HEAD", SOURCE_NONE, FIELD_STR, head_atom_parser},
-    [ATOM_COLOR]          = {"color", SOURCE_NONE, FIELD_STR, color_atom_parser},
-    [ATOM_WORKTREEPATH]   = {"worktreepath", SOURCE_NONE},
-    [ATOM_ALIGN]          = {"align", SOURCE_NONE, FIELD_STR, align_atom_parser},
-    [ATOM_END]            = {"end", SOURCE_NONE},
-    [ATOM_IF]             = {"if", SOURCE_NONE, FIELD_STR, if_atom_parser},
-    [ATOM_THEN]           = {"then", SOURCE_NONE},
-    [ATOM_ELSE]           = {"else", SOURCE_NONE},
-    [ATOM_REST]           = {"rest", SOURCE_NONE, FIELD_STR, rest_atom_parser},
-    [ATOM_AHEADBEHIND]    = {"ahead-behind", SOURCE_OTHER, FIELD_STR, ahead_behind_atom_parser},
-    [ATOM_ISBASE]         = {"is-base", SOURCE_OTHER, FIELD_STR, is_base_atom_parser},
+    [ATOM_REFNAME]        = { "refname", SOURCE_NONE, FIELD_STR, refname_atom_parser },
+    [ATOM_OBJECTTYPE]     = { "objecttype", SOURCE_OTHER, FIELD_STR, objecttype_atom_parser },
+    [ATOM_OBJECTSIZE]     = { "objectsize", SOURCE_OTHER, FIELD_ULONG, objectsize_atom_parser },
+    [ATOM_OBJECTNAME]     = { "objectname", SOURCE_OTHER, FIELD_STR, oid_atom_parser },
+    [ATOM_DELTABASE]      = { "deltabase", SOURCE_OTHER, FIELD_STR, deltabase_atom_parser },
+    [ATOM_TREE]           = { "tree", SOURCE_OBJ, FIELD_STR, oid_atom_parser },
+    [ATOM_PARENT]         = { "parent", SOURCE_OBJ, FIELD_STR, oid_atom_parser },
+    [ATOM_NUMPARENT]      = { "numparent", SOURCE_OBJ, FIELD_ULONG },
+    [ATOM_OBJECT]         = { "object", SOURCE_OBJ },
+    [ATOM_TYPE]           = { "type", SOURCE_OBJ },
+    [ATOM_TAG]            = { "tag", SOURCE_OBJ },
+    [ATOM_AUTHOR]         = { "author", SOURCE_OBJ },
+    [ATOM_AUTHORNAME]     = { "authorname", SOURCE_OBJ, FIELD_STR, person_name_atom_parser },
+    [ATOM_AUTHOREMAIL]    = { "authoremail", SOURCE_OBJ, FIELD_STR, person_email_atom_parser },
+    [ATOM_AUTHORDATE]     = { "authordate", SOURCE_OBJ, FIELD_TIME },
+    [ATOM_COMMITTER]      = { "committer", SOURCE_OBJ },
+    [ATOM_COMMITTERNAME]  = { "committername", SOURCE_OBJ, FIELD_STR, person_name_atom_parser },
+    [ATOM_COMMITTEREMAIL] = { "committeremail", SOURCE_OBJ, FIELD_STR, person_email_atom_parser },
+    [ATOM_COMMITTERDATE]  = { "committerdate", SOURCE_OBJ, FIELD_TIME },
+    [ATOM_TAGGER]         = { "tagger", SOURCE_OBJ },
+    [ATOM_TAGGERNAME]     = { "taggername", SOURCE_OBJ, FIELD_STR, person_name_atom_parser },
+    [ATOM_TAGGEREMAIL]    = { "taggeremail", SOURCE_OBJ, FIELD_STR, person_email_atom_parser },
+    [ATOM_TAGGERDATE]     = { "taggerdate", SOURCE_OBJ, FIELD_TIME },
+    [ATOM_CREATOR]        = { "creator", SOURCE_OBJ },
+    [ATOM_CREATORDATE]    = { "creatordate", SOURCE_OBJ, FIELD_TIME },
+    [ATOM_DESCRIBE]       = { "describe", SOURCE_OBJ, FIELD_STR, describe_atom_parser },
+    [ATOM_SUBJECT]        = { "subject", SOURCE_OBJ, FIELD_STR, subject_atom_parser },
+    [ATOM_BODY]           = { "body", SOURCE_OBJ, FIELD_STR, body_atom_parser },
+    [ATOM_TRAILERS]       = { "trailers", SOURCE_OBJ, FIELD_STR, trailers_atom_parser },
+    [ATOM_CONTENTS]       = { "contents", SOURCE_OBJ, FIELD_STR, contents_atom_parser },
+    [ATOM_SIGNATURE]      = { "signature", SOURCE_OBJ, FIELD_STR, signature_atom_parser },
+    [ATOM_RAW]            = { "raw", SOURCE_OBJ, FIELD_STR, raw_atom_parser },
+    [ATOM_UPSTREAM]       = { "upstream", SOURCE_NONE, FIELD_STR, remote_ref_atom_parser },
+    [ATOM_PUSH]           = { "push", SOURCE_NONE, FIELD_STR, remote_ref_atom_parser },
+    [ATOM_SYMREF]         = { "symref", SOURCE_NONE, FIELD_STR, refname_atom_parser },
+    [ATOM_FLAG]           = { "flag", SOURCE_NONE },
+    [ATOM_HEAD]           = { "HEAD", SOURCE_NONE, FIELD_STR, head_atom_parser },
+    [ATOM_COLOR]          = { "color", SOURCE_NONE, FIELD_STR, color_atom_parser },
+    [ATOM_WORKTREEPATH]   = { "worktreepath", SOURCE_NONE },
+    [ATOM_ALIGN]          = { "align", SOURCE_NONE, FIELD_STR, align_atom_parser },
+    [ATOM_END]            = { "end", SOURCE_NONE },
+    [ATOM_IF]             = { "if", SOURCE_NONE, FIELD_STR, if_atom_parser },
+    [ATOM_THEN]           = { "then", SOURCE_NONE },
+    [ATOM_ELSE]           = { "else", SOURCE_NONE },
+    [ATOM_REST]           = { "rest", SOURCE_NONE, FIELD_STR, rest_atom_parser },
+    [ATOM_AHEADBEHIND]    = { "ahead-behind", SOURCE_OTHER, FIELD_STR, ahead_behind_atom_parser },
+    [ATOM_ISBASE]         = { "is-base", SOURCE_OTHER, FIELD_STR, is_base_atom_parser },
     /*
      * Please update $__git_ref_fieldlist in git-completion.bash
      * when you add new atoms
@@ -1305,9 +1302,9 @@ static struct
 };
 
 #define REF_FORMATTING_STATE_INIT \
-    {                             \
-        0                         \
-    }
+ {                                \
+  0                               \
+ }
 
 struct ref_formatting_stack
 {
@@ -1336,10 +1333,10 @@ struct atom_value
 
 #define ATOM_SIZE_UNSPECIFIED (-1)
 
-#define ATOM_VALUE_INIT                 \
-    {                                   \
-        .s_size = ATOM_SIZE_UNSPECIFIED \
-    }
+#define ATOM_VALUE_INIT           \
+ {                                \
+  .s_size = ATOM_SIZE_UNSPECIFIED \
+ }
 
 /*
  * Used to parse format string and sort specifiers
@@ -2177,8 +2174,8 @@ static void grab_person(const char *who, struct atom_value *val, int deref, void
     int         i;
     int         wholen    = strlen(who);
     const char *wholine   = NULL;
-    const char *headers[] = {"author ", "committer ",
-                             "tagger ", NULL};
+    const char *headers[] = { "author ", "committer ",
+                              "tagger ", NULL };
 
     for (i = 0; i < used_atom_cnt; i++)
     {
@@ -2288,7 +2285,7 @@ static void grab_signature(struct atom_value *val, int deref, struct object *obj
 {
     int                    i;
     struct commit         *commit            = (struct commit *)obj;
-    struct signature_check sigc              = {0};
+    struct signature_check sigc              = { 0 };
     int                    signature_checked = 0;
 
     for (i = 0; i < used_atom_cnt; i++)
@@ -3577,9 +3574,10 @@ static int ref_kind_from_refname(const char *refname)
         const char  *prefix;
         unsigned int kind;
     } ref_kind[] = {
-        {"refs/heads/", FILTER_REFS_BRANCHES},
-        {"refs/remotes/", FILTER_REFS_REMOTES},
-        {"refs/tags/", FILTER_REFS_TAGS}};
+        { "refs/heads/", FILTER_REFS_BRANCHES },
+        { "refs/remotes/", FILTER_REFS_REMOTES },
+        { "refs/tags/", FILTER_REFS_TAGS }
+    };
 
     if (!strcmp(refname, "HEAD"))
     {
@@ -3816,6 +3814,8 @@ void ref_array_clear(struct ref_array *array)
             free(atom->u.head);
         else if (atom->atom_type == ATOM_DESCRIBE)
             strvec_clear(&atom->u.describe_args);
+        else if (atom->atom_type == ATOM_ISBASE)
+            free(atom->u.base.name);
         else if (atom->atom_type == ATOM_TRAILERS || (atom->atom_type == ATOM_CONTENTS && atom->u.contents.option == C_TRAILERS))
         {
             struct ref_trailer_buf *tb = atom->u.contents.trailer_buf;
@@ -3849,8 +3849,8 @@ static void reach_filter(struct ref_array    *array,
                          struct commit_list **check_reachable,
                          int                  include_reached)
 {
-	size_t i, old_nr;
-	struct commit **to_clear;
+    size_t          i, old_nr;
+    struct commit **to_clear;
 
     if (!*check_reachable)
     {
@@ -3901,26 +3901,32 @@ static void reach_filter(struct ref_array    *array,
 }
 
 void filter_ahead_behind(struct repository *r,
-                         struct ref_format *format,
                          struct ref_array  *array)
 {
     struct commit **commits;
-    size_t          commits_nr = format->bases.nr + array->nr;
+    size_t          bases_nr, commits_nr;
 
-    if (!format->bases.nr || !array->nr)
-    {
+    if (!array->nr)
         return;
-    }
 
-    ALLOC_ARRAY(commits, commits_nr);
-    for (size_t i = 0; i < format->bases.nr; i++)
+    for (size_t i = bases_nr = 0; i < used_atom_cnt; i++)
     {
-        commits[i] = format->bases.items[i].util;
+        if (used_atom[i].atom_type == ATOM_AHEADBEHIND)
+            bases_nr++;
+    }
+    if (!bases_nr)
+        return;
+
+    ALLOC_ARRAY(commits, st_add(bases_nr, array->nr));
+    for (size_t i = 0, j = 0; i < used_atom_cnt; i++)
+    {
+        if (used_atom[i].atom_type == ATOM_AHEADBEHIND)
+            commits[j++] = used_atom[i].u.base.commit;
     }
 
-    ALLOC_ARRAY(array->counts, st_mult(format->bases.nr, array->nr));
+    ALLOC_ARRAY(array->counts, st_mult(bases_nr, array->nr));
 
-    commits_nr       = format->bases.nr;
+    commits_nr       = bases_nr;
     array->counts_nr = 0;
     for (size_t i = 0; i < array->nr; i++)
     {
@@ -3932,8 +3938,8 @@ void filter_ahead_behind(struct repository *r,
             continue;
         }
 
-        CALLOC_ARRAY(array->items[i]->counts, format->bases.nr);
-        for (size_t j = 0; j < format->bases.nr; j++)
+        CALLOC_ARRAY(array->items[i]->counts, bases_nr);
+        for (size_t j = 0; j < bases_nr; j++)
         {
             struct ahead_behind_count *count;
             count             = &array->counts[array->counts_nr++];
@@ -3950,14 +3956,21 @@ void filter_ahead_behind(struct repository *r,
 }
 
 void filter_is_base(struct repository *r,
-                    struct ref_format *format,
                     struct ref_array  *array)
 {
     struct commit         **bases;
-    size_t                  bases_nr = 0;
+    size_t                  bases_nr = 0, is_base_nr;
     struct ref_array_item **back_index;
 
-    if (!format->is_base_tips.nr || !array->nr)
+    if (!array->nr)
+        return;
+
+    for (size_t i = is_base_nr = 0; i < used_atom_cnt; i++)
+    {
+        if (used_atom[i].atom_type == ATOM_ISBASE)
+            is_base_nr++;
+    }
+    if (!is_base_nr)
         return;
 
     CALLOC_ARRAY(back_index, array->nr);
@@ -3968,7 +3981,7 @@ void filter_is_base(struct repository *r,
         const char    *name = array->items[i]->refname;
         struct commit *c    = lookup_commit_reference_by_name_gently(name, 1);
 
-        CALLOC_ARRAY(array->items[i]->is_base, format->is_base_tips.nr);
+        CALLOC_ARRAY(array->items[i]->is_base, is_base_nr);
 
         if (!c)
             continue;
@@ -3978,16 +3991,21 @@ void filter_is_base(struct repository *r,
         bases_nr++;
     }
 
-    for (size_t i = 0; i < format->is_base_tips.nr; i++)
+    for (size_t i = 0, j = 0; i < used_atom_cnt; i++)
     {
-        struct commit *tip        = format->is_base_tips.items[i].util;
-        int            base_index = get_branch_base_for_tip(r, tip, bases, bases_nr);
+        struct commit *tip;
+        int            base_index;
 
+        if (used_atom[i].atom_type != ATOM_ISBASE)
+            continue;
+
+        tip        = used_atom[i].u.base.commit;
+        base_index = get_branch_base_for_tip(r, tip, bases, bases_nr);
         if (base_index < 0)
             continue;
 
         /* Store the string for use in output later. */
-        back_index[base_index]->is_base[i] = xstrdup(format->is_base_tips.items[i].string);
+        back_index[base_index]->is_base[j++] = xstrdup(used_atom[i].u.base.name);
     }
 
     free(back_index);
@@ -4092,8 +4110,7 @@ struct ref_sorting
 };
 
 static inline int can_do_iterative_format(struct ref_filter  *filter,
-                                          struct ref_sorting *sorting,
-                                          struct ref_format  *format)
+                                          struct ref_sorting *sorting)
 {
     /*
      * Reference backends sort patterns lexicographically by refname, so if
@@ -4115,14 +4132,21 @@ static inline int can_do_iterative_format(struct ref_filter  *filter,
      * - filtering on reachability
      * - including ahead-behind information in the formatted output
      */
-    return !(filter->reachable_from || filter->unreachable_from || format->bases.nr || format->is_base_tips.nr);
+    for (size_t i = 0; i < used_atom_cnt; i++)
+    {
+        if (used_atom[i].atom_type == ATOM_AHEADBEHIND)
+            return 0;
+        if (used_atom[i].atom_type == ATOM_ISBASE)
+            return 0;
+    }
+    return !(filter->reachable_from || filter->unreachable_from);
 }
 
 void filter_and_format_refs(struct ref_filter *filter, unsigned int type,
                             struct ref_sorting *sorting,
                             struct ref_format  *format)
 {
-    if (can_do_iterative_format(filter, sorting, format))
+    if (can_do_iterative_format(filter, sorting))
     {
         int                                 save_commit_buffer_orig;
         struct ref_filter_and_format_cbdata ref_cbdata = {
@@ -4139,10 +4163,10 @@ void filter_and_format_refs(struct ref_filter *filter, unsigned int type,
     }
     else
     {
-        struct ref_array array = {0};
+        struct ref_array array = { 0 };
         filter_refs(&array, filter, type);
-        filter_ahead_behind(the_repository, format, &array);
-        filter_is_base(the_repository, format, &array);
+        filter_ahead_behind(the_repository, &array);
+        filter_is_base(the_repository, &array);
         ref_array_sort(sorting, &array);
         print_formatted_ref_array(&array, format);
         ref_array_clear(&array);
@@ -4487,7 +4511,7 @@ struct ref_sorting *ref_sorting_options(struct string_list *options)
 
     if (options->nr)
     {
-        for_each_string_list_item(item, options)
+        for_each_string_list_item (item, options)
             parse_ref_sorting(tail, item->string);
     }
 
@@ -4557,17 +4581,4 @@ void ref_filter_clear(struct ref_filter *filter)
     free_commit_list(filter->reachable_from);
     free_commit_list(filter->unreachable_from);
     ref_filter_init(filter);
-}
-
-void ref_format_init(struct ref_format *format)
-{
-    struct ref_format blank = REF_FORMAT_INIT;
-    memcpy(format, &blank, sizeof(blank));
-}
-
-void ref_format_clear(struct ref_format *format)
-{
-    string_list_clear(&format->bases, 0);
-    string_list_clear(&format->is_base_tips, 0);
-    ref_format_init(format);
 }

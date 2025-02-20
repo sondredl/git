@@ -117,8 +117,8 @@ char *get_remote_object_url(const char *url, const char *hex,
 /* Options for http_get_*() */
 struct http_get_options
 {
-    unsigned no_cache : 1,
-        initial_request : 1;
+    unsigned no_cache:1,
+        initial_request:1;
 
     /* If non-NULL, returns the content-type of the response. */
     struct strbuf *content_type;
@@ -199,7 +199,7 @@ struct http_pack_request
      * If NULL, defaults to	{"index-pack", "--stdin", NULL}.
      */
     const char **index_pack_args;
-    unsigned     preserve_index_pack_stdout : 1;
+    unsigned     preserve_index_pack_stdout:1;
 
     FILE                       *packfile;
     struct strbuf               tmpfile;
@@ -234,7 +234,7 @@ struct http_object_request
     long                        http_code;
     struct object_id            oid;
     struct object_id            real_oid;
-    git_hash_ctx                c;
+    struct git_hash_ctx         c;
     git_zstream                 stream;
     int                         zret;
     int                         rename;

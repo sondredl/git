@@ -41,8 +41,11 @@ static int   run_update_server_info = 1;
 static char *packdir, *packtmp_name, *packtmp;
 
 static const char *const git_repack_usage[] = {
-    N_("git repack [<options>]"),
-    NULL};
+    N_("git repack [-a] [-A] [-d] [-f] [-F] [-l] [-n] [-q] [-b] [-m]\n"
+       "[--window=<n>] [--depth=<n>] [--threads=<n>] [--keep-pack=<pack-name>]\n"
+       "[--write-midx] [--name-hash-version=<n>]"),
+    NULL
+};
 
 static const char incremental_bitmap_conflict_error[] = N_(
     "Incremental repacks are incompatible with bitmap indexes.  Use\n"
@@ -59,6 +62,7 @@ struct pack_objects_args
     int                                no_reuse_object;
     int                                quiet;
     int                                local;
+    int                                name_hash_version;
     struct list_objects_filter_options filter_options;
 };
 
@@ -130,12 +134,12 @@ struct existing_packs
     struct string_list cruft_packs;
 };
 
-#define EXISTING_PACKS_INIT                     \
-    {                                           \
-        .kept_packs     = STRING_LIST_INIT_DUP, \
-        .non_kept_packs = STRING_LIST_INIT_DUP, \
-        .cruft_packs    = STRING_LIST_INIT_DUP, \
-    }
+#define EXISTING_PACKS_INIT               \
+ {                                        \
+  .kept_packs     = STRING_LIST_INIT_DUP, \
+  .non_kept_packs = STRING_LIST_INIT_DUP, \
+  .cruft_packs    = STRING_LIST_INIT_DUP, \
+ }
 
 static int has_existing_non_kept_packs(const struct existing_packs *existing)
 {
@@ -173,7 +177,7 @@ static void mark_packs_for_deletion_1(struct string_list *names,
     struct string_list_item *item;
     const int                hexsz = the_hash_algo->hexsz;
 
-    for_each_string_list_item(item, list)
+    for_each_string_list_item (item, list)
     {
         char  *sha1;
         size_t len = strlen(item->string);
@@ -245,7 +249,7 @@ static void remove_redundant_pack(const char *dir_name, const char *base_name)
 static void remove_redundant_packs_1(struct string_list *packs)
 {
     struct string_list_item *item;
-    for_each_string_list_item(item, packs)
+    for_each_string_list_item (item, packs)
     {
         if (!pack_is_marked_for_deletion(item))
         {
@@ -330,45 +334,27 @@ static void prepare_pack_objects(struct child_process           *cmd,
 {
     strvec_push(&cmd->args, "pack-objects");
     if (args->window)
-    {
         strvec_pushf(&cmd->args, "--window=%s", args->window);
-    }
     if (args->window_memory)
-    {
         strvec_pushf(&cmd->args, "--window-memory=%s", args->window_memory);
-    }
     if (args->depth)
-    {
         strvec_pushf(&cmd->args, "--depth=%s", args->depth);
-    }
     if (args->threads)
-    {
         strvec_pushf(&cmd->args, "--threads=%s", args->threads);
-    }
     if (args->max_pack_size)
-    {
         strvec_pushf(&cmd->args, "--max-pack-size=%lu", args->max_pack_size);
-    }
     if (args->no_reuse_delta)
-    {
         strvec_pushf(&cmd->args, "--no-reuse-delta");
-    }
     if (args->no_reuse_object)
-    {
         strvec_pushf(&cmd->args, "--no-reuse-object");
-    }
+    if (args->name_hash_version)
+        strvec_pushf(&cmd->args, "--name-hash-version=%d", args->name_hash_version);
     if (args->local)
-    {
         strvec_push(&cmd->args, "--local");
-    }
     if (args->quiet)
-    {
         strvec_push(&cmd->args, "--quiet");
-    }
     if (delta_base_offset)
-    {
         strvec_push(&cmd->args, "--delta-base-offset");
-    }
     strvec_push(&cmd->args, out);
     cmd->git_cmd = 1;
     cmd->out     = -1;
@@ -402,14 +388,14 @@ static int write_oid(const struct object_id *oid,
 static struct
 {
     const char *name;
-    unsigned    optional : 1;
+    unsigned    optional:1;
 } exts[] = {
-    {".pack"},
-    {".rev", 1},
-    {".mtimes", 1},
-    {".bitmap", 1},
-    {".promisor", 1},
-    {".idx"},
+    { ".pack" },
+    { ".rev", 1 },
+    { ".mtimes", 1 },
+    { ".bitmap", 1 },
+    { ".promisor", 1 },
+    { ".idx" },
 };
 
 struct generated_pack_data
@@ -466,15 +452,15 @@ static void repack_promisor_objects(const struct pack_objects_args *args,
     prepare_pack_objects(&cmd, args, packtmp);
     cmd.in = -1;
 
-	/*
-	 * NEEDSWORK: Giving pack-objects only the OIDs without any ordering
-	 * hints may result in suboptimal deltas in the resulting pack. See if
-	 * the OIDs can be sent with fake paths such that pack-objects can use a
-	 * {type -> existing pack order} ordering when computing deltas instead
-	 * of a {type -> size} ordering, which may produce better deltas.
-	 */
-	for_each_packed_object(the_repository, write_oid, &cmd,
-			       FOR_EACH_OBJECT_PROMISOR_ONLY);
+    /*
+     * NEEDSWORK: Giving pack-objects only the OIDs without any ordering
+     * hints may result in suboptimal deltas in the resulting pack. See if
+     * the OIDs can be sent with fake paths such that pack-objects can use a
+     * {type -> existing pack order} ordering when computing deltas instead
+     * of a {type -> size} ordering, which may produce better deltas.
+     */
+    for_each_packed_object(the_repository, write_oid, &cmd,
+                           FOR_EACH_OBJECT_PROMISOR_ONLY);
 
     if (cmd.in == -1)
     {
@@ -856,7 +842,7 @@ static void midx_snapshot_refs(struct tempfile *f)
         struct string_list_item *item;
 
         data.preferred = 1;
-        for_each_string_list_item(item, preferred)
+        for_each_string_list_item (item, preferred)
             refs_for_each_ref_in(get_main_ref_store(the_repository),
                                  item->string,
                                  midx_snapshot_ref_one, &data);
@@ -885,14 +871,14 @@ static void midx_included_packs(struct string_list    *include,
     struct string_list_item *item;
     struct strbuf            buf = STRBUF_INIT;
 
-    for_each_string_list_item(item, &existing->kept_packs)
+    for_each_string_list_item (item, &existing->kept_packs)
     {
         strbuf_reset(&buf);
         strbuf_addf(&buf, "%s.idx", item->string);
         string_list_insert(include, buf.buf);
     }
 
-    for_each_string_list_item(item, names)
+    for_each_string_list_item (item, names)
     {
         strbuf_reset(&buf);
         strbuf_addf(&buf, "pack-%s.idx", item->string);
@@ -930,7 +916,7 @@ static void midx_included_packs(struct string_list    *include,
     }
     else
     {
-        for_each_string_list_item(item, &existing->non_kept_packs)
+        for_each_string_list_item (item, &existing->non_kept_packs)
         {
             if (pack_is_marked_for_deletion(item))
                 continue;
@@ -941,7 +927,7 @@ static void midx_included_packs(struct string_list    *include,
         }
     }
 
-    for_each_string_list_item(item, &existing->cruft_packs)
+    for_each_string_list_item (item, &existing->cruft_packs)
     {
         /*
          * When doing a --geometric repack, there is no need to check
@@ -1023,7 +1009,7 @@ static int write_midx_included_packs(struct string_list   *include,
          * `--max-pack-size` was given, but any one of them
          * will suffice, so pick the first one.)
          */
-        for_each_string_list_item(item, names)
+        for_each_string_list_item (item, names)
         {
             struct generated_pack_data *data = item->util;
             if (has_pack_ext(data, ".mtimes"))
@@ -1060,7 +1046,7 @@ static int write_midx_included_packs(struct string_list   *include,
     }
 
     in = xfdopen(cmd.in, "w");
-    for_each_string_list_item(item, include)
+    for_each_string_list_item (item, include)
         fprintf(in, "%s\n", item->string);
     fclose(in);
 
@@ -1082,7 +1068,7 @@ static void remove_redundant_bitmaps(struct string_list *include,
      * Remove any pack bitmaps corresponding to packs which are now
      * included in the MIDX.
      */
-    for_each_string_list_item(item, include)
+    for_each_string_list_item (item, include)
     {
         strbuf_addstr(&path, item->string);
         strbuf_strip_suffix(&path, ".idx");
@@ -1156,7 +1142,7 @@ static int write_filtered_pack(const struct pack_objects_args *args,
     {
         strvec_push(&cmd.args, "--honor-pack-keep");
     }
-    for_each_string_list_item(item, &existing->kept_packs)
+    for_each_string_list_item (item, &existing->kept_packs)
         strvec_pushf(&cmd.args, "--keep-pack=%s", item->string);
 
     cmd.in = -1;
@@ -1174,14 +1160,14 @@ static int write_filtered_pack(const struct pack_objects_args *args,
      * 'keep_pack_list'.
      */
     in = xfdopen(cmd.in, "w");
-    for_each_string_list_item(item, names)
+    for_each_string_list_item (item, names)
         fprintf(in, "^%s-%s.pack\n", pack_prefix, item->string);
-    for_each_string_list_item(item, &existing->non_kept_packs)
+    for_each_string_list_item (item, &existing->non_kept_packs)
         fprintf(in, "%s.pack\n", item->string);
-    for_each_string_list_item(item, &existing->cruft_packs)
+    for_each_string_list_item (item, &existing->cruft_packs)
         fprintf(in, "%s.pack\n", item->string);
     caret = pack_kept_objects ? "" : "^";
-    for_each_string_list_item(item, &existing->kept_packs)
+    for_each_string_list_item (item, &existing->kept_packs)
         fprintf(in, "%s%s.pack\n", caret, item->string);
     fclose(in);
 
@@ -1322,7 +1308,7 @@ static int write_cruft_pack(const struct pack_objects_args *args,
      * objects contained in the cruft pack.
      */
     in = xfdopen(cmd.in, "w");
-    for_each_string_list_item(item, names)
+    for_each_string_list_item (item, names)
         fprintf(in, "%s-%s.pack\n", pack_prefix, item->string);
     if (args->max_pack_size && !cruft_expiration)
     {
@@ -1330,12 +1316,12 @@ static int write_cruft_pack(const struct pack_objects_args *args,
     }
     else
     {
-        for_each_string_list_item(item, &existing->non_kept_packs)
+        for_each_string_list_item (item, &existing->non_kept_packs)
             fprintf(in, "-%s.pack\n", item->string);
-        for_each_string_list_item(item, &existing->cruft_packs)
+        for_each_string_list_item (item, &existing->cruft_packs)
             fprintf(in, "-%s.pack\n", item->string);
     }
-    for_each_string_list_item(item, &existing->kept_packs)
+    for_each_string_list_item (item, &existing->kept_packs)
         fprintf(in, "%s.pack\n", item->string);
     fclose(in);
 
@@ -1366,7 +1352,7 @@ int cmd_repack(int                     argc,
     struct string_list_item *item;
     struct string_list       names         = STRING_LIST_INIT_DUP;
     struct existing_packs    existing      = EXISTING_PACKS_INIT;
-    struct pack_geometry     geometry      = {0};
+    struct pack_geometry     geometry      = { 0 };
     struct tempfile         *refs_snapshot = NULL;
     int                      i;
     int                      ext;
@@ -1378,8 +1364,8 @@ int cmd_repack(int                     argc,
     const char              *unpack_unreachable = NULL;
     int                      keep_unreachable   = 0;
     struct string_list       keep_pack_list     = STRING_LIST_INIT_NODUP;
-    struct pack_objects_args po_args            = {0};
-    struct pack_objects_args cruft_po_args      = {0};
+    struct pack_objects_args po_args            = { 0 };
+    struct pack_objects_args cruft_po_args      = { 0 };
     int                      write_midx         = 0;
     const char              *cruft_expiration   = NULL;
     const char              *expire_to          = NULL;
@@ -1408,6 +1394,8 @@ int cmd_repack(int                     argc,
                  N_("pass --no-reuse-delta to git-pack-objects")),
         OPT_BOOL('F', NULL, &po_args.no_reuse_object,
                  N_("pass --no-reuse-object to git-pack-objects")),
+        OPT_INTEGER(0, "name-hash-version", &po_args.name_hash_version,
+                    N_("specify the name hash version to use for grouping similar objects by path")),
         OPT_NEGBIT('n', NULL, &run_update_server_info,
                    N_("do not run git-update-server-info"), 1),
         OPT__QUIET(&po_args.quiet, N_("be quiet")),
@@ -1444,7 +1432,8 @@ int cmd_repack(int                     argc,
                    N_("pack prefix to store a pack containing pruned objects")),
         OPT_STRING(0, "filter-to", &filter_to, N_("dir"),
                    N_("pack prefix to store a pack containing filtered out objects")),
-        OPT_END()};
+        OPT_END()
+    };
 
     list_objects_filter_init(&po_args.filter_options);
 
@@ -1586,7 +1575,7 @@ int cmd_repack(int                     argc,
 
         if (has_existing_non_kept_packs(&existing) && delete_redundant && !(pack_everything & PACK_CRUFT))
         {
-            for_each_string_list_item(item, &names)
+            for_each_string_list_item (item, &names)
             {
                 strvec_pushf(&cmd.args, "--keep-pack=%s-%s.pack",
                              packtmp_name, item->string);
@@ -1605,9 +1594,11 @@ int cmd_repack(int                     argc,
             else if (keep_unreachable)
             {
                 strvec_push(&cmd.args, "--keep-unreachable");
-                strvec_push(&cmd.args, "--pack-loose-unreachable");
             }
         }
+
+        if (keep_unreachable && delete_redundant && !(pack_everything & PACK_CRUFT))
+            strvec_push(&cmd.args, "--pack-loose-unreachable");
     }
     else if (geometry.split_factor)
     {
@@ -1762,7 +1753,7 @@ int cmd_repack(int                     argc,
     /*
      * Ok we have prepared all new packfiles.
      */
-    for_each_string_list_item(item, &names)
+    for_each_string_list_item (item, &names)
     {
         struct generated_pack_data *data = item->util;
 
@@ -1855,16 +1846,17 @@ int cmd_repack(int                     argc,
         }
     }
 
-	if (run_update_server_info)
-		update_server_info(the_repository, 0);
+    if (run_update_server_info)
+        update_server_info(the_repository, 0);
 
-	if (git_env_bool(GIT_TEST_MULTI_PACK_INDEX, 0)) {
-		unsigned flags = 0;
-		if (git_env_bool(GIT_TEST_MULTI_PACK_INDEX_WRITE_INCREMENTAL, 0))
-			flags |= MIDX_WRITE_INCREMENTAL;
-		write_midx_file(the_repository, repo_get_object_directory(the_repository),
-				NULL, NULL, flags);
-	}
+    if (git_env_bool(GIT_TEST_MULTI_PACK_INDEX, 0))
+    {
+        unsigned flags = 0;
+        if (git_env_bool(GIT_TEST_MULTI_PACK_INDEX_WRITE_INCREMENTAL, 0))
+            flags |= MIDX_WRITE_INCREMENTAL;
+        write_midx_file(the_repository, repo_get_object_directory(the_repository),
+                        NULL, NULL, flags);
+    }
 
 cleanup:
     string_list_clear(&keep_pack_list, 0);

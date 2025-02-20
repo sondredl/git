@@ -20,7 +20,7 @@
 #include "repository.h"
 
 #ifndef NO_CURL
-    #include "git-curl-compat.h" /* For LIBCURL_VERSION only */
+ #include "git-curl-compat.h" /* For LIBCURL_VERSION only */
 #endif
 
 struct category_description
@@ -31,24 +31,26 @@ struct category_description
 static uint32_t common_mask =
     CAT_init | CAT_worktree | CAT_info | CAT_history | CAT_remote;
 static struct category_description common_categories[] = {
-    {CAT_init, N_("start a working area (see also: git help tutorial)")},
-    {CAT_worktree, N_("work on the current change (see also: git help everyday)")},
-    {CAT_info, N_("examine the history and state (see also: git help revisions)")},
-    {CAT_history, N_("grow, mark and tweak your common history")},
-    {CAT_remote, N_("collaborate (see also: git help workflows)")},
-    {0, NULL}};
+    { CAT_init, N_("start a working area (see also: git help tutorial)") },
+    { CAT_worktree, N_("work on the current change (see also: git help everyday)") },
+    { CAT_info, N_("examine the history and state (see also: git help revisions)") },
+    { CAT_history, N_("grow, mark and tweak your common history") },
+    { CAT_remote, N_("collaborate (see also: git help workflows)") },
+    { 0, NULL }
+};
 static struct category_description main_categories[] = {
-    {CAT_mainporcelain, N_("Main Porcelain Commands")},
-    {CAT_ancillarymanipulators, N_("Ancillary Commands / Manipulators")},
-    {CAT_ancillaryinterrogators, N_("Ancillary Commands / Interrogators")},
-    {CAT_foreignscminterface, N_("Interacting with Others")},
-    {CAT_plumbingmanipulators, N_("Low-level Commands / Manipulators")},
-    {CAT_plumbinginterrogators, N_("Low-level Commands / Interrogators")},
-    {CAT_synchingrepositories, N_("Low-level Commands / Syncing Repositories")},
-    {CAT_purehelpers, N_("Low-level Commands / Internal Helpers")},
-    {CAT_userinterfaces, N_("User-facing repository, command and file interfaces")},
-    {CAT_developerinterfaces, N_("Developer-facing file formats, protocols and other interfaces")},
-    {0, NULL}};
+    { CAT_mainporcelain, N_("Main Porcelain Commands") },
+    { CAT_ancillarymanipulators, N_("Ancillary Commands / Manipulators") },
+    { CAT_ancillaryinterrogators, N_("Ancillary Commands / Interrogators") },
+    { CAT_foreignscminterface, N_("Interacting with Others") },
+    { CAT_plumbingmanipulators, N_("Low-level Commands / Manipulators") },
+    { CAT_plumbinginterrogators, N_("Low-level Commands / Interrogators") },
+    { CAT_synchingrepositories, N_("Low-level Commands / Syncing Repositories") },
+    { CAT_purehelpers, N_("Low-level Commands / Internal Helpers") },
+    { CAT_userinterfaces, N_("User-facing repository, command and file interfaces") },
+    { CAT_developerinterfaces, N_("Developer-facing file formats, protocols and other interfaces") },
+    { 0, NULL }
+};
 
 static const char *drop_prefix(const char *name, uint32_t category)
 {
@@ -532,8 +534,9 @@ void list_cmds_by_config(struct string_list *list)
 void list_guides_help(void)
 {
     struct category_description catdesc[] = {
-        {CAT_guide, N_("The Git concept guides are:")},
-        {0, NULL}};
+        { CAT_guide, N_("The Git concept guides are:") },
+        { 0, NULL }
+    };
     print_cmd_by_category(catdesc, NULL);
     putchar('\n');
 }
@@ -541,8 +544,9 @@ void list_guides_help(void)
 void list_user_interfaces_help(void)
 {
     struct category_description catdesc[] = {
-        {CAT_userinterfaces, N_("User-facing repository, command and file interfaces:")},
-        {0, NULL}};
+        { CAT_userinterfaces, N_("User-facing repository, command and file interfaces:") },
+        { 0, NULL }
+    };
     print_cmd_by_category(catdesc, NULL);
     putchar('\n');
 }
@@ -550,8 +554,9 @@ void list_user_interfaces_help(void)
 void list_developer_interfaces_help(void)
 {
     struct category_description catdesc[] = {
-        {CAT_developerinterfaces, N_("File formats, protocols and other developer interfaces:")},
-        {0, NULL}};
+        { CAT_developerinterfaces, N_("File formats, protocols and other developer interfaces:") },
+        { 0, NULL }
+    };
     print_cmd_by_category(catdesc, NULL);
     putchar('\n');
 }
@@ -656,40 +661,65 @@ int is_in_cmdlist(struct cmdnames *c, const char *s)
     return 0;
 }
 
-struct help_unknown_cmd_config {
-	int autocorrect;
-	struct cmdnames aliases;
+struct help_unknown_cmd_config
+{
+    int             autocorrect;
+    struct cmdnames aliases;
 };
 
+#define AUTOCORRECT_SHOW        (-4)
 #define AUTOCORRECT_PROMPT      (-3)
 #define AUTOCORRECT_NEVER       (-2)
 #define AUTOCORRECT_IMMEDIATELY (-1)
 
-static int git_unknown_cmd_config(const char *var, const char *value,
-				  const struct config_context *ctx,
-				  void *cb)
+static int parse_autocorrect(const char *value)
 {
-	struct help_unknown_cmd_config *cfg = cb;
-	const char *p;
+    switch (git_parse_maybe_bool_text(value))
+    {
+        case 1:
+            return AUTOCORRECT_IMMEDIATELY;
+        case 0:
+            return AUTOCORRECT_SHOW;
+        default: /* other random text */
+            break;
+    }
 
-	if (!strcmp(var, "help.autocorrect")) {
-		if (!value)
-			return config_error_nonbool(var);
-		if (!strcmp(value, "never")) {
-			cfg->autocorrect = AUTOCORRECT_NEVER;
-		} else if (!strcmp(value, "immediate")) {
-			cfg->autocorrect = AUTOCORRECT_IMMEDIATELY;
-		} else if (!strcmp(value, "prompt")) {
-			cfg->autocorrect = AUTOCORRECT_PROMPT;
-		} else {
-			int v = git_config_int(var, value, ctx->kvi);
-			cfg->autocorrect = (v < 0)
-				? AUTOCORRECT_IMMEDIATELY : v;
-		}
-	}
-	/* Also use aliases for command lookup */
-	if (skip_prefix(var, "alias.", &p))
-		add_cmdname(&cfg->aliases, p, strlen(p));
+    if (!strcmp(value, "prompt"))
+        return AUTOCORRECT_PROMPT;
+    if (!strcmp(value, "never"))
+        return AUTOCORRECT_NEVER;
+    if (!strcmp(value, "immediate"))
+        return AUTOCORRECT_IMMEDIATELY;
+    if (!strcmp(value, "show"))
+        return AUTOCORRECT_SHOW;
+
+    return 0;
+}
+
+static int git_unknown_cmd_config(const char *var, const char *value,
+                                  const struct config_context *ctx,
+                                  void                        *cb)
+{
+    struct help_unknown_cmd_config *cfg = cb;
+    const char                     *p;
+
+    if (!strcmp(var, "help.autocorrect"))
+    {
+        int v = parse_autocorrect(value);
+
+        if (!v)
+        {
+            v = git_config_int(var, value, ctx->kvi);
+            if (v < 0 || v == 1)
+                v = AUTOCORRECT_IMMEDIATELY;
+        }
+
+        cfg->autocorrect = v;
+    }
+
+    /* Also use aliases for command lookup */
+    if (skip_prefix(var, "alias.", &p))
+        add_cmdname(&cfg->aliases, p, strlen(p));
 
     return 0;
 }
@@ -728,31 +758,32 @@ static const char bad_interpreter_advice[] =
 
 char *help_unknown_cmd(const char *cmd)
 {
-	struct help_unknown_cmd_config cfg = { 0 };
-	int i, n, best_similarity = 0;
-	struct cmdnames main_cmds = { 0 };
-	struct cmdnames other_cmds = { 0 };
-	struct cmdname_help *common_cmds;
+    struct help_unknown_cmd_config cfg = { 0 };
+    int                            i, n, best_similarity = 0;
+    struct cmdnames                main_cmds  = { 0 };
+    struct cmdnames                other_cmds = { 0 };
+    struct cmdname_help           *common_cmds;
 
-	read_early_config(the_repository, git_unknown_cmd_config, &cfg);
+    read_early_config(the_repository, git_unknown_cmd_config, &cfg);
 
-	/*
-	 * Disable autocorrection prompt in a non-interactive session
-	 */
-	if ((cfg.autocorrect == AUTOCORRECT_PROMPT) && (!isatty(0) || !isatty(2)))
-		cfg.autocorrect = AUTOCORRECT_NEVER;
+    /*
+     * Disable autocorrection prompt in a non-interactive session
+     */
+    if ((cfg.autocorrect == AUTOCORRECT_PROMPT) && (!isatty(0) || !isatty(2)))
+        cfg.autocorrect = AUTOCORRECT_NEVER;
 
-	if (cfg.autocorrect == AUTOCORRECT_NEVER) {
-		fprintf_ln(stderr, _("git: '%s' is not a git command. See 'git --help'."), cmd);
-		exit(1);
-	}
+    if (cfg.autocorrect == AUTOCORRECT_NEVER)
+    {
+        fprintf_ln(stderr, _("git: '%s' is not a git command. See 'git --help'."), cmd);
+        exit(1);
+    }
 
     load_command_list("git-", &main_cmds, &other_cmds);
 
-	add_cmd_list(&main_cmds, &cfg.aliases);
-	add_cmd_list(&main_cmds, &other_cmds);
-	QSORT(main_cmds.names, main_cmds.cnt, cmdname_compare);
-	uniq(&main_cmds);
+    add_cmd_list(&main_cmds, &cfg.aliases);
+    add_cmd_list(&main_cmds, &other_cmds);
+    QSORT(main_cmds.names, main_cmds.cnt, cmdname_compare);
+    uniq(&main_cmds);
 
     extract_cmds(&common_cmds, common_mask);
 
@@ -807,51 +838,56 @@ char *help_unknown_cmd(const char *cmd)
         ; /* still counting */
     }
 
-	if (main_cmds.cnt <= n) {
-		/* prefix matches with everything? that is too ambiguous */
-		best_similarity = SIMILARITY_FLOOR + 1;
-	} else {
-		/* count all the most similar ones */
-		for (best_similarity = main_cmds.names[n++]->len;
-		     (n < main_cmds.cnt &&
-		      best_similarity == main_cmds.names[n]->len);
-		     n++)
-			; /* still counting */
-	}
-	if (cfg.autocorrect && n == 1 && SIMILAR_ENOUGH(best_similarity)) {
-		char *assumed = xstrdup(main_cmds.names[0]->name);
+    if (main_cmds.cnt <= n)
+    {
+        /* prefix matches with everything? that is too ambiguous */
+        best_similarity = SIMILARITY_FLOOR + 1;
+    }
+    else
+    {
+        /* count all the most similar ones */
+        for (best_similarity = main_cmds.names[n++]->len;
+             (n < main_cmds.cnt && best_similarity == main_cmds.names[n]->len);
+             n++)
+            ; /* still counting */
+    }
+    if (cfg.autocorrect && cfg.autocorrect != AUTOCORRECT_SHOW && n == 1 && SIMILAR_ENOUGH(best_similarity))
+    {
+        char *assumed = xstrdup(main_cmds.names[0]->name);
 
-		fprintf_ln(stderr,
-			   _("WARNING: You called a Git command named '%s', "
-			     "which does not exist."),
-			   cmd);
-		if (cfg.autocorrect == AUTOCORRECT_IMMEDIATELY)
-			fprintf_ln(stderr,
-				   _("Continuing under the assumption that "
-				     "you meant '%s'."),
-				   assumed);
-		else if (cfg.autocorrect == AUTOCORRECT_PROMPT) {
-			char *answer;
-			struct strbuf msg = STRBUF_INIT;
-			strbuf_addf(&msg, _("Run '%s' instead [y/N]? "), assumed);
-			answer = git_prompt(msg.buf, PROMPT_ECHO);
-			strbuf_release(&msg);
-			if (!(starts_with(answer, "y") ||
-			      starts_with(answer, "Y")))
-				exit(1);
-		} else {
-			fprintf_ln(stderr,
-				   _("Continuing in %0.1f seconds, "
-				     "assuming that you meant '%s'."),
-				   (float)cfg.autocorrect/10.0, assumed);
-			sleep_millisec(cfg.autocorrect * 100);
-		}
+        fprintf_ln(stderr,
+                   _("WARNING: You called a Git command named '%s', "
+                     "which does not exist."),
+                   cmd);
+        if (cfg.autocorrect == AUTOCORRECT_IMMEDIATELY)
+            fprintf_ln(stderr,
+                       _("Continuing under the assumption that "
+                         "you meant '%s'."),
+                       assumed);
+        else if (cfg.autocorrect == AUTOCORRECT_PROMPT)
+        {
+            char         *answer;
+            struct strbuf msg = STRBUF_INIT;
+            strbuf_addf(&msg, _("Run '%s' instead [y/N]? "), assumed);
+            answer = git_prompt(msg.buf, PROMPT_ECHO);
+            strbuf_release(&msg);
+            if (!(starts_with(answer, "y") || starts_with(answer, "Y")))
+                exit(1);
+        }
+        else
+        {
+            fprintf_ln(stderr,
+                       _("Continuing in %0.1f seconds, "
+                         "assuming that you meant '%s'."),
+                       (float)cfg.autocorrect / 10.0, assumed);
+            sleep_millisec(cfg.autocorrect * 100);
+        }
 
-		cmdnames_release(&cfg.aliases);
-		cmdnames_release(&main_cmds);
-		cmdnames_release(&other_cmds);
-		return assumed;
-	}
+        cmdnames_release(&cfg.aliases);
+        cmdnames_release(&main_cmds);
+        cmdnames_release(&other_cmds);
+        return assumed;
+    }
 
     fprintf_ln(stderr, _("git: '%s' is not a git command. See 'git --help'."), cmd);
 
@@ -920,11 +956,13 @@ int cmd_version(int argc, const char **argv, const char *prefix, struct reposito
     int               build_options = 0;
     const char *const usage[]       = {
               N_("git version [--build-options]"),
-              NULL};
+              NULL
+    };
     struct option options[] = {
         OPT_BOOL(0, "build-options", &build_options,
                  "also print build options"),
-        OPT_END()};
+        OPT_END()
+    };
 
     argc = parse_options(argc, argv, prefix, options, usage, 0);
 

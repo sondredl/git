@@ -73,10 +73,10 @@ struct ref_filter
     struct commit_list *reachable_from;
     struct commit_list *unreachable_from;
 
-    unsigned int with_commit_tag_algo : 1,
-        match_as_path : 1,
-        ignore_case : 1,
-        detached : 1;
+    unsigned int with_commit_tag_algo:1,
+        match_as_path:1,
+        ignore_case:1,
+        detached:1;
     unsigned int kind,
         lines;
     int abbrev,
@@ -103,12 +103,6 @@ struct ref_format
     /* Internal state to ref-filter */
     int need_color_reset_at_eol;
 
-    /* List of bases for ahead-behind counts. */
-    struct string_list bases;
-
-    /* List of bases for is-base indicators. */
-    struct string_list is_base_tips;
-
     struct
     {
         int max_count;
@@ -116,34 +110,32 @@ struct ref_format
     } array_opts;
 };
 
-#define REF_FILTER_INIT              \
-    {                                \
-        .points_at = OID_ARRAY_INIT, \
-        .exclude   = STRVEC_INIT,    \
-    }
-#define REF_FORMAT_INIT                       \
-    {                                         \
-        .use_color    = -1,                   \
-        .bases        = STRING_LIST_INIT_DUP, \
-        .is_base_tips = STRING_LIST_INIT_DUP, \
-    }
+#define REF_FILTER_INIT        \
+ {                             \
+  .points_at = OID_ARRAY_INIT, \
+  .exclude   = STRVEC_INIT,    \
+ }
+#define REF_FORMAT_INIT \
+ {                      \
+  .use_color = -1,      \
+ }
 
 /*  Macros for checking --merged and --no-merged options */
-#define _OPT_MERGED_NO_MERGED(option, filter, h)                 \
-    {                                                            \
-        OPTION_CALLBACK, 0, option, (filter), N_("commit"), (h), \
-            PARSE_OPT_LASTARG_DEFAULT | PARSE_OPT_NONEG,         \
-            parse_opt_merge_filter, (intptr_t) "HEAD"            \
-    }
+#define _OPT_MERGED_NO_MERGED(option, filter, h)           \
+ {                                                         \
+  OPTION_CALLBACK, 0, option, (filter), N_("commit"), (h), \
+      PARSE_OPT_LASTARG_DEFAULT | PARSE_OPT_NONEG,         \
+      parse_opt_merge_filter, (intptr_t) "HEAD"            \
+ }
 #define OPT_MERGED(f, h)    _OPT_MERGED_NO_MERGED("merged", f, h)
 #define OPT_NO_MERGED(f, h) _OPT_MERGED_NO_MERGED("no-merged", f, h)
 
-#define OPT_REF_SORT(var)             \
-    OPT_STRING_LIST(0, "sort", (var), \
-                    N_("key"), N_("field name to sort on"))
-#define OPT_REF_FILTER_EXCLUDE(var)           \
-    OPT_STRVEC(0, "exclude", &(var)->exclude, \
-               N_("pattern"), N_("exclude refs which match pattern"))
+#define OPT_REF_SORT(var)          \
+ OPT_STRING_LIST(0, "sort", (var), \
+                 N_("key"), N_("field name to sort on"))
+#define OPT_REF_FILTER_EXCLUDE(var)        \
+ OPT_STRVEC(0, "exclude", &(var)->exclude, \
+            N_("pattern"), N_("exclude refs which match pattern"))
 
 /*
  * API for filtering a set of refs. Based on the type of refs the user
@@ -213,7 +205,6 @@ struct ref_array_item *ref_array_push(struct ref_array       *array,
  * If this is not called, then any ahead-behind atoms will be blank.
  */
 void filter_ahead_behind(struct repository *r,
-                         struct ref_format *format,
                          struct ref_array  *array);
 
 /*
@@ -223,13 +214,9 @@ void filter_ahead_behind(struct repository *r,
  * If this is not called, then any is-base atoms will be blank.
  */
 void filter_is_base(struct repository *r,
-                    struct ref_format *format,
                     struct ref_array  *array);
 
 void ref_filter_init(struct ref_filter *filter);
 void ref_filter_clear(struct ref_filter *filter);
-
-void ref_format_init(struct ref_format *format);
-void ref_format_clear(struct ref_format *format);
 
 #endif /*  REF_FILTER_H  */

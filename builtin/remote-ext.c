@@ -248,10 +248,10 @@ int cmd_remote_ext(int                     argc,
 {
     BUG_ON_NON_EMPTY_PREFIX(prefix);
 
+    show_usage_if_asked(argc, argv, usage_msg);
+
     if (argc != 3)
-    {
         usage(usage_msg);
-    }
 
     return command_loop(argv[2]);
 }

@@ -135,7 +135,7 @@ static int populate_maildir_list(struct string_list *list, const char *path)
     DIR           *dir;
     struct dirent *dent;
     char          *name   = NULL;
-    const char    *subs[] = {"cur", "new", NULL};
+    const char    *subs[] = { "cur", "new", NULL };
     const char   **sub;
     int            ret = -1;
 
@@ -206,10 +206,10 @@ static int maildir_filename_cmp(const char *a, const char *b)
 static int split_maildir(const char *maildir, const char *dir,
                          int nr_prec, int skip)
 {
-	char *file = NULL;
-	FILE *f = NULL;
-	int ret = -1;
-	struct string_list list = STRING_LIST_INIT_DUP;
+    char              *file = NULL;
+    FILE              *f    = NULL;
+    int                ret  = -1;
+    struct string_list list = STRING_LIST_INIT_DUP;
 
     list.cmp = maildir_filename_cmp;
 
@@ -218,8 +218,9 @@ static int split_maildir(const char *maildir, const char *dir,
         goto out;
     }
 
-	for (size_t i = 0; i < list.nr; i++) {
-		char *name;
+    for (size_t i = 0; i < list.nr; i++)
+    {
+        char *name;
 
         free(file);
         file = xstrfmt("%s/%s", maildir, list.items[i].string);
@@ -335,35 +336,29 @@ int cmd_mailsplit(int                     argc,
     int                allow_bare = 0;
     const char        *dir        = NULL;
     const char       **argp;
-    static const char *stdin_only[] = {"-", NULL};
+    static const char *stdin_only[] = { "-", NULL };
 
     BUG_ON_NON_EMPTY_PREFIX(prefix);
+
+    show_usage_if_asked(argc, argv, git_mailsplit_usage);
 
     for (argp = argv + 1; *argp; argp++)
     {
         const char *arg = *argp;
 
         if (arg[0] != '-')
-        {
             break;
-        }
         /* do flags here */
         if (arg[1] == 'd')
         {
             nr_prec = strtol(arg + 2, NULL, 10);
             if (nr_prec < 3 || 10 <= nr_prec)
-            {
                 usage(git_mailsplit_usage);
-            }
             continue;
         }
-        if (arg[1] == 'f')
+        else if (arg[1] == 'f')
         {
             nr = strtol(arg + 2, NULL, 10);
-        }
-        else if (arg[1] == 'h')
-        {
-            usage(git_mailsplit_usage);
         }
         else if (arg[1] == 'b' && !arg[2])
         {

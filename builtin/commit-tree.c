@@ -18,7 +18,8 @@ static const char *const commit_tree_usage[] = {
     N_("git commit-tree <tree> [(-p <parent>)...]"),
     N_("git commit-tree [(-p <parent>)...] [-S[<keyid>]] [(-m <message>)...]\n"
        "                [(-F <file>)...] <tree>"),
-    NULL};
+    NULL
+};
 
 static const char *sign_commit;
 
@@ -125,17 +126,16 @@ int cmd_commit_tree(int                     argc,
         OPT_CALLBACK_F('F', NULL, &buffer, N_("file"),
                        N_("read commit log message from file"), PARSE_OPT_NONEG,
                        parse_file_arg_callback),
-        {OPTION_STRING, 'S', "gpg-sign", &sign_commit, N_("key-id"),
-         N_("GPG sign commit"), PARSE_OPT_OPTARG, NULL, (intptr_t) ""},
-        OPT_END()};
+        { OPTION_STRING, 'S', "gpg-sign", &sign_commit, N_("key-id"),
+          N_("GPG sign commit"), PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
+        OPT_END()
+    };
     int ret;
 
     git_config(git_default_config, NULL);
 
-    if (argc < 2 || !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(commit_tree_usage, options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     commit_tree_usage, options);
 
     argc = parse_options(argc, argv, prefix, options, commit_tree_usage, 0);
 

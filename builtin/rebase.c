@@ -43,7 +43,8 @@ static char const *const builtin_rebase_usage[] = {
     N_("git rebase [-i] [options] [--exec <cmd>] [--onto <newbase>] "
        "--root [<branch>]"),
     "git rebase --continue | --abort | --skip | --edit-todo",
-    NULL};
+    NULL
+};
 
 static GIT_PATH_FUNC(path_squash_onto, "rebase-merge/squash-onto") static GIT_PATH_FUNC(path_interactive, "rebase-merge/interactive") static GIT_PATH_FUNC(apply_dir, "rebase-apply") static GIT_PATH_FUNC(merge_dir, "rebase-merge")
 
@@ -80,7 +81,8 @@ static const char *action_names[] = {
     "abort",
     "quit",
     "edit_todo",
-    "show_current_patch"};
+    "show_current_patch"
+};
 
 struct rebase_options
 {
@@ -135,26 +137,26 @@ struct rebase_options
     int                config_update_refs;
 };
 
-#define REBASE_OPTIONS_INIT                             \
-    {                                                   \
-        .type                 = REBASE_UNSPECIFIED,     \
-        .empty                = EMPTY_UNSPECIFIED,      \
-        .keep_empty           = 1,                      \
-        .default_backend      = xstrdup("merge"),       \
-        .flags                = REBASE_NO_QUIET,        \
-        .git_am_opts          = STRVEC_INIT,            \
-        .exec                 = STRING_LIST_INIT_NODUP, \
-        .git_format_patch_opt = STRBUF_INIT,            \
-        .fork_point           = -1,                     \
-        .reapply_cherry_picks = -1,                     \
-        .allow_empty_message  = 1,                      \
-        .autosquash           = -1,                     \
-        .rebase_merges        = -1,                     \
-        .config_rebase_merges = -1,                     \
-        .update_refs          = -1,                     \
-        .config_update_refs   = -1,                     \
-        .strategy_opts        = STRING_LIST_INIT_NODUP, \
-    }
+#define REBASE_OPTIONS_INIT                       \
+ {                                                \
+  .type                 = REBASE_UNSPECIFIED,     \
+  .empty                = EMPTY_UNSPECIFIED,      \
+  .keep_empty           = 1,                      \
+  .default_backend      = xstrdup("merge"),       \
+  .flags                = REBASE_NO_QUIET,        \
+  .git_am_opts          = STRVEC_INIT,            \
+  .exec                 = STRING_LIST_INIT_NODUP, \
+  .git_format_patch_opt = STRBUF_INIT,            \
+  .fork_point           = -1,                     \
+  .reapply_cherry_picks = -1,                     \
+  .allow_empty_message  = 1,                      \
+  .autosquash           = -1,                     \
+  .rebase_merges        = -1,                     \
+  .config_rebase_merges = -1,                     \
+  .update_refs          = -1,                     \
+  .config_update_refs   = -1,                     \
+  .strategy_opts        = STRING_LIST_INIT_NODUP, \
+ }
 
 static void rebase_options_release(struct rebase_options *opts)
 {
@@ -672,7 +674,7 @@ static int move_to_original_branch(struct rebase_options *opts)
 {
     struct strbuf          branch_reflog = STRBUF_INIT;
     struct strbuf          head_reflog   = STRBUF_INIT;
-    struct reset_head_opts ropts         = {0};
+    struct reset_head_opts ropts         = { 0 };
     int                    ret;
 
     if (!opts->head_name)
@@ -784,7 +786,7 @@ static int run_am(struct rebase_options *opts)
     status = run_command(&format_patch);
     if (status)
     {
-        struct reset_head_opts ropts = {0};
+        struct reset_head_opts ropts = { 0 };
         unlink(rebased_patches);
         free(rebased_patches);
         child_process_clear(&am);
@@ -1003,7 +1005,7 @@ static int rebase_config(const char *var, const char *value,
 static int checkout_up_to_date(struct rebase_options *options)
 {
     struct strbuf          buf   = STRBUF_INIT;
-    struct reset_head_opts ropts = {0};
+    struct reset_head_opts ropts = { 0 };
     int                    ret   = 0;
 
     strbuf_addf(&buf, "%s: checkout %s",
@@ -1313,7 +1315,7 @@ int cmd_rebase(int                     argc,
     int                    reschedule_failed_exec   = -1;
     int                    allow_preemptive_ff      = 1;
     int                    preserve_merges_selected = 0;
-    struct reset_head_opts ropts                    = {0};
+    struct reset_head_opts ropts                    = { 0 };
     struct option          builtin_rebase_options[] = {
                  OPT_STRING(0, "onto", &options.onto_name,
                             N_("revision"),
@@ -1328,9 +1330,9 @@ int cmd_rebase(int                     argc,
                  OPT_BIT('v', "verbose", &options.flags,
                          N_("display a diffstat of what changed upstream"),
                          REBASE_NO_QUIET | REBASE_VERBOSE | REBASE_DIFFSTAT),
-                 {OPTION_NEGBIT, 'n', "no-stat", &options.flags, NULL,
-                  N_("do not show diffstat of what changed upstream"),
-                  PARSE_OPT_NOARG, NULL, REBASE_DIFFSTAT},
+                 { OPTION_NEGBIT, 'n', "no-stat", &options.flags, NULL,
+                   N_("do not show diffstat of what changed upstream"),
+                   PARSE_OPT_NOARG, NULL, REBASE_DIFFSTAT },
                  OPT_BOOL(0, "signoff", &options.signoff,
                           N_("add a Signed-off-by trailer to each commit")),
                  OPT_BOOL(0, "committer-date-is-author-date",
@@ -1397,9 +1399,9 @@ int cmd_rebase(int                     argc,
                  OPT_BOOL(0, "update-refs", &options.update_refs,
                           N_("update branches that point to commits "
                                       "that are being rebased")),
-                 {OPTION_STRING, 'S', "gpg-sign", &gpg_sign, N_("key-id"),
-                  N_("GPG-sign commits"),
-                  PARSE_OPT_OPTARG, NULL, (intptr_t) ""},
+                 { OPTION_STRING, 'S', "gpg-sign", &gpg_sign, N_("key-id"),
+                   N_("GPG-sign commits"),
+                   PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
                  OPT_AUTOSTASH(&options.autostash),
                  OPT_STRING_LIST('x', "exec", &options.exec, N_("exec"),
                                  N_("add exec lines after each commit of the "
@@ -1430,9 +1432,9 @@ int cmd_rebase(int                     argc,
     };
     int i;
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-        usage_with_options(builtin_rebase_usage,
-                           builtin_rebase_options);
+    show_usage_with_options_if_asked(argc, argv,
+                                     builtin_rebase_usage,
+                                     builtin_rebase_options);
 
     prepare_repo_settings(the_repository);
     the_repository->settings.command_requires_full_index = 0;
@@ -1458,10 +1460,9 @@ int cmd_rebase(int                     argc,
         strbuf_addf(&buf, "%s/rewritten", merge_dir());
         if (!(options.action == ACTION_ABORT) && is_directory(buf.buf))
         {
-            die(_(
-                "`rebase --preserve-merges` (-p) is no longer supported.\n"
-                "Use `git rebase --abort` to terminate current rebase.\n"
-                "Or downgrade to v2.33, or earlier, to complete the rebase."));
+            die(_("`rebase --preserve-merges` (-p) is no longer supported.\n"
+                  "Use `git rebase --abort` to terminate current rebase.\n"
+                  "Or downgrade to v2.33, or earlier, to complete the rebase."));
         }
         else
         {
@@ -1483,10 +1484,9 @@ int cmd_rebase(int                     argc,
                                builtin_rebase_usage, 0);
 
     if (preserve_merges_selected)
-        die(_(
-            "--preserve-merges was replaced by --rebase-merges\n"
-            "Note: Your `pull.rebase` configuration may also be set to 'preserve',\n"
-            "which is no longer supported; use 'merges' instead"));
+        die(_("--preserve-merges was replaced by --rebase-merges\n"
+              "Note: Your `pull.rebase` configuration may also be set to 'preserve',\n"
+              "which is no longer supported; use 'merges' instead"));
 
     if (options.action != ACTION_NONE && total_argc != 2)
     {
@@ -1518,9 +1518,8 @@ int cmd_rebase(int                     argc,
         die(_("no rebase in progress"));
 
     if (options.action == ACTION_EDIT_TODO && !is_merge(&options))
-        die(_(
-            "The --edit-todo action can only be used during "
-            "interactive rebase."));
+        die(_("The --edit-todo action can only be used during "
+              "interactive rebase."));
 
     if (trace2_is_enabled())
     {
@@ -1559,9 +1558,8 @@ int cmd_rebase(int                     argc,
 
             if (has_unstaged_changes(the_repository, 1))
             {
-                puts(_(
-                    "You must edit all merge conflicts and then\n"
-                    "mark them as resolved using git add"));
+                puts(_("You must edit all merge conflicts and then\n"
+                       "mark them as resolved using git add"));
                 exit(1);
             }
             if (read_basic_state(&options))
@@ -1680,9 +1678,8 @@ int cmd_rebase(int                     argc,
         {
             while (*p)
                 if (!isdigit(*(p++)))
-                    die(_(
-                        "switch `C' expects a "
-                        "numerical value"));
+                    die(_("switch `C' expects a "
+                          "numerical value"));
         }
         else if (skip_prefix(option, "--whitespace=", &p))
         {
@@ -1771,9 +1768,8 @@ int cmd_rebase(int                     argc,
         if (i >= 0 || options.type == REBASE_APPLY)
         {
             if (is_merge(&options))
-                die(_(
-                    "apply options and merge options "
-                    "cannot be used together"));
+                die(_("apply options and merge options "
+                      "cannot be used together"));
             else if (options.rebase_merges == -1 && options.config_rebase_merges == 1)
                 die(_("apply options are incompatible with rebase.rebaseMerges.  Consider adding --no-rebase-merges"));
             else if (options.update_refs == -1 && options.config_update_refs == 1)
@@ -1837,9 +1833,8 @@ int cmd_rebase(int                     argc,
             options.empty = EMPTY_DROP;
     }
     if (reschedule_failed_exec > 0 && !is_merge(&options))
-        die(_(
-            "--reschedule-failed-exec requires "
-            "--exec or --interactive"));
+        die(_("--reschedule-failed-exec requires "
+              "--exec or --interactive"));
     if (reschedule_failed_exec >= 0)
         options.reschedule_failed_exec = reschedule_failed_exec;
 
@@ -2101,9 +2096,8 @@ int cmd_rebase(int                     argc,
 
     /* Detach HEAD and reset the tree */
     if (options.flags & REBASE_NO_QUIET)
-        printf(_(
-            "First, rewinding head to replay your work on top of "
-            "it...\n"));
+        printf(_("First, rewinding head to replay your work on top of "
+                 "it...\n"));
 
     strbuf_addf(&msg, "%s (start): checkout %s",
                 options.reflog_action, options.onto_name);

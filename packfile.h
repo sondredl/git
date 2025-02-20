@@ -32,7 +32,7 @@ struct pack_entry
  * Example: odb_pack_name(out, sha1, "idx") => ".git/objects/pack/pack-1234..idx"
  */
 char *odb_pack_name(struct repository *r, struct strbuf *buf,
-		    const unsigned char *hash, const char *ext);
+                    const unsigned char *hash, const char *ext);
 
 /*
  * Return the basename of the packfile, omitting any containing directory
@@ -50,7 +50,7 @@ const char *pack_basename(struct packed_git *p);
  * packs. You probably want add_packed_git() instead.
  */
 struct packed_git *parse_pack_index(struct repository *r, unsigned char *sha1,
-				    const char *idx_path);
+                                    const char *idx_path);
 
 typedef void each_file_in_pack_dir_fn(const char *full_path, size_t full_path_len,
                                       const char *file_name, void *data);
@@ -89,7 +89,7 @@ unsigned long repo_approximate_object_count(struct repository *r);
  * find_pack_entry() instead.
  */
 struct packed_git *find_oid_pack(const struct object_id *oid,
-				 struct packed_git *packs);
+                                 struct packed_git      *packs);
 
 void pack_report(struct repository *repo);
 
@@ -111,14 +111,14 @@ uint32_t get_pack_fanout(struct packed_git *p, uint32_t value);
 
 struct raw_object_store;
 
-unsigned char *use_pack(struct packed_git *, struct pack_window **, off_t, unsigned long *);
-void close_pack_windows(struct packed_git *);
-void close_pack(struct packed_git *);
-void close_object_store(struct raw_object_store *o);
-void unuse_pack(struct pack_window **);
-void clear_delta_base_cache(void);
+unsigned char     *use_pack(struct packed_git *, struct pack_window **, off_t, unsigned long *);
+void               close_pack_windows(struct packed_git *);
+void               close_pack(struct packed_git *);
+void               close_object_store(struct raw_object_store *o);
+void               unuse_pack(struct pack_window **);
+void               clear_delta_base_cache(void);
 struct packed_git *add_packed_git(struct repository *r, const char *path,
-				  size_t path_len, int local);
+                                  size_t path_len, int local);
 
 /*
  * Unlink the .pack and associated extension files.
@@ -197,7 +197,7 @@ int find_kept_pack_entry(struct repository *r, const struct object_id *oid, unsi
 
 int has_object_pack(struct repository *r, const struct object_id *oid);
 int has_object_kept_pack(struct repository *r, const struct object_id *oid,
-			 unsigned flags);
+                         unsigned flags);
 
 /*
  * Return 1 if an object in a promisor packfile is or refers to the given
@@ -217,5 +217,11 @@ int is_promisor_object(struct repository *r, const struct object_id *oid);
  */
 int load_idx(const char *path, const unsigned int hashsz, void *idx_map,
              size_t idx_size, struct packed_git *p);
+
+/*
+ * Parse a --pack_header option as accepted by index-pack and unpack-objects,
+ * turning it into the matching bytes we'd find in a pack.
+ */
+int parse_pack_header_option(const char *in, unsigned char *out, unsigned int *len);
 
 #endif

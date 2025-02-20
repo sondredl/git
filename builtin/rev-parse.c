@@ -92,7 +92,8 @@ static int is_rev_argument(const char *arg)
         "--topo-order",
         "--date-order",
         "--unpacked",
-        NULL};
+        NULL
+    };
     const char **p = rev_args;
 
     /* accept -<digit>, like traditional "head" */
@@ -525,7 +526,8 @@ static int cmd_parseopt(int argc, const char **argv, const char *prefix)
     int               stop_at_non_option = 0;
     char const *const parseopt_usage[]   = {
           N_("git rev-parse --parseopt [<options>] -- [<args>...]"),
-          NULL};
+          NULL
+    };
     struct option parseopt_opts[] = {
         OPT_BOOL(0, "keep-dashdash", &keep_dashdash,
                  N_("keep the `--` passed as an arg")),
@@ -863,10 +865,10 @@ int cmd_rev_parse(int                     argc,
     int                         seen_end_of_options = 0;
     enum format_type            format              = FORMAT_DEFAULT;
 
+    show_usage_if_asked(argc, argv, builtin_rev_parse_usage);
+
     if (argc > 1 && !strcmp("--parseopt", argv[1]))
-    {
         return cmd_parseopt(argc - 1, argv + 1, prefix);
-    }
 
     if (argc > 1 && !strcmp("--sq-quote", argv[1]))
     {

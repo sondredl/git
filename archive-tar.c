@@ -36,14 +36,14 @@ static int write_tar_filter_archive(const struct archiver *ar,
  * Likewise for the mtime (which happens to use a buffer of the same size).
  */
 #if ULONG_MAX == 0xFFFFFFFF
-    #define USTAR_MAX_SIZE ULONG_MAX
+ #define USTAR_MAX_SIZE ULONG_MAX
 #else
-    #define USTAR_MAX_SIZE 077777777777UL
+ #define USTAR_MAX_SIZE 077777777777UL
 #endif
 #if TIME_MAX == 0xFFFFFFFF
-    #define USTAR_MAX_MTIME TIME_MAX
+ #define USTAR_MAX_MTIME TIME_MAX
 #else
-    #define USTAR_MAX_MTIME 077777777777ULL
+ #define USTAR_MAX_MTIME 077777777777ULL
 #endif
 
 static void tar_write_block(const void *buf)
@@ -558,9 +558,7 @@ static const char internal_gzip_command[] = "git archive gzip";
 static int write_tar_filter_archive(const struct archiver *ar,
                                     struct archiver_args  *args)
 {
-#if ZLIB_VERNUM >= 0x1221
-    struct gz_header_s gzhead = {.os = 3}; /* Unix, for reproducibility */
-#endif
+    struct gz_header_s   gzhead = { .os = 3 }; /* Unix, for reproducibility */
     struct strbuf        cmd    = STRBUF_INIT;
     struct child_process filter = CHILD_PROCESS_INIT;
     int                  r;
@@ -574,12 +572,8 @@ static int write_tar_filter_archive(const struct archiver *ar,
     {
         write_block = tgz_write_block;
         git_deflate_init_gzip(&gzstream, args->compression_level);
-#if ZLIB_VERNUM >= 0x1221
         if (deflateSetHeader(&gzstream.z, &gzhead) != Z_OK)
-        {
             BUG("deflateSetHeader() called too late");
-        }
-#endif
         gzstream.next_out  = outbuf;
         gzstream.avail_out = sizeof(outbuf);
 

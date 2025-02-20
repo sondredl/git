@@ -11,21 +11,23 @@ https://developers.google.com/open-source/licenses/bsd
 
 /* This header glues the reftable library to the rest of Git */
 
-#define DISABLE_SIGN_COMPARE_WARNINGS
-
 #include "git-compat-util.h"
+#include "compat/zlib-compat.h"
 
 /*
  * An implementation-specific temporary file. By making this specific to the
  * implementation it becomes possible to tie temporary files into any kind of
  * signal or atexit handlers for cleanup on abnormal situations.
  */
-struct reftable_tmpfile {
-	const char *path;
-	int fd;
-	void *priv;
+struct reftable_tmpfile
+{
+    const char *path;
+    int         fd;
+    void       *priv;
 };
-#define REFTABLE_TMPFILE_INIT ((struct reftable_tmpfile) { .fd = -1, })
+#define REFTABLE_TMPFILE_INIT ((struct reftable_tmpfile){ \
+    .fd = -1,                                             \
+})
 
 /*
  * Create a temporary file from a pattern similar to how mkstemp(3p) would.
@@ -62,12 +64,15 @@ int tmpfile_rename(struct reftable_tmpfile *t, const char *path);
  * into signal or atexit handlers such that we know to clean up stale locks on
  * abnormal exits.
  */
-struct reftable_flock {
-	const char *path;
-	int fd;
-	void *priv;
+struct reftable_flock
+{
+    const char *path;
+    int         fd;
+    void       *priv;
 };
-#define REFTABLE_FLOCK_INIT ((struct reftable_flock){ .fd = -1, })
+#define REFTABLE_FLOCK_INIT ((struct reftable_flock){ \
+    .fd = -1,                                         \
+})
 
 /*
  * Acquire the lock for the given target path by exclusively creating a file
@@ -78,7 +83,7 @@ struct reftable_flock {
  * Retrun 0 on success, a reftable error code on error.
  */
 int flock_acquire(struct reftable_flock *l, const char *target_path,
-		  long timeout_ms);
+                  long timeout_ms);
 
 /*
  * Close the lockfile's file descriptor without removing the lock itself. This

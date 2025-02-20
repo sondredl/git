@@ -1,5 +1,3 @@
-#define USE_THE_REPOSITORY_VARIABLE
-
 #include "git-compat-util.h"
 #include "environment.h"
 #include "gettext.h"
@@ -18,10 +16,10 @@
 
 void reset_pack_idx_option(struct pack_idx_option *opts)
 {
-	memset(opts, 0, sizeof(*opts));
-	opts->version = 2;
-	opts->off32_limit = 0x7fffffff;
-	opts->delta_base_cache_limit = DEFAULT_DELTA_BASE_CACHE_LIMIT;
+    memset(opts, 0, sizeof(*opts));
+    opts->version                = 2;
+    opts->off32_limit            = 0x7fffffff;
+    opts->delta_base_cache_limit = DEFAULT_DELTA_BASE_CACHE_LIMIT;
 }
 
 static int sha1_compare(const void *_a, const void *_b)
@@ -60,7 +58,8 @@ static int need_large_offset(off_t offset, const struct pack_idx_option *opts)
  * The *sha1 contains the pack content SHA1 hash.
  * The objects array passed in will be sorted by SHA1 on exit.
  */
-const char *write_idx_file(const char *index_name, struct pack_idx_entry **objects,
+const char *write_idx_file(const struct git_hash_algo *hash_algo,
+                           const char *index_name, struct pack_idx_entry **objects,
                            int nr_objects, const struct pack_idx_option *opts,
                            const unsigned char *sha1)
 {
@@ -154,15 +153,11 @@ const char *write_idx_file(const char *index_name, struct pack_idx_entry **objec
     {
         struct pack_idx_entry *obj = *list++;
         if (index_version < 2)
-        {
             hashwrite_be32(f, obj->offset);
-        }
-        hashwrite(f, obj->oid.hash, the_hash_algo->rawsz);
+        hashwrite(f, obj->oid.hash, hash_algo->rawsz);
         if ((opts->flags & WRITE_IDX_STRICT) && (i && oideq(&list[-2]->oid, &obj->oid)))
-        {
             die("The same object %s appears twice in the pack",
                 oid_to_hex(&obj->oid));
-        }
     }
 
     if (index_version >= 2)
@@ -206,7 +201,7 @@ const char *write_idx_file(const char *index_name, struct pack_idx_entry **objec
         }
     }
 
-    hashwrite(f, sha1, the_hash_algo->rawsz);
+    hashwrite(f, sha1, hash_algo->rawsz);
     finalize_hashfile(f, NULL, FSYNC_COMPONENT_PACK_METADATA,
                       CSUM_HASH_IN_STREAM | CSUM_CLOSE | ((opts->flags & WRITE_IDX_VERIFY) ? 0 : CSUM_FSYNC));
     return index_name;
@@ -230,11 +225,12 @@ static int pack_order_cmp(const void *va, const void *vb, void *ctx)
     return 0;
 }
 
-static void write_rev_header(struct hashfile *f)
+static void write_rev_header(const struct git_hash_algo *hash_algo,
+                             struct hashfile            *f)
 {
     hashwrite_be32(f, RIDX_SIGNATURE);
     hashwrite_be32(f, RIDX_VERSION);
-    hashwrite_be32(f, oid_version(the_hash_algo));
+    hashwrite_be32(f, oid_version(hash_algo));
 }
 
 static void write_rev_index_positions(struct hashfile *f,
@@ -248,16 +244,18 @@ static void write_rev_index_positions(struct hashfile *f,
     }
 }
 
-static void write_rev_trailer(struct hashfile *f, const unsigned char *hash)
+static void write_rev_trailer(const struct git_hash_algo *hash_algo,
+                              struct hashfile *f, const unsigned char *hash)
 {
-    hashwrite(f, hash, the_hash_algo->rawsz);
+    hashwrite(f, hash, hash_algo->rawsz);
 }
 
-char *write_rev_file(const char             *rev_name,
-                     struct pack_idx_entry **objects,
-                     uint32_t                nr_objects,
-                     const unsigned char    *hash,
-                     unsigned                flags)
+char *write_rev_file(const struct git_hash_algo *hash_algo,
+                     const char                 *rev_name,
+                     struct pack_idx_entry     **objects,
+                     uint32_t                    nr_objects,
+                     const unsigned char        *hash,
+                     unsigned                    flags)
 {
     uint32_t *pack_order;
     uint32_t  i;
@@ -275,19 +273,20 @@ char *write_rev_file(const char             *rev_name,
     }
     QSORT_S(pack_order, nr_objects, pack_order_cmp, objects);
 
-    ret = write_rev_file_order(rev_name, pack_order, nr_objects, hash,
-                               flags);
+    ret = write_rev_file_order(hash_algo, rev_name, pack_order, nr_objects,
+                               hash, flags);
 
     free(pack_order);
 
     return ret;
 }
 
-char *write_rev_file_order(const char          *rev_name,
-                           uint32_t            *pack_order,
-                           uint32_t             nr_objects,
-                           const unsigned char *hash,
-                           unsigned             flags)
+char *write_rev_file_order(const struct git_hash_algo *hash_algo,
+                           const char                 *rev_name,
+                           uint32_t                   *pack_order,
+                           uint32_t                    nr_objects,
+                           const unsigned char        *hash,
+                           unsigned                    flags)
 {
     struct hashfile *f;
     char            *path;
@@ -335,10 +334,10 @@ char *write_rev_file_order(const char          *rev_name,
         return NULL;
     }
 
-    write_rev_header(f);
+    write_rev_header(hash_algo, f);
 
     write_rev_index_positions(f, pack_order, nr_objects);
-    write_rev_trailer(f, hash);
+    write_rev_trailer(hash_algo, f, hash);
 
     if (adjust_shared_perm(path) < 0)
         die(_("failed to make %s readable"), path);
@@ -349,11 +348,12 @@ char *write_rev_file_order(const char          *rev_name,
     return path;
 }
 
-static void write_mtimes_header(struct hashfile *f)
+static void write_mtimes_header(const struct git_hash_algo *hash_algo,
+                                struct hashfile            *f)
 {
     hashwrite_be32(f, MTIMES_SIGNATURE);
     hashwrite_be32(f, MTIMES_VERSION);
-    hashwrite_be32(f, oid_version(the_hash_algo));
+    hashwrite_be32(f, oid_version(hash_algo));
 }
 
 /*
@@ -374,15 +374,17 @@ static void write_mtimes_objects(struct hashfile        *f,
     }
 }
 
-static void write_mtimes_trailer(struct hashfile *f, const unsigned char *hash)
+static void write_mtimes_trailer(const struct git_hash_algo *hash_algo,
+                                 struct hashfile *f, const unsigned char *hash)
 {
-    hashwrite(f, hash, the_hash_algo->rawsz);
+    hashwrite(f, hash, hash_algo->rawsz);
 }
 
-static char *write_mtimes_file(struct packing_data    *to_pack,
-                               struct pack_idx_entry **objects,
-                               uint32_t                nr_objects,
-                               const unsigned char    *hash)
+static char *write_mtimes_file(const struct git_hash_algo *hash_algo,
+                               struct packing_data        *to_pack,
+                               struct pack_idx_entry     **objects,
+                               uint32_t                    nr_objects,
+                               const unsigned char        *hash)
 {
     struct strbuf    tmp_file = STRBUF_INIT;
     char            *mtimes_name;
@@ -398,9 +400,9 @@ static char *write_mtimes_file(struct packing_data    *to_pack,
     mtimes_name = strbuf_detach(&tmp_file, NULL);
     f           = hashfd(fd, mtimes_name);
 
-    write_mtimes_header(f);
+    write_mtimes_header(hash_algo, f);
     write_mtimes_objects(f, to_pack, objects, nr_objects);
-    write_mtimes_trailer(f, hash);
+    write_mtimes_trailer(hash_algo, f, hash);
 
     if (adjust_shared_perm(mtimes_name) < 0)
     {
@@ -440,45 +442,36 @@ off_t write_pack_header(struct hashfile *f, uint32_t nr_entries)
  * partial_pack_sha1 can refer to the same buffer if the caller is not
  * interested in the resulting SHA1 of pack data above partial_pack_offset.
  */
-void fixup_pack_header_footer(int            pack_fd,
-                              unsigned char *new_pack_hash,
-                              const char    *pack_name,
-                              uint32_t       object_count,
-                              unsigned char *partial_pack_hash,
-                              off_t          partial_pack_offset)
+void fixup_pack_header_footer(const struct git_hash_algo *hash_algo,
+                              int                         pack_fd,
+                              unsigned char              *new_pack_hash,
+                              const char                 *pack_name,
+                              uint32_t                    object_count,
+                              unsigned char              *partial_pack_hash,
+                              off_t                       partial_pack_offset)
 {
-    int                aligned_sz;
-    int                buf_sz = 8 * 1024;
-    git_hash_ctx       old_hash_ctx;
-    git_hash_ctx       new_hash_ctx;
-    struct pack_header hdr;
-    char              *buf;
-    ssize_t            read_result;
+    int                 aligned_sz, buf_sz = 8 * 1024;
+    struct git_hash_ctx old_hash_ctx, new_hash_ctx;
+    struct pack_header  hdr;
+    char               *buf;
+    ssize_t             read_result;
 
-    the_hash_algo->init_fn(&old_hash_ctx);
-    the_hash_algo->init_fn(&new_hash_ctx);
+    hash_algo->init_fn(&old_hash_ctx);
+    hash_algo->init_fn(&new_hash_ctx);
 
     if (lseek(pack_fd, 0, SEEK_SET) != 0)
-    {
         die_errno("Failed seeking to start of '%s'", pack_name);
-    }
     read_result = read_in_full(pack_fd, &hdr, sizeof(hdr));
     if (read_result < 0)
-    {
         die_errno("Unable to reread header of '%s'", pack_name);
-    }
     else if (read_result != sizeof(hdr))
-    {
         die_errno("Unexpected short read for header of '%s'",
                   pack_name);
-    }
     if (lseek(pack_fd, 0, SEEK_SET) != 0)
-    {
         die_errno("Failed seeking to start of '%s'", pack_name);
-    }
-    the_hash_algo->update_fn(&old_hash_ctx, &hdr, sizeof(hdr));
+    git_hash_update(&old_hash_ctx, &hdr, sizeof(hdr));
     hdr.hdr_entries = htonl(object_count);
-    the_hash_algo->update_fn(&new_hash_ctx, &hdr, sizeof(hdr));
+    git_hash_update(&new_hash_ctx, &hdr, sizeof(hdr));
     write_or_die(pack_fd, &hdr, sizeof(hdr));
     partial_pack_offset -= sizeof(hdr);
 
@@ -486,19 +479,14 @@ void fixup_pack_header_footer(int            pack_fd,
     aligned_sz = buf_sz - sizeof(hdr);
     for (;;)
     {
-        ssize_t m;
-        ssize_t n;
+        ssize_t m, n;
         m = (partial_pack_hash && partial_pack_offset < aligned_sz) ? partial_pack_offset : aligned_sz;
         n = xread(pack_fd, buf, m);
         if (!n)
-        {
             break;
-        }
         if (n < 0)
-        {
             die_errno("Failed to checksum '%s'", pack_name);
-        }
-        the_hash_algo->update_fn(&new_hash_ctx, buf, n);
+        git_hash_update(&new_hash_ctx, buf, n);
 
         aligned_sz -= n;
         if (!aligned_sz)
@@ -511,25 +499,23 @@ void fixup_pack_header_footer(int            pack_fd,
             continue;
         }
 
-        the_hash_algo->update_fn(&old_hash_ctx, buf, n);
+        git_hash_update(&old_hash_ctx, buf, n);
         partial_pack_offset -= n;
         if (partial_pack_offset == 0)
         {
             unsigned char hash[GIT_MAX_RAWSZ];
-            the_hash_algo->final_fn(hash, &old_hash_ctx);
+            git_hash_final(hash, &old_hash_ctx);
             if (!hasheq(hash, partial_pack_hash,
-                        the_repository->hash_algo))
-            {
+                        hash_algo))
                 die("Unexpected checksum for %s "
                     "(disk corruption?)",
                     pack_name);
-            }
             /*
              * Now let's compute the SHA1 of the remainder of the
              * pack, which also means making partial_pack_offset
              * big enough not to matter anymore.
              */
-            the_hash_algo->init_fn(&old_hash_ctx);
+            hash_algo->init_fn(&old_hash_ctx);
             partial_pack_offset = ~partial_pack_offset;
             partial_pack_offset -= MSB(partial_pack_offset, 1);
         }
@@ -537,18 +523,16 @@ void fixup_pack_header_footer(int            pack_fd,
     free(buf);
 
     if (partial_pack_hash)
-    {
-        the_hash_algo->final_fn(partial_pack_hash, &old_hash_ctx);
-    }
-    the_hash_algo->final_fn(new_pack_hash, &new_hash_ctx);
-    write_or_die(pack_fd, new_pack_hash, the_hash_algo->rawsz);
+        git_hash_final(partial_pack_hash, &old_hash_ctx);
+    git_hash_final(new_pack_hash, &new_hash_ctx);
+    write_or_die(pack_fd, new_pack_hash, hash_algo->rawsz);
     fsync_component_or_die(FSYNC_COMPONENT_PACK, pack_fd, pack_name);
 }
 
-char *index_pack_lockfile(int ip_out, int *is_well_formed)
+char *index_pack_lockfile(struct repository *r, int ip_out, int *is_well_formed)
 {
     char      packname[GIT_MAX_HEXSZ + 6];
-    const int len = the_hash_algo->hexsz + 6;
+    const int len = r->hash_algo->hexsz + 6;
 
     /*
      * The first thing we expect from index-pack's output
@@ -566,7 +550,7 @@ char *index_pack_lockfile(int ip_out, int *is_well_formed)
         packname[len - 1] = 0;
         if (skip_prefix(packname, "keep\t", &name))
             return xstrfmt("%s/pack/pack-%s.keep",
-                           repo_get_object_directory(the_repository), name);
+                           repo_get_object_directory(r), name);
         return NULL;
     }
     if (is_well_formed)
@@ -637,14 +621,15 @@ void rename_tmp_packfile_idx(struct strbuf *name_buffer,
     rename_tmp_packfile(name_buffer, *idx_tmp_name, "idx");
 }
 
-void stage_tmp_packfiles(struct strbuf          *name_buffer,
-                         const char             *pack_tmp_name,
-                         struct pack_idx_entry **written_list,
-                         uint32_t                nr_written,
-                         struct packing_data    *to_pack,
-                         struct pack_idx_option *pack_idx_opts,
-                         unsigned char           hash[],
-                         char                  **idx_tmp_name)
+void stage_tmp_packfiles(const struct git_hash_algo *hash_algo,
+                         struct strbuf              *name_buffer,
+                         const char                 *pack_tmp_name,
+                         struct pack_idx_entry     **written_list,
+                         uint32_t                    nr_written,
+                         struct packing_data        *to_pack,
+                         struct pack_idx_option     *pack_idx_opts,
+                         unsigned char               hash[],
+                         char                      **idx_tmp_name)
 {
     char *rev_tmp_name    = NULL;
     char *mtimes_tmp_name = NULL;
@@ -654,20 +639,18 @@ void stage_tmp_packfiles(struct strbuf          *name_buffer,
         die_errno("unable to make temporary pack file readable");
     }
 
-    *idx_tmp_name = (char *)write_idx_file(NULL, written_list, nr_written,
-                                           pack_idx_opts, hash);
+    *idx_tmp_name = (char *)write_idx_file(hash_algo, NULL, written_list,
+                                           nr_written, pack_idx_opts, hash);
     if (adjust_shared_perm(*idx_tmp_name))
-    {
         die_errno("unable to make temporary index file readable");
-    }
 
-    rev_tmp_name = write_rev_file(NULL, written_list, nr_written, hash,
-                                  pack_idx_opts->flags);
+    rev_tmp_name = write_rev_file(hash_algo, NULL, written_list, nr_written,
+                                  hash, pack_idx_opts->flags);
 
     if (pack_idx_opts->flags & WRITE_MTIMES)
     {
-        mtimes_tmp_name = write_mtimes_file(to_pack, written_list,
-                                            nr_written,
+        mtimes_tmp_name = write_mtimes_file(hash_algo, to_pack,
+                                            written_list, nr_written,
                                             hash);
     }
 

@@ -20,21 +20,21 @@ https://developers.google.com/open-source/licenses/bsd
 struct reftable_write_options
 {
     /* boolean: do not pad out blocks to block size. */
-    unsigned unpadded : 1;
+    unsigned unpadded:1;
 
     /* the blocksize. Should be less than 2^24. */
     uint32_t block_size;
 
     /* boolean: do not generate a SHA1 => ref index. */
-    unsigned skip_index_objects : 1;
+    unsigned skip_index_objects:1;
 
     /* how often to write complete keys in each block. */
     uint16_t restart_interval;
 
-	/* 4-byte identifier ("sha1", "s256") of the hash.
-	 * Defaults to SHA1 if unset
-	 */
-	enum reftable_hash hash_id;
+    /* 4-byte identifier ("sha1", "s256") of the hash.
+     * Defaults to SHA1 if unset
+     */
+    enum reftable_hash hash_id;
 
     /* Default mode for creating files. If unset, use 0666 (+umask) */
     unsigned int default_permissions;
@@ -42,10 +42,10 @@ struct reftable_write_options
     /* boolean: copy log messages exactly. If unset, check that the message
      *   is a single line, and add '\n' if missing.
      */
-    unsigned exact_log_message : 1;
+    unsigned exact_log_message:1;
 
     /* boolean: Prevent auto-compaction of tables. */
-    unsigned disable_auto_compact : 1;
+    unsigned disable_auto_compact:1;
 
     /*
      * Geometric sequence factor used by auto-compaction to decide which
@@ -53,31 +53,31 @@ struct reftable_write_options
      */
     uint8_t auto_compaction_factor;
 
-	/*
-	 * The number of milliseconds to wait when trying to lock "tables.list".
-	 * Note that this does not apply to locking individual tables, as these
-	 * should only ever be locked when already holding the "tables.list"
-	 * lock.
-	 *
-	 * Passing 0 will fail immediately when the file is locked, passing a
-	 * negative value will cause us to block indefinitely.
-	 */
-	long lock_timeout_ms;
+    /*
+     * The number of milliseconds to wait when trying to lock "tables.list".
+     * Note that this does not apply to locking individual tables, as these
+     * should only ever be locked when already holding the "tables.list"
+     * lock.
+     *
+     * Passing 0 will fail immediately when the file is locked, passing a
+     * negative value will cause us to block indefinitely.
+     */
+    long lock_timeout_ms;
 
-	/*
-	 * Optional callback used to fsync files to disk. Falls back to using
-	 * fsync(3P) when unset.
-	 */
-	int (*fsync)(int fd);
+    /*
+     * Optional callback used to fsync files to disk. Falls back to using
+     * fsync(3P) when unset.
+     */
+    int (*fsync)(int fd);
 
-	/*
-	 * Callback function to execute whenever the stack is being reloaded.
-	 * This can be used e.g. to discard cached information that relies on
-	 * the old stack's data. The payload data will be passed as argument to
-	 * the callback.
-	 */
-	void (*on_reload)(void *payload);
-	void *on_reload_payload;
+    /*
+     * Callback function to execute whenever the stack is being reloaded.
+     * This can be used e.g. to discard cached information that relies on
+     * the old stack's data. The payload data will be passed as argument to
+     * the callback.
+     */
+    void (*on_reload)(void *payload);
+    void *on_reload_payload;
 };
 
 /* reftable_block_stats holds statistics for a single block type */
@@ -86,7 +86,7 @@ struct reftable_block_stats
     /* total number of entries written */
     int entries;
     /* total number of key restarts */
-    int restarts;
+    uint32_t restarts;
     /* total number of blocks */
     int blocks;
     /* total number of index blocks */
@@ -127,17 +127,21 @@ int reftable_writer_new(struct reftable_writer **out,
                         int (*flush_func)(void *),
                         void *writer_arg, const struct reftable_write_options *opts);
 
-/* Set the range of update indices for the records we will add. When writing a
-   table into a stack, the min should be at least
-   reftable_stack_next_update_index(), or REFTABLE_API_ERROR is returned.
-
-   For transactional updates to a stack, typically min==max, and the
-   update_index can be obtained by inspeciting the stack. When converting an
-   existing ref database into a single reftable, this would be a range of
-   update-index timestamps.
+/*
+ * Set the range of update indices for the records we will add. When writing a
+ * table into a stack, the min should be at least
+ * reftable_stack_next_update_index(), or REFTABLE_API_ERROR is returned.
+ *
+ * For transactional updates to a stack, typically min==max, and the
+ * update_index can be obtained by inspeciting the stack. When converting an
+ * existing ref database into a single reftable, this would be a range of
+ * update-index timestamps.
+ *
+ * The function should be called before adding any records to the writer. If not
+ * it will fail with REFTABLE_API_ERROR.
  */
-void reftable_writer_set_limits(struct reftable_writer *w, uint64_t min,
-                                uint64_t max);
+int reftable_writer_set_limits(struct reftable_writer *w, uint64_t min,
+                               uint64_t max);
 
 /*
   Add a reftable_ref_record. The record should have names that come after

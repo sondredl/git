@@ -7,6 +7,7 @@
 #include "convert.h"
 #include "environment.h"
 #include "gettext.h"
+#include "git-zlib.h"
 #include "hex.h"
 #include "object-name.h"
 #include "path.h"
@@ -28,7 +29,8 @@ static char const *const archive_usage[] = {
     "git archive --list",
     N_("git archive --remote <repo> [--exec <cmd>] [<options>] <tree-ish> [<path>...]"),
     N_("git archive --remote <repo> [--exec <cmd>] --list"),
-    NULL};
+    NULL
+};
 
 static const struct archiver **archivers;
 static int                     nr_archivers;
@@ -507,7 +509,7 @@ static int reject_outside(const struct object_id *oid UNUSED,
 
 static int path_exists(struct archiver_args *args, const char *path)
 {
-    const char                *paths[] = {path, NULL};
+    const char                *paths[] = { path, NULL };
     struct path_exists_context ctx;
     int                        ret;
 
@@ -755,20 +757,20 @@ static int parse_archive_args(int argc, const char **argv,
                      OPT_STRING(0, "format", &format, N_("fmt"), N_("archive format")),
                      OPT_STRING(0, "prefix", &base, N_("prefix"),
                                 N_("prepend prefix to each pathname in the archive")),
-                     {OPTION_CALLBACK, 0, "add-file", args, N_("file"),
-                      N_("add untracked file to archive"), 0, add_file_cb,
-                      (intptr_t)&base},
-                     {OPTION_CALLBACK, 0, "add-virtual-file", args,
-                      N_("path:content"), N_("add untracked file to archive"), 0,
-                      add_file_cb, (intptr_t)&base},
+                     { OPTION_CALLBACK, 0, "add-file", args, N_("file"),
+                       N_("add untracked file to archive"), 0, add_file_cb,
+                       (intptr_t)&base },
+                     { OPTION_CALLBACK, 0, "add-virtual-file", args,
+                       N_("path:content"), N_("add untracked file to archive"), 0,
+                       add_file_cb, (intptr_t)&base },
                      OPT_STRING('o', "output", &output, N_("file"),
                                 N_("write the archive to this file")),
                      OPT_BOOL(0, "worktree-attributes", &worktree_attributes,
                               N_("read .gitattributes in working directory")),
                      OPT__VERBOSE(&verbose, N_("report archived files on stderr")),
-                     {OPTION_STRING, 0, "mtime", &mtime_option, N_("time"),
-                      N_("set modification time of archive entries"),
-                      PARSE_OPT_NONEG},
+                     { OPTION_STRING, 0, "mtime", &mtime_option, N_("time"),
+                       N_("set modification time of archive entries"),
+                       PARSE_OPT_NONEG },
                      OPT_NUMBER_CALLBACK(&compression_level,
                                          N_("set compression level"), number_callback),
                      OPT_GROUP(""),
@@ -779,7 +781,8 @@ static int parse_archive_args(int argc, const char **argv,
                                 N_("retrieve the archive from remote repository <repo>")),
                      OPT_STRING(0, "exec", &exec, N_("command"),
                                 N_("path to the remote git-upload-archive command")),
-                     OPT_END()};
+                     OPT_END()
+    };
 
     argc = parse_options(argc, argv, NULL, opts, archive_usage, 0);
 
@@ -870,8 +873,8 @@ int write_archive(int argc, const char **argv, const char *prefix,
                   const char *name_hint, int remote)
 {
     const struct archiver              *ar              = NULL;
-    struct pretty_print_describe_status describe_status = {0};
-    struct pretty_print_context         ctx             = {0};
+    struct pretty_print_describe_status describe_status = { 0 };
+    struct pretty_print_context         ctx             = { 0 };
     struct archiver_args                args;
     const char                        **argv_copy;
     int                                 rc;

@@ -45,10 +45,15 @@ int cmd_merge_recursive(int                     argc,
         o.subtree_shift = "";
     }
 
-    if (argc < 4)
+    if (argc == 2 && !strcmp(argv[1], "-h"))
     {
-        usagef(builtin_merge_recursive_usage, argv[0]);
+        struct strbuf msg = STRBUF_INIT;
+        strbuf_addf(&msg, builtin_merge_recursive_usage, argv[0]);
+        show_usage_if_asked(argc, argv, msg.buf);
     }
+
+    if (argc < 4)
+        usagef(builtin_merge_recursive_usage, argv[0]);
 
     for (i = 1; i < argc; ++i)
     {

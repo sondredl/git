@@ -845,7 +845,7 @@ typedef int (*mail_conv_fn)(FILE *out, FILE *in, int keep_cr);
 static int split_mail_conv(mail_conv_fn fn, struct am_state *state,
                            const char **paths, int keep_cr)
 {
-    static const char *stdin_only[] = {"-", NULL};
+    static const char *stdin_only[] = { "-", NULL };
     int                i;
 
     if (!*paths)
@@ -1394,7 +1394,7 @@ static int parse_mail(struct am_state *state, const char *mail)
     int             ret          = 0;
     struct mailinfo mi;
 
-	setup_mailinfo(the_repository, &mi);
+    setup_mailinfo(the_repository, &mi);
 
     if (state->utf8)
     {
@@ -1827,7 +1827,7 @@ static int fall_back_threeway(const struct am_state *state, const char *index_pa
 {
     struct object_id     their_tree;
     struct object_id     our_tree;
-    struct object_id     bases[1] = {0};
+    struct object_id     bases[1] = { 0 };
     struct merge_options o;
     struct commit       *result;
     char                *their_tree_name;
@@ -2075,14 +2075,17 @@ static int do_interactive(struct am_state *state)
         {
             struct strbuf msg = STRBUF_INIT;
 
-			if (!launch_editor(am_path(state, "final-commit"), &msg, NULL)) {
-				free(state->msg);
-				state->msg = strbuf_detach(&msg, &state->msg_len);
-			}
-			strbuf_release(&msg);
-		} else if (*reply == 'v' || *reply == 'V') {
-			const char *pager = git_pager(the_repository, 1);
-			struct child_process cp = CHILD_PROCESS_INIT;
+            if (!launch_editor(am_path(state, "final-commit"), &msg, NULL))
+            {
+                free(state->msg);
+                state->msg = strbuf_detach(&msg, &state->msg_len);
+            }
+            strbuf_release(&msg);
+        }
+        else if (*reply == 'v' || *reply == 'V')
+        {
+            const char          *pager = git_pager(the_repository, 1);
+            struct child_process cp    = CHILD_PROCESS_INIT;
 
             if (!pager)
                 pager = "cat";
@@ -2645,10 +2648,10 @@ static int show_patch(struct am_state *state, enum resume_type resume_mode)
         die_errno(_("failed to read '%s'"), patch_path);
     }
 
-	setup_pager(the_repository);
-	write_in_full(1, sb.buf, sb.len);
-	strbuf_release(&sb);
-	return 0;
+    setup_pager(the_repository);
+    write_in_full(1, sb.buf, sb.len);
+    strbuf_release(&sb);
+    return 0;
 }
 
 /**
@@ -2741,7 +2744,8 @@ int cmd_am(int                     argc,
     const char *const usage[] = {
         N_("git am [<options>] [(<mbox> | <Maildir>)...]"),
         N_("git am [<options>] (--continue | --skip | --abort)"),
-        NULL};
+        NULL
+    };
 
     struct option options[] = {
         OPT_BOOL('i', "interactive", &state.interactive,
@@ -2819,11 +2823,11 @@ int cmd_am(int                     argc,
         OPT_CMDMODE(0, "quit", &resume_mode,
                     N_("abort the patching operation but keep HEAD where it is"),
                     RESUME_QUIT),
-        {OPTION_CALLBACK, 0, "show-current-patch", &resume_mode,
-         "(diff|raw)",
-         N_("show the patch being applied"),
-         PARSE_OPT_CMDMODE | PARSE_OPT_OPTARG | PARSE_OPT_NONEG | PARSE_OPT_LITERAL_ARGHELP,
-         parse_opt_show_current_patch, RESUME_SHOW_PATCH_RAW},
+        { OPTION_CALLBACK, 0, "show-current-patch", &resume_mode,
+          "(diff|raw)",
+          N_("show the patch being applied"),
+          PARSE_OPT_CMDMODE | PARSE_OPT_OPTARG | PARSE_OPT_NONEG | PARSE_OPT_LITERAL_ARGHELP,
+          parse_opt_show_current_patch, RESUME_SHOW_PATCH_RAW },
         OPT_CMDMODE(0, "retry", &resume_mode,
                     N_("try to apply current patch again"),
                     RESUME_APPLY),
@@ -2836,20 +2840,18 @@ int cmd_am(int                     argc,
         OPT_BOOL(0, "ignore-date", &state.ignore_date,
                  N_("use current timestamp for author date")),
         OPT_RERERE_AUTOUPDATE(&state.allow_rerere_autoupdate),
-        {OPTION_STRING, 'S', "gpg-sign", &state.sign_commit, N_("key-id"),
-         N_("GPG-sign commits"),
-         PARSE_OPT_OPTARG, NULL, (intptr_t) ""},
+        { OPTION_STRING, 'S', "gpg-sign", &state.sign_commit, N_("key-id"),
+          N_("GPG-sign commits"),
+          PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
         OPT_CALLBACK_F(0, "empty", &state.empty_type, "(stop|drop|keep)",
                        N_("how to handle empty patches"),
                        PARSE_OPT_NONEG, am_option_parse_empty),
         OPT_HIDDEN_BOOL(0, "rebasing", &state.rebasing,
                         N_("(internal use for git-rebase)")),
-        OPT_END()};
+        OPT_END()
+    };
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(usage, options);
-    }
+    show_usage_with_options_if_asked(argc, argv, usage, options);
 
     git_config(git_default_config, NULL);
 

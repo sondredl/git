@@ -48,9 +48,9 @@
 #include "ws.h"
 
 #ifdef NO_FAST_WORKING_DIRECTORY
-    #define FAST_WORKING_DIRECTORY 0
+ #define FAST_WORKING_DIRECTORY 0
 #else
-    #define FAST_WORKING_DIRECTORY 1
+ #define FAST_WORKING_DIRECTORY 1
 #endif
 
 static int                  diff_detect_rename_default;
@@ -129,7 +129,7 @@ static const char *color_diff_slots[] = {
     [DIFF_FILE_NEW_BOLD]          = "newBold",
 };
 
-define_list_config_array_extra(color_diff_slots, {"plain"});
+define_list_config_array_extra(color_diff_slots, { "plain" });
 
 static int parse_diff_color_slot(const char *var)
 {
@@ -407,7 +407,7 @@ static unsigned parse_color_moved_ws(const char *arg)
 
     string_list_split(&l, arg, ',', -1);
 
-    for_each_string_list_item(i, &l)
+    for_each_string_list_item (i, &l)
     {
         struct strbuf sb = STRBUF_INIT;
         strbuf_addstr(&sb, i->string);
@@ -1051,9 +1051,9 @@ struct emitted_diff_symbol
     enum diff_symbol s;
 };
 #define EMITTED_DIFF_SYMBOL_INIT \
-    {                            \
-        0                        \
-    }
+ {                               \
+  0                              \
+ }
 
 struct emitted_diff_symbols
 {
@@ -1061,9 +1061,9 @@ struct emitted_diff_symbols
     int                         nr, alloc;
 };
 #define EMITTED_DIFF_SYMBOLS_INIT \
-    {                             \
-        0                         \
-    }
+ {                                \
+  0                               \
+ }
 
 static void append_emitted_diff_symbol(struct diff_options        *o,
                                        struct emitted_diff_symbol *e)
@@ -1416,7 +1416,7 @@ static void fill_potential_moved_blocks(struct diff_options        *o,
  * Think of a way to unify them.
  */
 #define DIFF_SYMBOL_MOVED_LINE_ZEBRA_MASK \
-    (DIFF_SYMBOL_MOVED_LINE | DIFF_SYMBOL_MOVED_LINE_ALT)
+ (DIFF_SYMBOL_MOVED_LINE | DIFF_SYMBOL_MOVED_LINE_ALT)
 static int adjust_last_block(struct diff_options *o, int n, int block_length)
 {
     int i;
@@ -1930,7 +1930,8 @@ static void emit_diff_symbol(struct diff_options *o, enum diff_symbol s,
                              const char *line, int len, unsigned flags)
 {
     struct emitted_diff_symbol e = {
-        .line = line, .len = len, .flags = flags, .s = s};
+        .line = line, .len = len, .flags = flags, .s = s
+    };
 
     if (o->emitted_symbols)
     {
@@ -2024,7 +2025,7 @@ static void emit_hunk_header(struct emit_callback *ecbdata,
     const char       *func    = diff_get_color(ecbdata->color_diff, DIFF_FUNCINFO);
     const char       *reset   = diff_get_color(ecbdata->color_diff, DIFF_RESET);
     const char       *reverse = ecbdata->color_diff ? GIT_COLOR_REVERSE : "";
-    static const char atat[2] = {'@', '@'};
+    static const char atat[2] = { '@', '@' };
     const char       *cp;
     const char       *ep;
     struct strbuf     msgbuf  = STRBUF_INIT;
@@ -2310,9 +2311,10 @@ struct diff_words_style
 };
 
 static struct diff_words_style diff_words_styles[] = {
-    {DIFF_WORDS_PORCELAIN, {"+", "\n"}, {"-", "\n"}, {" ", "\n"}, "~\n"},
-    {DIFF_WORDS_PLAIN, {"{+", "+}"}, {"[-", "-]"}, {"", ""}, "\n"},
-    {DIFF_WORDS_COLOR, {"", ""}, {"", ""}, {"", ""}, "\n"}};
+    { DIFF_WORDS_PORCELAIN, { "+", "\n" }, { "-", "\n" }, { " ", "\n" }, "~\n" },
+    { DIFF_WORDS_PLAIN, { "{+", "+}" }, { "[-", "-]" }, { "", "" }, "\n" },
+    { DIFF_WORDS_COLOR, { "", "" }, { "", "" }, { "", "" }, "\n" }
+};
 
 struct diff_words_data
 {
@@ -4846,18 +4848,17 @@ static int reuse_worktree_file(struct index_state     *istate,
         return 0;
     }
 
-	/* We want to avoid the working directory if our caller
-	 * doesn't need the data in a normal file, this system
-	 * is rather slow with its stat/open/mmap/close syscalls,
-	 * and the object is contained in a pack file.  The pack
-	 * is probably already open and will be faster to obtain
-	 * the data through than the working directory.  Loose
-	 * objects however would tend to be slower as they need
-	 * to be individually opened and inflated.
-	 */
-	if (!FAST_WORKING_DIRECTORY && !want_file &&
-	    has_object_pack(istate->repo, oid))
-		return 0;
+    /* We want to avoid the working directory if our caller
+     * doesn't need the data in a normal file, this system
+     * is rather slow with its stat/open/mmap/close syscalls,
+     * and the object is contained in a pack file.  The pack
+     * is probably already open and will be faster to obtain
+     * the data through than the working directory.  Loose
+     * objects however would tend to be slower as they need
+     * to be individually opened and inflated.
+     */
+    if (!FAST_WORKING_DIRECTORY && !want_file && has_object_pack(istate->repo, oid))
+        return 0;
 
     /*
      * Similarly, if we'd have to convert the file contents anyway, that
@@ -5071,7 +5072,8 @@ int diff_populate_filespec(struct repository                           *r,
     else
     {
         struct object_info info = {
-            .sizep = &s->size};
+            .sizep = &s->size
+        };
 
         if (!(size_only || check_binary))
         {
@@ -7029,11 +7031,12 @@ struct option *add_diff_options(const struct option *opts,
         OPT_CALLBACK_F(0, "diff-filter", options, N_("[(A|C|D|M|R|T|U|X|B)...[*]]"),
                        N_("select files by diff type"),
                        PARSE_OPT_NONEG, diff_opt_diff_filter),
-        {OPTION_CALLBACK, 0, "output", options, N_("<file>"),
-         N_("output to a specific file"),
-         PARSE_OPT_NONEG, NULL, 0, diff_opt_output},
+        { OPTION_CALLBACK, 0, "output", options, N_("<file>"),
+          N_("output to a specific file"),
+          PARSE_OPT_NONEG, NULL, 0, diff_opt_output },
 
-        OPT_END()};
+        OPT_END()
+    };
 
     return parse_options_concat(opts, parseopts);
 }
@@ -7041,7 +7044,7 @@ struct option *add_diff_options(const struct option *opts,
 int diff_opt_parse(struct diff_options *options,
                    const char **av, int ac, const char *prefix)
 {
-    struct option  no_options[] = {OPT_END()};
+    struct option  no_options[] = { OPT_END() };
     struct option *parseopts    = add_diff_options(no_options, options);
 
     if (!prefix)
@@ -7607,8 +7610,8 @@ static void diff_summary(struct diff_options *opt, struct diff_filepair *p)
 
 struct patch_id_t
 {
-    git_hash_ctx *ctx;
-    int           patchlen;
+    struct git_hash_ctx *ctx;
+    int                  patchlen;
 };
 
 static int remove_space(char *line, int len)
@@ -7628,13 +7631,13 @@ static int remove_space(char *line, int len)
     return dst - line;
 }
 
-void flush_one_hunk(struct object_id *result, git_hash_ctx *ctx)
+void flush_one_hunk(struct object_id *result, struct git_hash_ctx *ctx)
 {
     unsigned char  hash[GIT_MAX_RAWSZ];
     unsigned short carry = 0;
     int            i;
 
-    the_hash_algo->final_fn(hash, ctx);
+    git_hash_final(hash, ctx);
     the_hash_algo->init_fn(ctx);
     /* 20-byte sum, with carry */
     for (i = 0; i < the_hash_algo->rawsz; ++i)
@@ -7656,22 +7659,22 @@ static int patch_id_consume(void *priv, char *line, unsigned long len)
     }
     new_len = remove_space(line, len);
 
-    the_hash_algo->update_fn(data->ctx, line, new_len);
+    git_hash_update(data->ctx, line, new_len);
     data->patchlen += new_len;
     return 0;
 }
 
-static void patch_id_add_string(git_hash_ctx *ctx, const char *str)
+static void patch_id_add_string(struct git_hash_ctx *ctx, const char *str)
 {
-    the_hash_algo->update_fn(ctx, str, strlen(str));
+    git_hash_update(ctx, str, strlen(str));
 }
 
-static void patch_id_add_mode(git_hash_ctx *ctx, unsigned mode)
+static void patch_id_add_mode(struct git_hash_ctx *ctx, unsigned mode)
 {
     /* large enough for 2^32 in octal */
     char buf[12];
     int  len = xsnprintf(buf, sizeof(buf), "%06o", mode);
-    the_hash_algo->update_fn(ctx, buf, len);
+    git_hash_update(ctx, buf, len);
 }
 
 /* returns 0 upon success, and writes result into oid */
@@ -7679,7 +7682,7 @@ static int diff_get_patch_id(struct diff_options *options, struct object_id *oid
 {
     struct diff_queue_struct *q = &diff_queued_diff;
     int                       i;
-    git_hash_ctx              ctx;
+    struct git_hash_ctx       ctx;
     struct patch_id_t         data;
 
     the_hash_algo->init_fn(&ctx);
@@ -7727,9 +7730,9 @@ static int diff_get_patch_id(struct diff_options *options, struct object_id *oid
         len2 = remove_space(p->two->path, strlen(p->two->path));
         patch_id_add_string(&ctx, "diff--git");
         patch_id_add_string(&ctx, "a/");
-        the_hash_algo->update_fn(&ctx, p->one->path, len1);
+        git_hash_update(&ctx, p->one->path, len1);
         patch_id_add_string(&ctx, "b/");
-        the_hash_algo->update_fn(&ctx, p->two->path, len2);
+        git_hash_update(&ctx, p->two->path, len2);
 
         if (p->one->mode == 0)
         {
@@ -7755,10 +7758,10 @@ static int diff_get_patch_id(struct diff_options *options, struct object_id *oid
         }
         else if (diff_filespec_is_binary(options->repo, p->one) || diff_filespec_is_binary(options->repo, p->two))
         {
-            the_hash_algo->update_fn(&ctx, oid_to_hex(&p->one->oid),
-                                     the_hash_algo->hexsz);
-            the_hash_algo->update_fn(&ctx, oid_to_hex(&p->two->oid),
-                                     the_hash_algo->hexsz);
+            git_hash_update(&ctx, oid_to_hex(&p->one->oid),
+                            the_hash_algo->hexsz);
+            git_hash_update(&ctx, oid_to_hex(&p->two->oid),
+                            the_hash_algo->hexsz);
         }
         else
         {
@@ -7766,20 +7769,20 @@ static int diff_get_patch_id(struct diff_options *options, struct object_id *oid
             {
                 patch_id_add_string(&ctx, "---/dev/null");
                 patch_id_add_string(&ctx, "+++b/");
-                the_hash_algo->update_fn(&ctx, p->two->path, len2);
+                git_hash_update(&ctx, p->two->path, len2);
             }
             else if (p->two->mode == 0)
             {
                 patch_id_add_string(&ctx, "---a/");
-                the_hash_algo->update_fn(&ctx, p->one->path, len1);
+                git_hash_update(&ctx, p->one->path, len1);
                 patch_id_add_string(&ctx, "+++/dev/null");
             }
             else
             {
                 patch_id_add_string(&ctx, "---a/");
-                the_hash_algo->update_fn(&ctx, p->one->path, len1);
+                git_hash_update(&ctx, p->one->path, len1);
                 patch_id_add_string(&ctx, "+++b/");
-                the_hash_algo->update_fn(&ctx, p->two->path, len2);
+                git_hash_update(&ctx, p->two->path, len2);
             }
 
             if (fill_mmfile(options->repo, &mf1, p->one) < 0 || fill_mmfile(options->repo, &mf2, p->two) < 0)
@@ -7903,7 +7906,7 @@ static void create_filepairs_for_header_only_notifications(struct diff_options *
      * in diff_queued_diff, create a synthetic filepair and insert that
      * into diff_queued_diff.
      */
-    strmap_for_each_entry(o->additional_path_headers, &iter, e)
+    strmap_for_each_entry (o->additional_path_headers, &iter, e)
     {
         if (!strset_contains(&present, e->key))
         {
@@ -8783,16 +8786,15 @@ int textconv_object(struct repository      *r,
 
 void setup_diff_pager(struct diff_options *opt)
 {
-	/*
-	 * If the user asked for our exit code, then either they want --quiet
-	 * or --exit-code. We should definitely not bother with a pager in the
-	 * former case, as we will generate no output. Since we still properly
-	 * report our exit code even when a pager is run, we _could_ run a
-	 * pager with --exit-code. But since we have not done so historically,
-	 * and because it is easy to find people oneline advising "git diff
-	 * --exit-code" in hooks and other scripts, we do not do so.
-	 */
-	if (!opt->flags.exit_with_status &&
-	    check_pager_config(the_repository, "diff") != 0)
-		setup_pager(the_repository);
+    /*
+     * If the user asked for our exit code, then either they want --quiet
+     * or --exit-code. We should definitely not bother with a pager in the
+     * former case, as we will generate no output. Since we still properly
+     * report our exit code even when a pager is run, we _could_ run a
+     * pager with --exit-code. But since we have not done so historically,
+     * and because it is easy to find people oneline advising "git diff
+     * --exit-code" in hooks and other scripts, we do not do so.
+     */
+    if (!opt->flags.exit_with_status && check_pager_config(the_repository, "diff") != 0)
+        setup_pager(the_repository);
 }

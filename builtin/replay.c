@@ -69,7 +69,7 @@ static struct commit *create_commit(struct tree   *tree,
     const char                 *message          = repo_logmsg_reencode(the_repository, based_on,
                                                                         NULL, out_enc);
     const char                 *orig_message     = NULL;
-    const char                 *exclude_gpgsig[] = {"gpgsig", NULL};
+    const char                 *exclude_gpgsig[] = { "gpgsig", NULL };
 
     commit_list_insert(parent, &parents);
     extra = read_commit_extra_headers(based_on, exclude_gpgsig);
@@ -182,20 +182,15 @@ static void determine_replay_mode(struct rev_cmdline_info *cmd_info,
 
     get_ref_information(cmd_info, &rinfo);
     if (!rinfo.positive_refexprs)
-    {
         die(_("need some commits to replay"));
-    }
-    if (onto_name && *advance_name)
-    {
-        die(_("--onto and --advance are incompatible"));
-    }
-    else if (onto_name)
+
+    die_for_incompatible_opt2(!!onto_name, "--onto",
+                              !!*advance_name, "--advance");
+    if (onto_name)
     {
         *onto = peel_committish(onto_name);
         if (rinfo.positive_refexprs < strset_get_size(&rinfo.positive_refs))
-        {
             die(_("all positive revisions given must be references"));
-        }
     }
     else if (*advance_name)
     {
@@ -251,8 +246,8 @@ static void determine_replay_mode(struct rev_cmdline_info *cmd_info,
             }
 
             /* Only one entry, but we have to loop to get it */
-            strset_for_each_entry(&rinfo.negative_refs,
-                                  &iter, entry)
+            strset_for_each_entry (&rinfo.negative_refs,
+                                   &iter, entry)
             {
                 last_key = entry->key;
             }
@@ -355,7 +350,8 @@ int cmd_replay(int                     argc,
         N_("(EXPERIMENTAL!) git replay "
            "([--contained] --onto <newbase> | --advance <branch>) "
            "<revision-range>..."),
-        NULL};
+        NULL
+    };
     struct option replay_options[] = {
         OPT_STRING(0, "advance", &advance_name_opt,
                    N_("branch"),
@@ -365,7 +361,8 @@ int cmd_replay(int                     argc,
                    N_("replay onto given commit")),
         OPT_BOOL(0, "contained", &contained,
                  N_("advance all branches contained in revision-range")),
-        OPT_END()};
+        OPT_END()
+    };
 
     argc = parse_options(argc, argv, prefix, replay_options, replay_usage,
                          PARSE_OPT_KEEP_ARGV0 | PARSE_OPT_KEEP_UNKNOWN_OPT);

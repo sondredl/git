@@ -18,7 +18,8 @@
 time_t tm_to_time_t(const struct tm *tm)
 {
     static const int mdays[] = {
-        0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+        0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334
+    };
     int year  = tm->tm_year - 70;
     int month = tm->tm_mon;
     int day   = tm->tm_mday;
@@ -44,10 +45,12 @@ time_t tm_to_time_t(const struct tm *tm)
 
 static const char *month_names[] = {
     "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"};
+    "July", "August", "September", "October", "November", "December"
+};
 
 static const char *weekday_names[] = {
-    "Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"};
+    "Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"
+};
 
 static time_t gm_time_t(timestamp_t time, int tz)
 {
@@ -259,13 +262,13 @@ static void show_date_normal(struct strbuf *buf, timestamp_t time, struct tm *tm
 {
     struct
     {
-        unsigned int year : 1,
-            date : 1,
-            wday : 1,
-            time : 1,
-            seconds : 1,
-            tz : 1;
-    } hide = {0};
+        unsigned int year:1,
+            date:1,
+            wday:1,
+            time:1,
+            seconds:1,
+            tz:1;
+    } hide = { 0 };
 
     hide.tz   = local || tz == human_tz;
     hide.year = tm->tm_year == human_tm->tm_year;
@@ -349,8 +352,8 @@ static void show_date_normal(struct strbuf *buf, timestamp_t time, struct tm *tm
 const char *show_date(timestamp_t time, int tz, struct date_mode mode)
 {
     struct tm           *tm;
-    struct tm            tmbuf    = {0};
-    struct tm            human_tm = {0};
+    struct tm            tmbuf    = { 0 };
+    struct tm            human_tm = { 0 };
     int                  human_tz = -1;
     static struct strbuf timebuf  = STRBUF_INIT;
 
@@ -1484,7 +1487,7 @@ void datestamp(struct strbuf *out)
 {
     time_t    now;
     int       offset;
-    struct tm tm = {0};
+    struct tm tm = { 0 };
 
     time(&now);
 
@@ -1648,15 +1651,16 @@ static const struct special
     const char *name;
     void (*fn)(struct tm *, struct tm *, int *);
 } special[] = {
-    {"yesterday", date_yesterday},
-    {"noon", date_noon},
-    {"midnight", date_midnight},
-    {"tea", date_tea},
-    {"PM", date_pm},
-    {"AM", date_am},
-    {"never", date_never},
-    {"now", date_now},
-    {NULL}};
+    { "yesterday", date_yesterday },
+    { "noon", date_noon },
+    { "midnight", date_midnight },
+    { "tea", date_tea },
+    { "PM", date_pm },
+    { "AM", date_am },
+    { "never", date_never },
+    { "now", date_now },
+    { NULL }
+};
 
 static const char *number_name[] = {
     "zero",
@@ -1677,12 +1681,13 @@ static const struct typelen
     const char *type;
     int         length;
 } typelen[] = {
-    {"seconds", 1},
-    {"minutes", 60},
-    {"hours", 60 * 60},
-    {"days", 24 * 60 * 60},
-    {"weeks", 7 * 24 * 60 * 60},
-    {NULL}};
+    { "seconds", 1 },
+    { "minutes", 60 },
+    { "hours", 60 * 60 },
+    { "days", 24 * 60 * 60 },
+    { "weeks", 7 * 24 * 60 * 60 },
+    { NULL }
+};
 
 static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm *now, int *num, int *touched)
 {
@@ -1709,7 +1714,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 
     for (s = special; s->name; s++)
     {
-        int len = strlen(s->name);
+        size_t len = strlen(s->name);
         if (match_string(date, s->name) == len)
         {
             s->fn(tm, now, num);
@@ -1722,7 +1727,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
     {
         for (i = 1; i < 11; i++)
         {
-            int len = strlen(number_name[i]);
+            size_t len = strlen(number_name[i]);
             if (match_string(date, number_name[i]) == len)
             {
                 *num     = i;
@@ -1741,7 +1746,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
     tl = typelen;
     while (tl->type)
     {
-        int len = strlen(tl->type);
+        size_t len = strlen(tl->type);
         if (match_string(date, tl->type) >= len - 1)
         {
             update_tm(tm, now, tl->length * *num);

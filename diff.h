@@ -117,12 +117,11 @@ typedef const char *(*diff_prefix_fn_t)(struct diff_options *opt, void *data);
 #define DIFF_FORMAT_CALLBACK 0x1000
 
 #define DIFF_FLAGS_INIT \
-    {                   \
-        0               \
-    }
+ {                      \
+  0                     \
+ }
 struct diff_flags
 {
-
     /**
      * Tells if tree traversal done by tree-diff should recursively descend
      * into a tree object pair that are different in preimage and postimage set.
@@ -207,11 +206,11 @@ struct diff_flags
 static inline void diff_flags_or(struct diff_flags       *a,
                                  const struct diff_flags *b)
 {
-	char *tmp_a = (char *)a;
-	const char *tmp_b = (const char *)b;
+    char       *tmp_a = (char *)a;
+    const char *tmp_b = (const char *)b;
 
-	for (size_t i = 0; i < sizeof(struct diff_flags); i++)
-		tmp_a[i] |= tmp_b[i];
+    for (size_t i = 0; i < sizeof(struct diff_flags); i++)
+        tmp_a[i] |= tmp_b[i];
 }
 
 #define DIFF_XDL_TST(opts, flag) ((opts)->xdl_opts & XDF_##flag)
@@ -427,10 +426,10 @@ struct diffstat_t
         char       *name;
         char       *print_name;
         const char *comments;
-        unsigned    is_unmerged : 1;
-        unsigned    is_binary : 1;
-        unsigned    is_renamed : 1;
-        unsigned    is_interesting : 1;
+        unsigned    is_unmerged:1;
+        unsigned    is_binary:1;
+        unsigned    is_renamed:1;
+        unsigned    is_interesting:1;
         uintmax_t   added, deleted;
     } * *files;
 };
@@ -464,14 +463,14 @@ enum color_diff
 
 const char *diff_get_color(int diff_use_color, enum color_diff ix);
 #define diff_get_color_opt(o, ix) \
-    diff_get_color((o)->use_color, ix)
+ diff_get_color((o)->use_color, ix)
 
 const char *diff_line_prefix(struct diff_options *);
 
 extern const char mime_boundary_leader[];
 
 struct combine_diff_path *diff_tree_paths(
-    struct combine_diff_path *p, const struct object_id *oid,
+    const struct object_id  *oid,
     const struct object_id **parents_oid, int nparent,
     struct strbuf *base, struct diff_options *opt);
 void diff_tree_oid(const struct object_id *old_oid,
@@ -491,12 +490,20 @@ struct combine_diff_path
         char             status;
         unsigned int     mode;
         struct object_id oid;
-        struct strbuf    path;
+        /*
+         * This per-parent path is filled only when doing a combined
+         * diff with revs.combined_all_paths set, and only if the path
+         * differs from the post-image (e.g., a rename or copy).
+         * Otherwise it is left NULL.
+         */
+        char *path;
     } parent[FLEX_ARRAY];
 };
-#define combine_diff_path_size(n, l)                  \
-    st_add4(sizeof(struct combine_diff_path), (l), 1, \
-            st_mult(sizeof(struct combine_diff_parent), (n)))
+struct combine_diff_path *combine_diff_path_new(const char             *path,
+                                                size_t                  path_len,
+                                                unsigned int            mode,
+                                                const struct object_id *oid,
+                                                size_t                  num_parents);
 
 void show_combined_diff(struct combine_diff_path *elem, int num_parent,
                         struct rev_info *);
@@ -582,33 +589,33 @@ void init_diffstat_widths(struct diff_options *);
 void diffcore_std(struct diff_options *);
 void diffcore_fix_diff_index(void);
 
-#define COMMON_DIFF_OPTIONS_HELP                                                  \
-    "\ncommon diff options:\n"                                                    \
-    "  -z            output diff-raw with lines terminated with NUL.\n"           \
-    "  -p            output patch format.\n"                                      \
-    "  -u            synonym for -p.\n"                                           \
-    "  --patch-with-raw\n"                                                        \
-    "                output both a patch and the diff-raw format.\n"              \
-    "  --stat        show diffstat instead of patch.\n"                           \
-    "  --numstat     show numeric diffstat instead of patch.\n"                   \
-    "  --patch-with-stat\n"                                                       \
-    "                output a patch and prepend its diffstat.\n"                  \
-    "  --name-only   show only names of changed files.\n"                         \
-    "  --name-status show names and status of changed files.\n"                   \
-    "  --full-index  show full object name on index lines.\n"                     \
-    "  --abbrev=<n>  abbreviate object names in diff-tree header and diff-raw.\n" \
-    "  -R            swap input file pairs.\n"                                    \
-    "  -B            detect complete rewrites.\n"                                 \
-    "  -M            detect renames.\n"                                           \
-    "  -C            detect copies.\n"                                            \
-    "  --find-copies-harder\n"                                                    \
-    "                try unchanged files as candidate for copy detection.\n"      \
-    "  -l<n>         limit rename attempts up to <n> paths.\n"                    \
-    "  -O<file>      reorder diffs according to the <file>.\n"                    \
-    "  -S<string>    find filepair whose only one side contains the string.\n"    \
-    "  --pickaxe-all\n"                                                           \
-    "                show all files diff when -S is used and hit is found.\n"     \
-    "  -a  --text    treat all files as text.\n"
+#define COMMON_DIFF_OPTIONS_HELP                                               \
+ "\ncommon diff options:\n"                                                    \
+ "  -z            output diff-raw with lines terminated with NUL.\n"           \
+ "  -p            output patch format.\n"                                      \
+ "  -u            synonym for -p.\n"                                           \
+ "  --patch-with-raw\n"                                                        \
+ "                output both a patch and the diff-raw format.\n"              \
+ "  --stat        show diffstat instead of patch.\n"                           \
+ "  --numstat     show numeric diffstat instead of patch.\n"                   \
+ "  --patch-with-stat\n"                                                       \
+ "                output a patch and prepend its diffstat.\n"                  \
+ "  --name-only   show only names of changed files.\n"                         \
+ "  --name-status show names and status of changed files.\n"                   \
+ "  --full-index  show full object name on index lines.\n"                     \
+ "  --abbrev=<n>  abbreviate object names in diff-tree header and diff-raw.\n" \
+ "  -R            swap input file pairs.\n"                                    \
+ "  -B            detect complete rewrites.\n"                                 \
+ "  -M            detect renames.\n"                                           \
+ "  -C            detect copies.\n"                                            \
+ "  --find-copies-harder\n"                                                    \
+ "                try unchanged files as candidate for copy detection.\n"      \
+ "  -l<n>         limit rename attempts up to <n> paths.\n"                    \
+ "  -O<file>      reorder diffs according to the <file>.\n"                    \
+ "  -S<string>    find filepair whose only one side contains the string.\n"    \
+ "  --pickaxe-all\n"                                                           \
+ "                show all files diff when -S is used and hit is found.\n"     \
+ "  -a  --text    treat all files as text.\n"
 
 int  diff_queue_is_empty(struct diff_options *o);
 void diff_flush(struct diff_options *);
@@ -651,7 +658,7 @@ void run_diff_index(struct rev_info *revs, unsigned int option);
 
 int  do_diff_cache(const struct object_id *, struct diff_options *);
 int  diff_flush_patch_id(struct diff_options *, struct object_id *, int);
-void flush_one_hunk(struct object_id *result, git_hash_ctx *ctx);
+void flush_one_hunk(struct object_id *result, struct git_hash_ctx *ctx);
 
 int diff_result_code(struct rev_info *);
 

@@ -23,30 +23,30 @@ static int integer_needle_lesseq(size_t i, void *_args)
 
 static void *realloc_stub(void *p UNUSED, size_t size UNUSED)
 {
-	return NULL;
+    return NULL;
 }
 
 int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
 {
-    if_test("binary search with binsearch works")
+    if_test ("binary search with binsearch works")
     {
-        int haystack[] = {2, 4, 6, 8, 10};
+        int haystack[] = { 2, 4, 6, 8, 10 };
         struct
         {
             int    needle;
             size_t expected_idx;
         } testcases[] = {
-            {-9000, 0},
-            {-1, 0},
-            {0, 0},
-            {2, 0},
-            {3, 1},
-            {4, 1},
-            {7, 3},
-            {9, 4},
-            {10, 4},
-            {11, 5},
-            {9000, 5},
+            { -9000, 0 },
+            { -1, 0 },
+            { 0, 0 },
+            { 2, 0 },
+            { 3, 1 },
+            { 4, 1 },
+            { 7, 3 },
+            { 9, 4 },
+            { 10, 4 },
+            { 11, 5 },
+            { 9000, 5 },
         };
 
         for (size_t i = 0; i < ARRAY_SIZE(testcases); i++)
@@ -63,24 +63,24 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
         }
     }
 
-    if_test("names_length returns size of a NULL-terminated string array")
+    if_test ("names_length returns size of a NULL-terminated string array")
     {
-        const char *a[] = {"a", "b", NULL};
+        const char *a[] = { "a", "b", NULL };
         check_int(names_length(a), ==, 2);
     }
 
-    if_test("names_equal compares NULL-terminated string arrays")
+    if_test ("names_equal compares NULL-terminated string arrays")
     {
-        const char *a[] = {"a", "b", "c", NULL};
-        const char *b[] = {"a", "b", "d", NULL};
-        const char *c[] = {"a", "b", NULL};
+        const char *a[] = { "a", "b", "c", NULL };
+        const char *b[] = { "a", "b", "d", NULL };
+        const char *c[] = { "a", "b", NULL };
 
         check(names_equal(a, a));
         check(!names_equal(a, b));
         check(!names_equal(a, c));
     }
 
-    if_test("parse_names works for basic input")
+    if_test ("parse_names works for basic input")
     {
         char   in1[] = "line\n";
         char   in2[] = "a\nb\nc";
@@ -99,7 +99,7 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
         free_names(out);
     }
 
-    if_test("parse_names drops empty string")
+    if_test ("parse_names drops empty string")
     {
         char   in[] = "a\n\nb\n";
         char **out  = parse_names(in, strlen(in));
@@ -111,7 +111,7 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
         free_names(out);
     }
 
-    if_test("common_prefix_size works")
+    if_test ("common_prefix_size works")
     {
         struct reftable_buf a = REFTABLE_BUF_INIT;
         struct reftable_buf b = REFTABLE_BUF_INIT;
@@ -120,18 +120,18 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
             const char *a, *b;
             int         want;
         } cases[] = {
-            {"abcdef", "abc", 3},
-            {"abc", "ab", 2},
-            {"", "abc", 0},
-            {"abc", "abd", 2},
-            {"abc", "pqr", 0},
+            { "abcdef", "abc", 3 },
+            { "abc", "ab", 2 },
+            { "", "abc", 0 },
+            { "abc", "abd", 2 },
+            { "abc", "pqr", 0 },
         };
 
         for (size_t i = 0; i < ARRAY_SIZE(cases); i++)
         {
             check(!reftable_buf_addstr(&a, cases[i].a));
             check(!reftable_buf_addstr(&b, cases[i].b));
-            check_int(common_prefix_size(&a, &b), ==, cases[i].want);
+            check_uint(common_prefix_size(&a, &b), ==, cases[i].want);
             reftable_buf_reset(&a);
             reftable_buf_reset(&b);
         }
@@ -139,7 +139,7 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
         reftable_buf_release(&b);
     }
 
-    if_test("put_be24 and get_be24 work")
+    if_test ("put_be24 and get_be24 work")
     {
         uint32_t in = 0x112233;
         uint8_t  dest[3];
@@ -149,7 +149,7 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
         check_int(in, ==, out);
     }
 
-    if_test("put_be16 and get_be16 work")
+    if_test ("put_be16 and get_be16 work")
     {
         uint32_t in = 0xfef1;
         uint8_t  dest[3];
@@ -159,56 +159,58 @@ int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
         check_int(in, ==, out);
     }
 
-	if_test ("REFTABLE_ALLOC_GROW works") {
-		int *arr = NULL, *old_arr;
-		size_t alloc = 0, old_alloc;
+    if_test ("REFTABLE_ALLOC_GROW works")
+    {
+        int   *arr   = NULL, *old_arr;
+        size_t alloc = 0, old_alloc;
 
-		check(!REFTABLE_ALLOC_GROW(arr, 1, alloc));
-		check(arr != NULL);
-		check_uint(alloc, >=, 1);
-		arr[0] = 42;
+        check(!REFTABLE_ALLOC_GROW(arr, 1, alloc));
+        check(arr != NULL);
+        check_uint(alloc, >=, 1);
+        arr[0] = 42;
 
-		old_alloc = alloc;
-		old_arr = arr;
-		reftable_set_alloc(NULL, realloc_stub, NULL);
-		check(REFTABLE_ALLOC_GROW(arr, old_alloc + 1, alloc));
-		check(arr == old_arr);
-		check_uint(alloc, ==, old_alloc);
+        old_alloc = alloc;
+        old_arr   = arr;
+        reftable_set_alloc(NULL, realloc_stub, NULL);
+        check(REFTABLE_ALLOC_GROW(arr, old_alloc + 1, alloc));
+        check(arr == old_arr);
+        check_uint(alloc, ==, old_alloc);
 
-		old_alloc = alloc;
-		reftable_set_alloc(NULL, NULL, NULL);
-		check(!REFTABLE_ALLOC_GROW(arr, old_alloc + 1, alloc));
-		check(arr != NULL);
-		check_uint(alloc, >, old_alloc);
-		arr[alloc - 1] = 42;
+        old_alloc = alloc;
+        reftable_set_alloc(NULL, NULL, NULL);
+        check(!REFTABLE_ALLOC_GROW(arr, old_alloc + 1, alloc));
+        check(arr != NULL);
+        check_uint(alloc, >, old_alloc);
+        arr[alloc - 1] = 42;
 
-		reftable_free(arr);
-	}
+        reftable_free(arr);
+    }
 
-	if_test ("REFTABLE_ALLOC_GROW_OR_NULL works") {
-		int *arr = NULL;
-		size_t alloc = 0, old_alloc;
+    if_test ("REFTABLE_ALLOC_GROW_OR_NULL works")
+    {
+        int   *arr   = NULL;
+        size_t alloc = 0, old_alloc;
 
-		REFTABLE_ALLOC_GROW_OR_NULL(arr, 1, alloc);
-		check(arr != NULL);
-		check_uint(alloc, >=, 1);
-		arr[0] = 42;
+        REFTABLE_ALLOC_GROW_OR_NULL(arr, 1, alloc);
+        check(arr != NULL);
+        check_uint(alloc, >=, 1);
+        arr[0] = 42;
 
-		old_alloc = alloc;
-		REFTABLE_ALLOC_GROW_OR_NULL(arr, old_alloc + 1, alloc);
-		check(arr != NULL);
-		check_uint(alloc, >, old_alloc);
-		arr[alloc - 1] = 42;
+        old_alloc = alloc;
+        REFTABLE_ALLOC_GROW_OR_NULL(arr, old_alloc + 1, alloc);
+        check(arr != NULL);
+        check_uint(alloc, >, old_alloc);
+        arr[alloc - 1] = 42;
 
-		old_alloc = alloc;
-		reftable_set_alloc(NULL, realloc_stub, NULL);
-		REFTABLE_ALLOC_GROW_OR_NULL(arr, old_alloc + 1, alloc);
-		check(arr == NULL);
-		check_uint(alloc, ==, 0);
-		reftable_set_alloc(NULL, NULL, NULL);
+        old_alloc = alloc;
+        reftable_set_alloc(NULL, realloc_stub, NULL);
+        REFTABLE_ALLOC_GROW_OR_NULL(arr, old_alloc + 1, alloc);
+        check(arr == NULL);
+        check_uint(alloc, ==, 0);
+        reftable_set_alloc(NULL, NULL, NULL);
 
-		reftable_free(arr);
-	}
+        reftable_free(arr);
+    }
 
-	return test_done();
+    return test_done();
 }

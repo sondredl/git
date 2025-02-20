@@ -17,23 +17,24 @@ static void (*reftable_free_ptr)(void *);
 
 void *reftable_malloc(size_t sz)
 {
-	if (!sz)
-		return NULL;
-	if (reftable_malloc_ptr)
-		return (*reftable_malloc_ptr)(sz);
-	return malloc(sz);
+    if (!sz)
+        return NULL;
+    if (reftable_malloc_ptr)
+        return (*reftable_malloc_ptr)(sz);
+    return malloc(sz);
 }
 
 void *reftable_realloc(void *p, size_t sz)
 {
-	if (!sz) {
-		reftable_free(p);
-		return NULL;
-	}
+    if (!sz)
+    {
+        reftable_free(p);
+        return NULL;
+    }
 
-	if (reftable_realloc_ptr)
-		return (*reftable_realloc_ptr)(p, sz);
-	return realloc(p, sz);
+    if (reftable_realloc_ptr)
+        return (*reftable_realloc_ptr)(p, sz);
+    return realloc(p, sz);
 }
 
 void reftable_free(void *p)
@@ -125,10 +126,11 @@ int reftable_buf_add(struct reftable_buf *buf, const void *data, size_t len)
 {
     size_t newlen = buf->len + len;
 
-	if (newlen + 1 > buf->alloc) {
-		if (REFTABLE_ALLOC_GROW(buf->buf, newlen + 1, buf->alloc))
-			return REFTABLE_OUT_OF_MEMORY_ERROR;
-	}
+    if (newlen + 1 > buf->alloc)
+    {
+        if (REFTABLE_ALLOC_GROW(buf->buf, newlen + 1, buf->alloc))
+            return REFTABLE_OUT_OF_MEMORY_ERROR;
+    }
 
     memcpy(buf->buf + buf->len, data, len);
     buf->buf[newlen] = '\0';
@@ -236,17 +238,22 @@ char **parse_names(char *buf, int size)
     char  *p         = buf;
     char  *end       = buf + size;
 
-	while (p < end) {
-		char *next = strchr(p, '\n');
-		if (next && next < end) {
-			*next = 0;
-		} else {
-			next = end;
-		}
-		if (p < next) {
-			if (REFTABLE_ALLOC_GROW(names, names_len + 1,
-						names_cap))
-				goto err;
+    while (p < end)
+    {
+        char *next = strchr(p, '\n');
+        if (next && next < end)
+        {
+            *next = 0;
+        }
+        else
+        {
+            next = end;
+        }
+        if (p < next)
+        {
+            if (REFTABLE_ALLOC_GROW(names, names_len + 1,
+                                    names_cap))
+                goto err;
 
             names[names_len] = reftable_strdup(p);
             if (!names[names_len++])
@@ -255,9 +262,9 @@ char **parse_names(char *buf, int size)
         p = next + 1;
     }
 
-	if (REFTABLE_ALLOC_GROW(names, names_len + 1, names_cap))
-		goto err;
-	names[names_len] = NULL;
+    if (REFTABLE_ALLOC_GROW(names, names_len + 1, names_cap))
+        goto err;
+    names[names_len] = NULL;
 
     return names;
 
@@ -281,29 +288,25 @@ int names_equal(const char **a, const char **b)
     return a[i] == b[i];
 }
 
-int common_prefix_size(struct reftable_buf *a, struct reftable_buf *b)
+size_t common_prefix_size(struct reftable_buf *a, struct reftable_buf *b)
 {
-    int p = 0;
+    size_t p = 0;
     for (; p < a->len && p < b->len; p++)
-    {
         if (a->buf[p] != b->buf[p])
-        {
             break;
-        }
-    }
-
     return p;
 }
 
-int hash_size(enum reftable_hash id)
+uint32_t hash_size(enum reftable_hash id)
 {
-	if (!id)
-		return REFTABLE_HASH_SIZE_SHA1;
-	switch (id) {
-	case REFTABLE_HASH_SHA1:
-		return REFTABLE_HASH_SIZE_SHA1;
-	case REFTABLE_HASH_SHA256:
-		return REFTABLE_HASH_SIZE_SHA256;
-	}
-	abort();
+    if (!id)
+        return REFTABLE_HASH_SIZE_SHA1;
+    switch (id)
+    {
+        case REFTABLE_HASH_SHA1:
+            return REFTABLE_HASH_SIZE_SHA1;
+        case REFTABLE_HASH_SHA256:
+            return REFTABLE_HASH_SIZE_SHA256;
+    }
+    abort();
 }

@@ -182,26 +182,11 @@ void run_diff_files(struct rev_info *revs, unsigned int option)
             struct diff_filepair     *pair;
             unsigned int              wt_mode            = 0;
             int                       num_compare_stages = 0;
-            size_t                    path_len;
             struct stat               st;
-
-            path_len = ce_namelen(ce);
-
-            dpath       = xmalloc(combine_diff_path_size(5, path_len));
-            dpath->path = (char *)&(dpath->parent[5]);
-
-            dpath->next = NULL;
-            memcpy(dpath->path, ce->name, path_len);
-            dpath->path[path_len] = '\0';
-            oidclr(&dpath->oid, the_repository->hash_algo);
-            memset(&(dpath->parent[0]), 0,
-                   sizeof(struct combine_diff_parent) * 5);
 
             changed = check_removed(ce, &st);
             if (!changed)
-            {
                 wt_mode = ce_mode_from_stat(ce, st.st_mode);
-            }
             else
             {
                 if (changed < 0)
@@ -211,7 +196,14 @@ void run_diff_files(struct rev_info *revs, unsigned int option)
                 }
                 wt_mode = 0;
             }
-            dpath->mode = wt_mode;
+
+            /*
+             * Allocate space for two parents, which will come from
+             * index stages #2 and #3, if present. Below we'll fill
+             * these from (stage - 2).
+             */
+            dpath = combine_diff_path_new(ce->name, ce_namelen(ce),
+                                          wt_mode, null_oid(), 2);
 
             while (i < entries)
             {
@@ -469,16 +461,10 @@ static int show_modified(struct rev_info          *revs,
     if (revs->combine_merges && !cached && (!oideq(oid, &old_entry->oid) || !oideq(&old_entry->oid, &new_entry->oid)))
     {
         struct combine_diff_path *p;
-        int                       pathlen = ce_namelen(new_entry);
 
-        p       = xmalloc(combine_diff_path_size(2, pathlen));
-        p->path = (char *)&p->parent[2];
-        p->next = NULL;
-        memcpy(p->path, new_entry->name, pathlen);
-        p->path[pathlen] = 0;
-        p->mode          = mode;
-        oidclr(&p->oid, the_repository->hash_algo);
-        memset(p->parent, 0, 2 * sizeof(struct combine_diff_parent));
+        p                   = combine_diff_path_new(new_entry->name,
+                                                    ce_namelen(new_entry),
+                                                    mode, null_oid(), 2);
         p->parent[0].status = DIFF_STATUS_MODIFIED;
         p->parent[0].mode   = new_entry->ce_mode;
         oidcpy(&p->parent[0].oid, &new_entry->oid);
@@ -657,7 +643,7 @@ static int diff_cache(struct rev_info        *revs,
 void diff_get_merge_base(const struct rev_info *revs, struct object_id *mb)
 {
     int                 i;
-    struct commit      *mb_child[2] = {0};
+    struct commit      *mb_child[2] = { 0 };
     struct commit_list *merge_bases = NULL;
 
     for (i = 0; i < revs->pending.nr; i++)
@@ -760,11 +746,11 @@ int do_diff_cache(const struct object_id *tree_oid, struct diff_options *opt)
 {
     struct rev_info revs;
 
-	repo_init_revisions(opt->repo, &revs, NULL);
-	copy_pathspec(&revs.prune_data, &opt->pathspec);
-	diff_free(&revs.diffopt);
-	revs.diffopt = *opt;
-	revs.diffopt.no_free = 1;
+    repo_init_revisions(opt->repo, &revs, NULL);
+    copy_pathspec(&revs.prune_data, &opt->pathspec);
+    diff_free(&revs.diffopt);
+    revs.diffopt         = *opt;
+    revs.diffopt.no_free = 1;
 
     if (diff_cache(&revs, tree_oid, NULL, 1))
     {

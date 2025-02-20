@@ -44,13 +44,12 @@ static int check_ref_format_branch(const char *arg)
     const char   *name;
     int           nongit;
 
-	setup_git_directory_gently(&nongit);
-	if (check_branch_ref(&sb, arg) ||
-	    !skip_prefix(sb.buf, "refs/heads/", &name))
-		die("'%s' is not a valid branch name", arg);
-	printf("%s\n", name);
-	strbuf_release(&sb);
-	return 0;
+    setup_git_directory_gently(&nongit);
+    if (check_branch_ref(&sb, arg) || !skip_prefix(sb.buf, "refs/heads/", &name))
+        die("'%s' is not a valid branch name", arg);
+    printf("%s\n", name);
+    strbuf_release(&sb);
+    return 0;
 }
 
 int cmd_check_ref_format(int                     argc,
@@ -67,10 +66,8 @@ int cmd_check_ref_format(int                     argc,
 
     BUG_ON_NON_EMPTY_PREFIX(prefix);
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage(builtin_check_ref_format_usage);
-    }
+    show_usage_if_asked(argc, argv,
+                        builtin_check_ref_format_usage);
 
     if (argc == 3 && !strcmp(argv[1], "--branch"))
     {

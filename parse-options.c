@@ -507,8 +507,8 @@ static enum parse_opt_result parse_long_opt(
     const char          *arg_start             = arg;
     enum opt_parsed      flags                 = OPT_LONG;
     int                  arg_starts_with_no_no = 0;
-    struct parsed_option abbrev                = {.option = NULL, .flags = OPT_LONG};
-    struct parsed_option ambiguous             = {.option = NULL, .flags = OPT_LONG};
+    struct parsed_option abbrev                = { .option = NULL, .flags = OPT_LONG };
+    struct parsed_option ambiguous             = { .option = NULL, .flags = OPT_LONG };
 
     if (skip_prefix(arg_start, "no-", &arg_start))
     {
@@ -1381,54 +1381,53 @@ int parse_options(int argc, const char **argv,
 
 static int usage_argh(const struct option *opts, FILE *outfile)
 {
-	const char *s;
-	int literal = (opts->flags & PARSE_OPT_LITERAL_ARGHELP) ||
-		!opts->argh || !!strpbrk(opts->argh, "()<>[]|");
-	if (opts->flags & PARSE_OPT_OPTARG)
-		if (opts->long_name)
-			/*
-			 * TRANSLATORS: The "<%s>" part of this string
-			 * stands for an optional value given to a command
-			 * line option in the long form, and "<>" is there
-			 * as a convention to signal that it is a
-			 * placeholder (i.e. the user should substitute it
-			 * with the real value).  If your language uses a
-			 * different convention, you can change "<%s>" part
-			 * to match yours, e.g. it might use "|%s|" instead,
-			 * or if the alphabet is different enough it may use
-			 * "%s" without any placeholder signal.  Most
-			 * translations leave this message as is.
-			 */
-			s = literal ? "[=%s]" : _("[=<%s>]");
-		else
-			/*
-			 * TRANSLATORS: The "<%s>" part of this string
-			 * stands for an optional value given to a command
-			 * line option in the short form, and "<>" is there
-			 * as a convention to signal that it is a
-			 * placeholder (i.e. the user should substitute it
-			 * with the real value).  If your language uses a
-			 * different convention, you can change "<%s>" part
-			 * to match yours, e.g. it might use "|%s|" instead,
-			 * or if the alphabet is different enough it may use
-			 * "%s" without any placeholder signal.  Most
-			 * translations leave this message as is.
-			 */
-			s = literal ? "[%s]" : _("[<%s>]");
-	else
-		/*
-		 * TRANSLATORS: The "<%s>" part of this string stands for a
-		 * value given to a command line option, and "<>" is there
-		 * as a convention to signal that it is a placeholder
-		 * (i.e. the user should substitute it with the real value).
-		 * If your language uses a different convention, you can
-		 * change "<%s>" part to match yours, e.g. it might use
-		 * "|%s|" instead, or if the alphabet is different enough it
-		 * may use "%s" without any placeholder signal.  Most
-		 * translations leave this message as is.
-		 */
-		s = literal ? " %s" : _(" <%s>");
-	return utf8_fprintf(outfile, s, opts->argh ? _(opts->argh) : _("..."));
+    const char *s;
+    int         literal = (opts->flags & PARSE_OPT_LITERAL_ARGHELP) || !opts->argh || !!strpbrk(opts->argh, "()<>[]|");
+    if (opts->flags & PARSE_OPT_OPTARG)
+        if (opts->long_name)
+            /*
+             * TRANSLATORS: The "<%s>" part of this string
+             * stands for an optional value given to a command
+             * line option in the long form, and "<>" is there
+             * as a convention to signal that it is a
+             * placeholder (i.e. the user should substitute it
+             * with the real value).  If your language uses a
+             * different convention, you can change "<%s>" part
+             * to match yours, e.g. it might use "|%s|" instead,
+             * or if the alphabet is different enough it may use
+             * "%s" without any placeholder signal.  Most
+             * translations leave this message as is.
+             */
+            s = literal ? "[=%s]" : _("[=<%s>]");
+        else
+            /*
+             * TRANSLATORS: The "<%s>" part of this string
+             * stands for an optional value given to a command
+             * line option in the short form, and "<>" is there
+             * as a convention to signal that it is a
+             * placeholder (i.e. the user should substitute it
+             * with the real value).  If your language uses a
+             * different convention, you can change "<%s>" part
+             * to match yours, e.g. it might use "|%s|" instead,
+             * or if the alphabet is different enough it may use
+             * "%s" without any placeholder signal.  Most
+             * translations leave this message as is.
+             */
+            s = literal ? "[%s]" : _("[<%s>]");
+    else
+        /*
+         * TRANSLATORS: The "<%s>" part of this string stands for a
+         * value given to a command line option, and "<>" is there
+         * as a convention to signal that it is a placeholder
+         * (i.e. the user should substitute it with the real value).
+         * If your language uses a different convention, you can
+         * change "<%s>" part to match yours, e.g. it might use
+         * "|%s|" instead, or if the alphabet is different enough it
+         * may use "%s" without any placeholder signal.  Most
+         * translations leave this message as is.
+         */
+        s = literal ? " %s" : _(" <%s>");
+    return utf8_fprintf(outfile, s, opts->argh ? _(opts->argh) : _("..."));
 }
 
 static int usage_indent(FILE *outfile)
@@ -1683,6 +1682,17 @@ void NORETURN usage_with_options(const char *const   *usagestr,
 {
     usage_with_options_internal(NULL, usagestr, opts, 0, 1);
     exit(129);
+}
+
+void show_usage_with_options_if_asked(int ac, const char **av,
+                                      const char *const   *usagestr,
+                                      const struct option *opts)
+{
+    if (ac == 2 && !strcmp(av[1], "-h"))
+    {
+        usage_with_options_internal(NULL, usagestr, opts, 0, 0);
+        exit(129);
+    }
 }
 
 void NORETURN usage_msg_opt(const char          *msg,

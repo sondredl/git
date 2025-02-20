@@ -842,7 +842,7 @@ static void clear_pattern_entry_hashmap(struct hashmap *map)
     struct hashmap_iter   iter;
     struct pattern_entry *entry;
 
-    hashmap_for_each_entry(map, &iter, entry, ent)
+    hashmap_for_each_entry (map, &iter, entry, ent)
     {
         free(entry->pattern);
     }
@@ -1203,13 +1203,13 @@ static struct untracked_cache_dir *lookup_untracked(struct untracked_cache     *
 
 static void do_invalidate_gitignore(struct untracked_cache_dir *dir)
 {
-	int i;
-	dir->valid = 0;
-	for (size_t i = 0; i < dir->untracked_nr; i++)
-		free(dir->untracked[i]);
-	dir->untracked_nr = 0;
-	for (i = 0; i < dir->dirs_nr; i++)
-		do_invalidate_gitignore(dir->dirs[i]);
+    int i;
+    dir->valid = 0;
+    for (size_t i = 0; i < dir->untracked_nr; i++)
+        free(dir->untracked[i]);
+    dir->untracked_nr = 0;
+    for (i = 0; i < dir->dirs_nr; i++)
+        do_invalidate_gitignore(dir->dirs[i]);
 }
 
 static void invalidate_gitignore(struct untracked_cache     *uc,
@@ -1235,17 +1235,13 @@ static void invalidate_directory(struct untracked_cache     *uc,
         uc->dir_invalidated++;
     }
 
-	dir->valid = 0;
-	for (size_t i = 0; i < dir->untracked_nr; i++)
-		free(dir->untracked[i]);
-	dir->untracked_nr = 0;
-	for (i = 0; i < dir->dirs_nr; i++)
-		dir->dirs[i]->recurse = 0;
+    dir->valid = 0;
+    for (size_t i = 0; i < dir->untracked_nr; i++)
+        free(dir->untracked[i]);
+    dir->untracked_nr = 0;
+    for (i = 0; i < dir->dirs_nr; i++)
+        dir->dirs[i]->recurse = 0;
 }
-
-static int add_patterns_from_buffer(char *buf, size_t size,
-                                    const char *base, int baselen,
-                                    struct pattern_list *pl);
 
 /* Flags for add_patterns() */
 #define PATTERN_NOFOLLOW (1 << 0)
@@ -1357,9 +1353,9 @@ static int add_patterns(const char *fname, const char *base, int baselen,
     return 0;
 }
 
-static int add_patterns_from_buffer(char *buf, size_t size,
-                                    const char *base, int baselen,
-                                    struct pattern_list *pl)
+int add_patterns_from_buffer(char *buf, size_t size,
+                             const char *base, int baselen,
+                             struct pattern_list *pl)
 {
     char *orig = buf;
     int   i;
@@ -1776,7 +1772,6 @@ static int path_in_sparse_checkout_1(const char         *path,
          end > path && match == UNDECIDED;
          end = slash)
     {
-
         for (slash = end - 1; slash > path && *slash != '/'; slash--)
         {
             ; /* do nothing */
@@ -2293,7 +2288,6 @@ static enum path_treatment treat_directory(struct dir_struct          *dir,
     {
         if (excluded && (dir->flags & DIR_SHOW_IGNORED_TOO) && (dir->flags & DIR_SHOW_IGNORED_TOO_MODE_MATCHING))
         {
-
             /*
              * This is an excluded directory and we are
              * showing ignored paths that match an exclude
@@ -3304,17 +3298,16 @@ static void set_untracked_ident(struct untracked_cache *uc)
 
 static unsigned new_untracked_cache_flags(struct index_state *istate)
 {
-	struct repository *repo = istate->repo;
-	const char *val;
+    struct repository *repo = istate->repo;
+    const char        *val;
 
-	/*
-	 * This logic is coordinated with the setting of these flags in
-	 * wt-status.c#wt_status_collect_untracked(), and the evaluation
-	 * of the config setting in commit.c#git_status_config()
-	 */
-	if (!repo_config_get_string_tmp(repo, "status.showuntrackedfiles", &val) &&
-	    !strcmp(val, "all"))
-		return 0;
+    /*
+     * This logic is coordinated with the setting of these flags in
+     * wt-status.c#wt_status_collect_untracked(), and the evaluation
+     * of the config setting in commit.c#git_status_config()
+     */
+    if (!repo_config_get_string_tmp(repo, "status.showuntrackedfiles", &val) && !strcmp(val, "all"))
+        return 0;
 
     /*
      * The default, if "all" is not set, is "normal" - leading us here.
@@ -4158,16 +4151,17 @@ static void write_one_dir(struct untracked_cache_dir *untracked,
     unsigned int     value;
     int              i = wd->index++;
 
-	/*
-	 * untracked_nr should be reset whenever valid is clear, but
-	 * for safety..
-	 */
-	if (!untracked->valid) {
-		for (size_t i = 0; i < untracked->untracked_nr; i++)
-			free(untracked->untracked[i]);
-		untracked->untracked_nr = 0;
-		untracked->check_only = 0;
-	}
+    /*
+     * untracked_nr should be reset whenever valid is clear, but
+     * for safety..
+     */
+    if (!untracked->valid)
+    {
+        for (size_t i = 0; i < untracked->untracked_nr; i++)
+            free(untracked->untracked[i]);
+        untracked->untracked_nr = 0;
+        untracked->check_only   = 0;
+    }
 
     if (untracked->check_only)
     {
@@ -4557,11 +4551,11 @@ done2:
 static void invalidate_one_directory(struct untracked_cache     *uc,
                                      struct untracked_cache_dir *ucd)
 {
-	uc->dir_invalidated++;
-	ucd->valid = 0;
-	for (size_t i = 0; i < ucd->untracked_nr; i++)
-		free(ucd->untracked[i]);
-	ucd->untracked_nr = 0;
+    uc->dir_invalidated++;
+    ucd->valid = 0;
+    for (size_t i = 0; i < ucd->untracked_nr; i++)
+        free(ucd->untracked[i]);
+    ucd->untracked_nr = 0;
 }
 
 /*

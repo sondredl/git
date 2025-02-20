@@ -68,11 +68,12 @@
  */
 #define REF_DELETED_RMDIR (1 << 9)
 
-struct ref_lock {
-	char *ref_name;
-	struct lock_file lk;
-	struct object_id old_oid;
-	unsigned int count; /* track users of the lock (ref update + reflog updates) */
+struct ref_lock
+{
+    char            *ref_name;
+    struct lock_file lk;
+    struct object_id old_oid;
+    unsigned int     count; /* track users of the lock (ref update + reflog updates) */
 };
 
 struct files_ref_store
@@ -241,7 +242,7 @@ static void files_ref_path(struct files_ref_store *refs,
  */
 static void add_per_worktree_entries_to_dir(struct ref_dir *dir, const char *dirname)
 {
-    const char *prefixes[] = {"refs/bisect/", "refs/worktree/", "refs/rewritten/"};
+    const char *prefixes[] = { "refs/bisect/", "refs/worktree/", "refs/rewritten/" };
     int         ip;
 
     if (strcmp(dirname, "refs/") != 0)
@@ -635,8 +636,8 @@ stat_ref:
     strbuf_rtrim(&sb_contents);
     buf = sb_contents.buf;
 
-	ret = parse_loose_ref_contents(ref_store->repo->hash_algo, buf,
-				       oid, referent, type, NULL, &myerr);
+    ret = parse_loose_ref_contents(ref_store->repo->hash_algo, buf,
+                                   oid, referent, type, NULL, &myerr);
 
 out:
     if (ret && !myerr)
@@ -666,16 +667,16 @@ static int files_read_symbolic_ref(struct ref_store *ref_store, const char *refn
     int              ret;
     unsigned int     type;
 
-	ret = read_ref_internal(ref_store, refname, &oid, referent, &type, &failure_errno, 1);
-	if (!ret && !(type & REF_ISSYMREF))
-		return NOT_A_SYMREF;
-	return ret;
+    ret = read_ref_internal(ref_store, refname, &oid, referent, &type, &failure_errno, 1);
+    if (!ret && !(type & REF_ISSYMREF))
+        return NOT_A_SYMREF;
+    return ret;
 }
 
 int parse_loose_ref_contents(const struct git_hash_algo *algop,
-			     const char *buf, struct object_id *oid,
-			     struct strbuf *referent, unsigned int *type,
-			     const char **trailing, int *failure_errno)
+                             const char *buf, struct object_id *oid,
+                             struct strbuf *referent, unsigned int *type,
+                             const char **trailing, int *failure_errno)
 {
     const char *p;
     if (skip_prefix(buf, "ref:", &buf))
@@ -691,30 +692,31 @@ int parse_loose_ref_contents(const struct git_hash_algo *algop,
         return 0;
     }
 
-	/*
-	 * FETCH_HEAD has additional data after the sha.
-	 */
-	if (parse_oid_hex_algop(buf, oid, &p, algop) ||
-	    (*p != '\0' && !isspace(*p))) {
-		*type |= REF_ISBROKEN;
-		*failure_errno = EINVAL;
-		return -1;
-	}
+    /*
+     * FETCH_HEAD has additional data after the sha.
+     */
+    if (parse_oid_hex_algop(buf, oid, &p, algop) || (*p != '\0' && !isspace(*p)))
+    {
+        *type |= REF_ISBROKEN;
+        *failure_errno = EINVAL;
+        return -1;
+    }
 
-	if (trailing)
-		*trailing = p;
+    if (trailing)
+        *trailing = p;
 
-	return 0;
+    return 0;
 }
 
 static void unlock_ref(struct ref_lock *lock)
 {
-	lock->count--;
-	if (!lock->count) {
-		rollback_lock_file(&lock->lk);
-		free(lock->ref_name);
-		free(lock);
-	}
+    lock->count--;
+    if (!lock->count)
+    {
+        rollback_lock_file(&lock->lk);
+        free(lock->ref_name);
+        free(lock);
+    }
 }
 
 /*
@@ -769,63 +771,70 @@ static int lock_raw_ref(struct files_ref_store *refs,
 
     *lock_p = CALLOC_ARRAY(lock, 1);
 
-	lock->ref_name = xstrdup(refname);
-	lock->count = 1;
-	files_ref_path(refs, &ref_file, refname);
+    lock->ref_name = xstrdup(refname);
+    lock->count    = 1;
+    files_ref_path(refs, &ref_file, refname);
 
 retry:
-	switch (safe_create_leading_directories(ref_file.buf)) {
-	case SCLD_OK:
-		break; /* success */
-	case SCLD_EXISTS:
-		/*
-		 * Suppose refname is "refs/foo/bar". We just failed
-		 * to create the containing directory, "refs/foo",
-		 * because there was a non-directory in the way. This
-		 * indicates a D/F conflict, probably because of
-		 * another reference such as "refs/foo". There is no
-		 * reason to expect this error to be transitory.
-		 */
-		if (refs_verify_refname_available(&refs->base, refname,
-						  extras, NULL, 0, err)) {
-			if (mustexist) {
-				/*
-				 * To the user the relevant error is
-				 * that the "mustexist" reference is
-				 * missing:
-				 */
-				strbuf_reset(err);
-				strbuf_addf(err, "unable to resolve reference '%s'",
-					    refname);
-			} else {
-				/*
-				 * The error message set by
-				 * refs_verify_refname_available() is
-				 * OK.
-				 */
-				ret = TRANSACTION_NAME_CONFLICT;
-			}
-		} else {
-			/*
-			 * The file that is in the way isn't a loose
-			 * reference. Report it as a low-level
-			 * failure.
-			 */
-			strbuf_addf(err, "unable to create lock file %s.lock; "
-				    "non-directory in the way",
-				    ref_file.buf);
-		}
-		goto error_return;
-	case SCLD_VANISHED:
-		/* Maybe another process was tidying up. Try again. */
-		if (--attempts_remaining > 0)
-			goto retry;
-		/* fall through */
-	default:
-		strbuf_addf(err, "unable to create directory for %s",
-			    ref_file.buf);
-		goto error_return;
-	}
+    switch (safe_create_leading_directories(ref_file.buf))
+    {
+        case SCLD_OK:
+            break; /* success */
+        case SCLD_EXISTS:
+            /*
+             * Suppose refname is "refs/foo/bar". We just failed
+             * to create the containing directory, "refs/foo",
+             * because there was a non-directory in the way. This
+             * indicates a D/F conflict, probably because of
+             * another reference such as "refs/foo". There is no
+             * reason to expect this error to be transitory.
+             */
+            if (refs_verify_refname_available(&refs->base, refname,
+                                              extras, NULL, 0, err))
+            {
+                if (mustexist)
+                {
+                    /*
+                     * To the user the relevant error is
+                     * that the "mustexist" reference is
+                     * missing:
+                     */
+                    strbuf_reset(err);
+                    strbuf_addf(err, "unable to resolve reference '%s'",
+                                refname);
+                }
+                else
+                {
+                    /*
+                     * The error message set by
+                     * refs_verify_refname_available() is
+                     * OK.
+                     */
+                    ret = TRANSACTION_NAME_CONFLICT;
+                }
+            }
+            else
+            {
+                /*
+                 * The file that is in the way isn't a loose
+                 * reference. Report it as a low-level
+                 * failure.
+                 */
+                strbuf_addf(err, "unable to create lock file %s.lock; "
+                                 "non-directory in the way",
+                            ref_file.buf);
+            }
+            goto error_return;
+        case SCLD_VANISHED:
+            /* Maybe another process was tidying up. Try again. */
+            if (--attempts_remaining > 0)
+                goto retry;
+            /* fall through */
+        default:
+            strbuf_addf(err, "unable to create directory for %s",
+                        ref_file.buf);
+            goto error_return;
+    }
 
     if (hold_lock_file_for_update_timeout(
             &lock->lk, ref_file.buf, LOCK_NO_DEREF,
@@ -855,92 +864,111 @@ retry:
      * fear that its value will change.
      */
 
-	if (files_read_raw_ref(&refs->base, refname, &lock->old_oid, referent,
-			       type, &failure_errno)) {
-		if (failure_errno == ENOENT) {
-			if (mustexist) {
-				/* Garden variety missing reference. */
-				strbuf_addf(err, "unable to resolve reference '%s'",
-					    refname);
-				goto error_return;
-			} else {
-				/*
-				 * Reference is missing, but that's OK. We
-				 * know that there is not a conflict with
-				 * another loose reference because
-				 * (supposing that we are trying to lock
-				 * reference "refs/foo/bar"):
-				 *
-				 * - We were successfully able to create
-				 *   the lockfile refs/foo/bar.lock, so we
-				 *   know there cannot be a loose reference
-				 *   named "refs/foo".
-				 *
-				 * - We got ENOENT and not EISDIR, so we
-				 *   know that there cannot be a loose
-				 *   reference named "refs/foo/bar/baz".
-				 */
-			}
-		} else if (failure_errno == EISDIR) {
-			/*
-			 * There is a directory in the way. It might have
-			 * contained references that have been deleted. If
-			 * we don't require that the reference already
-			 * exists, try to remove the directory so that it
-			 * doesn't cause trouble when we want to rename the
-			 * lockfile into place later.
-			 */
-			if (mustexist) {
-				/* Garden variety missing reference. */
-				strbuf_addf(err, "unable to resolve reference '%s'",
-					    refname);
-				goto error_return;
-			} else if (remove_dir_recursively(&ref_file,
-							  REMOVE_DIR_EMPTY_ONLY)) {
-				if (refs_verify_refname_available(
-						    &refs->base, refname,
-						    extras, NULL, 0, err)) {
-					/*
-					 * The error message set by
-					 * verify_refname_available() is OK.
-					 */
-					ret = TRANSACTION_NAME_CONFLICT;
-					goto error_return;
-				} else {
-					/*
-					 * We can't delete the directory,
-					 * but we also don't know of any
-					 * references that it should
-					 * contain.
-					 */
-					strbuf_addf(err, "there is a non-empty directory '%s' "
-						    "blocking reference '%s'",
-						    ref_file.buf, refname);
-					goto error_return;
-				}
-			}
-		} else if (failure_errno == EINVAL && (*type & REF_ISBROKEN)) {
-			strbuf_addf(err, "unable to resolve reference '%s': "
-				    "reference broken", refname);
-			goto error_return;
-		} else {
-			strbuf_addf(err, "unable to resolve reference '%s': %s",
-				    refname, strerror(failure_errno));
-			goto error_return;
-		}
+    if (files_read_raw_ref(&refs->base, refname, &lock->old_oid, referent,
+                           type, &failure_errno))
+    {
+        if (failure_errno == ENOENT)
+        {
+            if (mustexist)
+            {
+                /* Garden variety missing reference. */
+                strbuf_addf(err, "unable to resolve reference '%s'",
+                            refname);
+                goto error_return;
+            }
+            else
+            {
+                /*
+                 * Reference is missing, but that's OK. We
+                 * know that there is not a conflict with
+                 * another loose reference because
+                 * (supposing that we are trying to lock
+                 * reference "refs/foo/bar"):
+                 *
+                 * - We were successfully able to create
+                 *   the lockfile refs/foo/bar.lock, so we
+                 *   know there cannot be a loose reference
+                 *   named "refs/foo".
+                 *
+                 * - We got ENOENT and not EISDIR, so we
+                 *   know that there cannot be a loose
+                 *   reference named "refs/foo/bar/baz".
+                 */
+            }
+        }
+        else if (failure_errno == EISDIR)
+        {
+            /*
+             * There is a directory in the way. It might have
+             * contained references that have been deleted. If
+             * we don't require that the reference already
+             * exists, try to remove the directory so that it
+             * doesn't cause trouble when we want to rename the
+             * lockfile into place later.
+             */
+            if (mustexist)
+            {
+                /* Garden variety missing reference. */
+                strbuf_addf(err, "unable to resolve reference '%s'",
+                            refname);
+                goto error_return;
+            }
+            else if (remove_dir_recursively(&ref_file,
+                                            REMOVE_DIR_EMPTY_ONLY))
+            {
+                if (refs_verify_refname_available(
+                        &refs->base, refname,
+                        extras, NULL, 0, err))
+                {
+                    /*
+                     * The error message set by
+                     * verify_refname_available() is OK.
+                     */
+                    ret = TRANSACTION_NAME_CONFLICT;
+                    goto error_return;
+                }
+                else
+                {
+                    /*
+                     * We can't delete the directory,
+                     * but we also don't know of any
+                     * references that it should
+                     * contain.
+                     */
+                    strbuf_addf(err, "there is a non-empty directory '%s' "
+                                     "blocking reference '%s'",
+                                ref_file.buf, refname);
+                    goto error_return;
+                }
+            }
+        }
+        else if (failure_errno == EINVAL && (*type & REF_ISBROKEN))
+        {
+            strbuf_addf(err, "unable to resolve reference '%s': "
+                             "reference broken",
+                        refname);
+            goto error_return;
+        }
+        else
+        {
+            strbuf_addf(err, "unable to resolve reference '%s': %s",
+                        refname, strerror(failure_errno));
+            goto error_return;
+        }
 
-		/*
-		 * If the ref did not exist and we are creating it,
-		 * make sure there is no existing packed ref that
-		 * conflicts with refname:
-		 */
-		if (refs_verify_refname_available(
-				    refs->packed_ref_store, refname,
-				    extras, NULL, 0, err)) {
-			ret = TRANSACTION_NAME_CONFLICT;
-			goto error_return;
-		}
-	}
+        /*
+         * If the ref did not exist and we are creating it,
+         * make sure there is no existing packed ref that
+         * conflicts with refname:
+         */
+        if (refs_verify_refname_available(
+                refs->packed_ref_store, refname,
+                extras, NULL, 0, err))
+        {
+            ret = TRANSACTION_NAME_CONFLICT;
+            goto error_return;
+        }
+    }
 
     ret = 0;
     goto out;
@@ -1263,19 +1291,17 @@ static struct ref_lock *lock_ref_oid_basic(struct files_ref_store *refs,
 
     files_ref_path(refs, &ref_file, refname);
 
-	/*
-	 * If the ref did not exist and we are creating it, make sure
-	 * there is no existing packed ref whose name begins with our
-	 * refname, nor a packed ref whose name is a proper prefix of
-	 * our refname.
-	 */
-	if (is_null_oid(&lock->old_oid) &&
-	    refs_verify_refname_available(refs->packed_ref_store, refname,
-					  NULL, NULL, 0, err))
-		goto error_return;
+    /*
+     * If the ref did not exist and we are creating it, make sure
+     * there is no existing packed ref whose name begins with our
+     * refname, nor a packed ref whose name is a proper prefix of
+     * our refname.
+     */
+    if (is_null_oid(&lock->old_oid) && refs_verify_refname_available(refs->packed_ref_store, refname, NULL, NULL, 0, err))
+        goto error_return;
 
-	lock->ref_name = xstrdup(refname);
-	lock->count = 1;
+    lock->ref_name = xstrdup(refname);
+    lock->count    = 1;
 
     if (raceproof_create_file(ref_file.buf, create_reflock, &lock->lk))
     {
@@ -1389,15 +1415,15 @@ static void prune_ref(struct files_ref_store *refs, struct ref_to_prune *r)
         return;
     }
 
-	transaction = ref_store_transaction_begin(&refs->base, 0, &err);
-	if (!transaction)
-		goto cleanup;
-	ref_transaction_add_update(
-			transaction, r->name,
-			REF_NO_DEREF | REF_HAVE_NEW | REF_HAVE_OLD | REF_IS_PRUNING,
-			null_oid(), &r->oid, NULL, NULL, NULL, NULL);
-	if (ref_transaction_commit(transaction, &err))
-		goto cleanup;
+    transaction = ref_store_transaction_begin(&refs->base, 0, &err);
+    if (!transaction)
+        goto cleanup;
+    ref_transaction_add_update(
+        transaction, r->name,
+        REF_NO_DEREF | REF_HAVE_NEW | REF_HAVE_OLD | REF_IS_PRUNING,
+        null_oid(), &r->oid, NULL, NULL, NULL, NULL);
+    if (ref_transaction_commit(transaction, &err))
+        goto cleanup;
 
     ret = 0;
 
@@ -1458,10 +1484,11 @@ static int should_pack_ref(struct files_ref_store *refs,
         return 0;
     }
 
-    for_each_string_list_item(item, opts->includes) if (!wildmatch(item->string, refname, 0))
-    {
-        return 1;
-    }
+    for_each_string_list_item (item, opts->includes)
+        if (!wildmatch(item->string, refname, 0))
+        {
+            return 1;
+        }
 
     return 0;
 }
@@ -1545,10 +1572,10 @@ static int files_pack_refs(struct ref_store      *ref_store,
     if (!should_pack_refs(refs, opts))
         return 0;
 
-	transaction = ref_store_transaction_begin(refs->packed_ref_store,
-						  0, &err);
-	if (!transaction)
-		return -1;
+    transaction = ref_store_transaction_begin(refs->packed_ref_store,
+                                              0, &err);
+    if (!transaction)
+        return -1;
 
     packed_refs_lock(refs->packed_ref_store, LOCK_DIE_ON_ERROR, &err);
 
@@ -1704,11 +1731,11 @@ static int refs_rename_ref_available(struct ref_store *refs,
     struct strbuf      err  = STRBUF_INIT;
     int                ok;
 
-	string_list_insert(&skip, old_refname);
-	ok = !refs_verify_refname_available(refs, new_refname,
-					    NULL, &skip, 0, &err);
-	if (!ok)
-		error("%s", err.buf);
+    string_list_insert(&skip, old_refname);
+    ok = !refs_verify_refname_available(refs, new_refname,
+                                        NULL, &skip, 0, &err);
+    if (!ok)
+        error("%s", err.buf);
 
     string_list_clear(&skip, 0);
     strbuf_release(&err);
@@ -2067,27 +2094,28 @@ static int log_ref_write_fd(int fd, const struct object_id *old_oid,
     struct strbuf sb  = STRBUF_INIT;
     int           ret = 0;
 
-	if (!committer)
-		committer = git_committer_info(0);
+    if (!committer)
+        committer = git_committer_info(0);
 
-	strbuf_addf(&sb, "%s %s %s", oid_to_hex(old_oid), oid_to_hex(new_oid), committer);
-	if (msg && *msg) {
-		strbuf_addch(&sb, '\t');
-		strbuf_addstr(&sb, msg);
-	}
-	strbuf_addch(&sb, '\n');
-	if (write_in_full(fd, sb.buf, sb.len) < 0)
-		ret = -1;
-	strbuf_release(&sb);
-	return ret;
+    strbuf_addf(&sb, "%s %s %s", oid_to_hex(old_oid), oid_to_hex(new_oid), committer);
+    if (msg && *msg)
+    {
+        strbuf_addch(&sb, '\t');
+        strbuf_addstr(&sb, msg);
+    }
+    strbuf_addch(&sb, '\n');
+    if (write_in_full(fd, sb.buf, sb.len) < 0)
+        ret = -1;
+    strbuf_release(&sb);
+    return ret;
 }
 
 static int files_log_ref_write(struct files_ref_store *refs,
-			       const char *refname,
-			       const struct object_id *old_oid,
-			       const struct object_id *new_oid,
-			       const char *committer_info, const char *msg,
-			       int flags, struct strbuf *err)
+                               const char             *refname,
+                               const struct object_id *old_oid,
+                               const struct object_id *new_oid,
+                               const char *committer_info, const char *msg,
+                               int flags, struct strbuf *err)
 {
     int logfd;
     int result;
@@ -2106,12 +2134,13 @@ static int files_log_ref_write(struct files_ref_store *refs,
         return result;
     }
 
-	if (logfd < 0)
-		return 0;
-	result = log_ref_write_fd(logfd, old_oid, new_oid, committer_info, msg);
-	if (result) {
-		struct strbuf sb = STRBUF_INIT;
-		int save_errno = errno;
+    if (logfd < 0)
+        return 0;
+    result = log_ref_write_fd(logfd, old_oid, new_oid, committer_info, msg);
+    if (result)
+    {
+        struct strbuf sb         = STRBUF_INIT;
+        int           save_errno = errno;
 
         files_reflog_path(refs, &sb, refname);
         strbuf_addf(err, "unable to append to '%s': %s",
@@ -2193,16 +2222,17 @@ static int commit_ref_update(struct files_ref_store *refs,
 {
     files_assert_main_repository(refs, "commit_ref_update");
 
-	clear_loose_ref_cache(refs);
-	if (files_log_ref_write(refs, lock->ref_name, &lock->old_oid, oid, NULL,
-				logmsg, flags, err)) {
-		char *old_msg = strbuf_detach(err, NULL);
-		strbuf_addf(err, "cannot update the ref '%s': %s",
-			    lock->ref_name, old_msg);
-		free(old_msg);
-		unlock_ref(lock);
-		return -1;
-	}
+    clear_loose_ref_cache(refs);
+    if (files_log_ref_write(refs, lock->ref_name, &lock->old_oid, oid, NULL,
+                            logmsg, flags, err))
+    {
+        char *old_msg = strbuf_detach(err, NULL);
+        strbuf_addf(err, "cannot update the ref '%s': %s",
+                    lock->ref_name, old_msg);
+        free(old_msg);
+        unlock_ref(lock);
+        return -1;
+    }
 
     if (strcmp(lock->ref_name, "HEAD") != 0)
     {
@@ -2221,20 +2251,21 @@ static int commit_ref_update(struct files_ref_store *refs,
         int         head_flag;
         const char *head_ref;
 
-		head_ref = refs_resolve_ref_unsafe(&refs->base, "HEAD",
-						   RESOLVE_REF_READING,
-						   NULL, &head_flag);
-		if (head_ref && (head_flag & REF_ISSYMREF) &&
-		    !strcmp(head_ref, lock->ref_name)) {
-			struct strbuf log_err = STRBUF_INIT;
-			if (files_log_ref_write(refs, "HEAD", &lock->old_oid,
-						oid, NULL, logmsg, flags,
-						&log_err)) {
-				error("%s", log_err.buf);
-				strbuf_release(&log_err);
-			}
-		}
-	}
+        head_ref = refs_resolve_ref_unsafe(&refs->base, "HEAD",
+                                           RESOLVE_REF_READING,
+                                           NULL, &head_flag);
+        if (head_ref && (head_flag & REF_ISSYMREF) && !strcmp(head_ref, lock->ref_name))
+        {
+            struct strbuf log_err = STRBUF_INIT;
+            if (files_log_ref_write(refs, "HEAD", &lock->old_oid,
+                                    oid, NULL, logmsg, flags,
+                                    &log_err))
+            {
+                error("%s", log_err.buf);
+                strbuf_release(&log_err);
+            }
+        }
+    }
 
     if (commit_ref(lock))
     {
@@ -2248,7 +2279,7 @@ static int commit_ref_update(struct files_ref_store *refs,
 }
 
 #ifdef NO_SYMLINK_HEAD
-    #define create_ref_symlink(a, b) (-1)
+ #define create_ref_symlink(a, b) (-1)
 #else
 static int create_ref_symlink(struct ref_lock *lock, const char *target)
 {
@@ -2665,11 +2696,11 @@ static int split_head_update(struct ref_update      *update,
         return TRANSACTION_NAME_CONFLICT;
     }
 
-	new_update = ref_transaction_add_update(
-			transaction, "HEAD",
-			update->flags | REF_LOG_ONLY | REF_NO_DEREF,
-			&update->new_oid, &update->old_oid,
-			NULL, NULL, update->committer_info, update->msg);
+    new_update = ref_transaction_add_update(
+        transaction, "HEAD",
+        update->flags | REF_LOG_ONLY | REF_NO_DEREF,
+        &update->new_oid, &update->old_oid,
+        NULL, NULL, update->committer_info, update->msg);
 
     /*
      * Add "HEAD". This insertion is O(N) in the transaction
@@ -2733,12 +2764,12 @@ static int split_symref_update(struct ref_update      *update,
         new_flags |= REF_UPDATE_VIA_HEAD;
     }
 
-	new_update = ref_transaction_add_update(
-			transaction, referent, new_flags,
-			update->new_target ? NULL : &update->new_oid,
-			update->old_target ? NULL : &update->old_oid,
-			update->new_target, update->old_target, NULL,
-			update->msg);
+    new_update = ref_transaction_add_update(
+        transaction, referent, new_flags,
+        update->new_target ? NULL : &update->new_oid,
+        update->old_target ? NULL : &update->old_oid,
+        update->new_target, update->old_target, NULL,
+        update->msg);
 
     new_update->parent_update = update;
 
@@ -2777,37 +2808,38 @@ static int split_symref_update(struct ref_update      *update,
 static int check_old_oid(struct ref_update *update, struct object_id *oid,
                          struct strbuf *err)
 {
-	int ret = TRANSACTION_GENERIC_ERROR;
+    int ret = TRANSACTION_GENERIC_ERROR;
 
-	if (!(update->flags & REF_HAVE_OLD) ||
-		   oideq(oid, &update->old_oid))
-		return 0;
+    if (!(update->flags & REF_HAVE_OLD) || oideq(oid, &update->old_oid))
+        return 0;
 
-	if (is_null_oid(&update->old_oid)) {
-		strbuf_addf(err, "cannot lock ref '%s': "
-			    "reference already exists",
-			    ref_update_original_update_refname(update));
-		ret = TRANSACTION_CREATE_EXISTS;
-	}
-	else if (is_null_oid(oid))
-		strbuf_addf(err, "cannot lock ref '%s': "
-			    "reference is missing but expected %s",
-			    ref_update_original_update_refname(update),
-			    oid_to_hex(&update->old_oid));
-	else
-		strbuf_addf(err, "cannot lock ref '%s': "
-			    "is at %s but expected %s",
-			    ref_update_original_update_refname(update),
-			    oid_to_hex(oid),
-			    oid_to_hex(&update->old_oid));
+    if (is_null_oid(&update->old_oid))
+    {
+        strbuf_addf(err, "cannot lock ref '%s': "
+                         "reference already exists",
+                    ref_update_original_update_refname(update));
+        ret = TRANSACTION_CREATE_EXISTS;
+    }
+    else if (is_null_oid(oid))
+        strbuf_addf(err, "cannot lock ref '%s': "
+                         "reference is missing but expected %s",
+                    ref_update_original_update_refname(update),
+                    oid_to_hex(&update->old_oid));
+    else
+        strbuf_addf(err, "cannot lock ref '%s': "
+                         "is at %s but expected %s",
+                    ref_update_original_update_refname(update),
+                    oid_to_hex(oid),
+                    oid_to_hex(&update->old_oid));
 
-	return ret;
+    return ret;
 }
 
-struct files_transaction_backend_data {
-	struct ref_transaction *packed_transaction;
-	int packed_refs_locked;
-	struct strmap ref_locks;
+struct files_transaction_backend_data
+{
+    struct ref_transaction *packed_transaction;
+    int                     packed_refs_locked;
+    struct strmap           ref_locks;
 };
 
 /*
@@ -2830,18 +2862,18 @@ static int lock_ref_for_update(struct files_ref_store *refs,
                                struct string_list     *affected_refnames,
                                struct strbuf          *err)
 {
-	struct strbuf referent = STRBUF_INIT;
-	int mustexist = ref_update_expects_existing_old_ref(update);
-	struct files_transaction_backend_data *backend_data;
-	int ret = 0;
-	struct ref_lock *lock;
+    struct strbuf                          referent  = STRBUF_INIT;
+    int                                    mustexist = ref_update_expects_existing_old_ref(update);
+    struct files_transaction_backend_data *backend_data;
+    int                                    ret = 0;
+    struct ref_lock                       *lock;
 
     files_assert_main_repository(refs, "lock_ref_for_update");
 
-	backend_data = transaction->backend_data;
+    backend_data = transaction->backend_data;
 
-	if ((update->flags & REF_HAVE_NEW) && ref_update_has_null_new_value(update))
-		update->flags |= REF_DELETING;
+    if ((update->flags & REF_HAVE_NEW) && ref_update_has_null_new_value(update))
+        update->flags |= REF_DELETING;
 
     if (head_ref)
     {
@@ -2853,97 +2885,115 @@ static int lock_ref_for_update(struct files_ref_store *refs,
         }
     }
 
-	lock = strmap_get(&backend_data->ref_locks, update->refname);
-	if (lock) {
-		lock->count++;
-	} else {
-		ret = lock_raw_ref(refs, update->refname, mustexist,
-				   affected_refnames,
-				   &lock, &referent,
-				   &update->type, err);
-		if (ret) {
-			char *reason;
+    lock = strmap_get(&backend_data->ref_locks, update->refname);
+    if (lock)
+    {
+        lock->count++;
+    }
+    else
+    {
+        ret = lock_raw_ref(refs, update->refname, mustexist,
+                           affected_refnames,
+                           &lock, &referent,
+                           &update->type, err);
+        if (ret)
+        {
+            char *reason;
 
-			reason = strbuf_detach(err, NULL);
-			strbuf_addf(err, "cannot lock ref '%s': %s",
-				    ref_update_original_update_refname(update), reason);
-			free(reason);
-			goto out;
-		}
+            reason = strbuf_detach(err, NULL);
+            strbuf_addf(err, "cannot lock ref '%s': %s",
+                        ref_update_original_update_refname(update), reason);
+            free(reason);
+            goto out;
+        }
 
-		strmap_put(&backend_data->ref_locks, update->refname, lock);
-	}
+        strmap_put(&backend_data->ref_locks, update->refname, lock);
+    }
 
     update->backend_data = lock;
 
-	if (update->flags & REF_LOG_ONLY)
-		goto out;
+    if (update->type & REF_ISSYMREF)
+    {
+        if (update->flags & REF_NO_DEREF)
+        {
+            /*
+             * We won't be reading the referent as part of
+             * the transaction, so we have to read it here
+             * to record and possibly check old_oid:
+             */
+            if (!refs_resolve_ref_unsafe(&refs->base,
+                                         referent.buf, 0,
+                                         &lock->old_oid, NULL))
+            {
+                if (update->flags & REF_HAVE_OLD)
+                {
+                    strbuf_addf(err, "cannot lock ref '%s': "
+                                     "error reading reference",
+                                ref_update_original_update_refname(update));
+                    ret = TRANSACTION_GENERIC_ERROR;
+                    goto out;
+                }
+            }
 
-	if (update->type & REF_ISSYMREF) {
-		if (update->flags & REF_NO_DEREF) {
-			/*
-			 * We won't be reading the referent as part of
-			 * the transaction, so we have to read it here
-			 * to record and possibly check old_oid:
-			 */
-			if (!refs_resolve_ref_unsafe(&refs->base,
-						     referent.buf, 0,
-						     &lock->old_oid, NULL)) {
-				if (update->flags & REF_HAVE_OLD) {
-					strbuf_addf(err, "cannot lock ref '%s': "
-						    "error reading reference",
-						    ref_update_original_update_refname(update));
-					ret = TRANSACTION_GENERIC_ERROR;
-					goto out;
-				}
-			}
+            if (update->old_target)
+            {
+                if (ref_update_check_old_target(referent.buf, update, err))
+                {
+                    ret = TRANSACTION_GENERIC_ERROR;
+                    goto out;
+                }
+            }
+            else
+            {
+                ret = check_old_oid(update, &lock->old_oid, err);
+                if (ret)
+                {
+                    goto out;
+                }
+            }
+        }
+        else
+        {
+            /*
+             * Create a new update for the reference this
+             * symref is pointing at. Also, we will record
+             * and verify old_oid for this update as part
+             * of processing the split-off update, so we
+             * don't have to do it here.
+             */
+            ret = split_symref_update(update,
+                                      referent.buf, transaction,
+                                      affected_refnames, err);
+            if (ret)
+                goto out;
+        }
+    }
+    else
+    {
+        struct ref_update *parent_update;
 
-			if (update->old_target) {
-				if (ref_update_check_old_target(referent.buf, update, err)) {
-					ret = TRANSACTION_GENERIC_ERROR;
-					goto out;
-				}
-			} else {
-				ret = check_old_oid(update, &lock->old_oid, err);
-				if  (ret) {
-					goto out;
-				}
-			}
-		} else {
-			/*
-			 * Create a new update for the reference this
-			 * symref is pointing at. Also, we will record
-			 * and verify old_oid for this update as part
-			 * of processing the split-off update, so we
-			 * don't have to do it here.
-			 */
-			ret = split_symref_update(update,
-						  referent.buf, transaction,
-						  affected_refnames, err);
-			if (ret)
-				goto out;
-		}
-	} else {
-		struct ref_update *parent_update;
-
-		/*
-		 * Even if the ref is a regular ref, if `old_target` is set, we
-		 * fail with an error.
-		 */
-		if (update->old_target) {
-			strbuf_addf(err, _("cannot lock ref '%s': "
-					   "expected symref with target '%s': "
-					   "but is a regular ref"),
-				    ref_update_original_update_refname(update),
-				    update->old_target);
-			ret = TRANSACTION_GENERIC_ERROR;
-			goto out;
-		} else {
-			ret = check_old_oid(update, &lock->old_oid, err);
-			if  (ret) {
-				goto out;
-			}
-		}
+        /*
+         * Even if the ref is a regular ref, if `old_target` is set, we
+         * fail with an error.
+         */
+        if (update->old_target)
+        {
+            strbuf_addf(err, _("cannot lock ref '%s': "
+                               "expected symref with target '%s': "
+                               "but is a regular ref"),
+                        ref_update_original_update_refname(update),
+                        update->old_target);
+            ret = TRANSACTION_GENERIC_ERROR;
+            goto out;
+        }
+        else
+        {
+            ret = check_old_oid(update, &lock->old_oid, err);
+            if (ret)
+            {
+                goto out;
+            }
+        }
 
         /*
          * If this update is happening indirectly because of a
@@ -3072,10 +3122,10 @@ static void files_transaction_cleanup(struct files_ref_store *refs,
             packed_refs_unlock(refs->packed_ref_store);
         }
 
-		strmap_clear(&backend_data->ref_locks, 0);
+        strmap_clear(&backend_data->ref_locks, 0);
 
-		free(backend_data);
-	}
+        free(backend_data);
+    }
 
     transaction->state = REF_TRANSACTION_CLOSED;
 }
@@ -3097,48 +3147,50 @@ static int files_transaction_prepare(struct ref_store       *ref_store,
 
     assert(err);
 
-	if (transaction->flags & REF_TRANSACTION_FLAG_INITIAL)
-		goto cleanup;
-	if (!transaction->nr)
-		goto cleanup;
+    if (transaction->flags & REF_TRANSACTION_FLAG_INITIAL)
+        goto cleanup;
+    if (!transaction->nr)
+        goto cleanup;
 
-	CALLOC_ARRAY(backend_data, 1);
-	strmap_init(&backend_data->ref_locks);
-	transaction->backend_data = backend_data;
+    CALLOC_ARRAY(backend_data, 1);
+    strmap_init(&backend_data->ref_locks);
+    transaction->backend_data = backend_data;
 
-	/*
-	 * Fail if a refname appears more than once in the
-	 * transaction. (If we end up splitting up any updates using
-	 * split_symref_update() or split_head_update(), those
-	 * functions will check that the new updates don't have the
-	 * same refname as any existing ones.) Also fail if any of the
-	 * updates use REF_IS_PRUNING without REF_NO_DEREF.
-	 */
-	for (i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
-		struct string_list_item *item;
+    /*
+     * Fail if a refname appears more than once in the
+     * transaction. (If we end up splitting up any updates using
+     * split_symref_update() or split_head_update(), those
+     * functions will check that the new updates don't have the
+     * same refname as any existing ones.) Also fail if any of the
+     * updates use REF_IS_PRUNING without REF_NO_DEREF.
+     */
+    for (i = 0; i < transaction->nr; i++)
+    {
+        struct ref_update       *update = transaction->updates[i];
+        struct string_list_item *item;
 
         if ((update->flags & REF_IS_PRUNING) && !(update->flags & REF_NO_DEREF))
         {
             BUG("REF_IS_PRUNING set without REF_NO_DEREF");
         }
 
-		if (update->flags & REF_LOG_ONLY)
-			continue;
+        if (update->flags & REF_LOG_ONLY)
+            continue;
 
-		item = string_list_append(&affected_refnames, update->refname);
-		/*
-		 * We store a pointer to update in item->util, but at
-		 * the moment we never use the value of this field
-		 * except to check whether it is non-NULL.
-		 */
-		item->util = update;
-	}
-	string_list_sort(&affected_refnames);
-	if (ref_update_reject_duplicates(&affected_refnames, err)) {
-		ret = TRANSACTION_GENERIC_ERROR;
-		goto cleanup;
-	}
+        item = string_list_append(&affected_refnames, update->refname);
+        /*
+         * We store a pointer to update in item->util, but at
+         * the moment we never use the value of this field
+         * except to check whether it is non-NULL.
+         */
+        item->util = update;
+    }
+    string_list_sort(&affected_refnames);
+    if (ref_update_reject_duplicates(&affected_refnames, err))
+    {
+        ret = TRANSACTION_GENERIC_ERROR;
+        goto cleanup;
+    }
 
     /*
      * Special hack: If a branch is updated directly and HEAD
@@ -3186,33 +3238,34 @@ static int files_transaction_prepare(struct ref_store       *ref_store,
             goto cleanup;
         }
 
-		if (update->flags & REF_DELETING &&
-		    !(update->flags & REF_LOG_ONLY) &&
-		    !(update->flags & REF_IS_PRUNING)) {
-			/*
-			 * This reference has to be deleted from
-			 * packed-refs if it exists there.
-			 */
-			if (!packed_transaction) {
-				packed_transaction = ref_store_transaction_begin(
-						refs->packed_ref_store,
-						transaction->flags, err);
-				if (!packed_transaction) {
-					ret = TRANSACTION_GENERIC_ERROR;
-					goto cleanup;
-				}
+        if (update->flags & REF_DELETING && !(update->flags & REF_LOG_ONLY) && !(update->flags & REF_IS_PRUNING))
+        {
+            /*
+             * This reference has to be deleted from
+             * packed-refs if it exists there.
+             */
+            if (!packed_transaction)
+            {
+                packed_transaction = ref_store_transaction_begin(
+                    refs->packed_ref_store,
+                    transaction->flags, err);
+                if (!packed_transaction)
+                {
+                    ret = TRANSACTION_GENERIC_ERROR;
+                    goto cleanup;
+                }
 
                 backend_data->packed_transaction =
                     packed_transaction;
             }
 
-			ref_transaction_add_update(
-					packed_transaction, update->refname,
-					REF_HAVE_NEW | REF_NO_DEREF,
-					&update->new_oid, NULL,
-					NULL, NULL, NULL, NULL);
-		}
-	}
+            ref_transaction_add_update(
+                packed_transaction, update->refname,
+                REF_HAVE_NEW | REF_NO_DEREF,
+                &update->new_oid, NULL,
+                NULL, NULL, NULL, NULL);
+        }
+    }
 
     if (packed_transaction)
     {
@@ -3300,10 +3353,11 @@ static int parse_and_write_reflog(struct files_ref_store *refs,
         }
     }
 
-	if (files_log_ref_write(refs, lock->ref_name, &lock->old_oid,
-				&update->new_oid, update->committer_info,
-				update->msg, update->flags, err)) {
-		char *old_msg = strbuf_detach(err, NULL);
+    if (files_log_ref_write(refs, lock->ref_name, &lock->old_oid,
+                            &update->new_oid, update->committer_info,
+                            update->msg, update->flags, err))
+    {
+        char *old_msg = strbuf_detach(err, NULL);
 
         strbuf_addf(err, "cannot update the ref '%s': %s",
                     lock->ref_name, old_msg);
@@ -3317,557 +3371,587 @@ static int parse_and_write_reflog(struct files_ref_store *refs,
 }
 
 static int ref_present(const char *refname, const char *referent UNUSED,
-		       const struct object_id *oid UNUSED,
-		       int flags UNUSED,
-		       void *cb_data)
+                       const struct object_id *oid UNUSED,
+                       int flags                   UNUSED,
+                       void                       *cb_data)
 {
-	struct string_list *affected_refnames = cb_data;
+    struct string_list *affected_refnames = cb_data;
 
-	return string_list_has_string(affected_refnames, refname);
+    return string_list_has_string(affected_refnames, refname);
 }
 
 static int files_transaction_finish_initial(struct files_ref_store *refs,
-					    struct ref_transaction *transaction,
-					    struct strbuf *err)
+                                            struct ref_transaction *transaction,
+                                            struct strbuf          *err)
 {
-	size_t i;
-	int ret = 0;
-	struct string_list affected_refnames = STRING_LIST_INIT_NODUP;
-	struct ref_transaction *packed_transaction = NULL;
-	struct ref_transaction *loose_transaction = NULL;
+    size_t                  i;
+    int                     ret                = 0;
+    struct string_list      affected_refnames  = STRING_LIST_INIT_NODUP;
+    struct ref_transaction *packed_transaction = NULL;
+    struct ref_transaction *loose_transaction  = NULL;
 
-	assert(err);
+    assert(err);
 
-	if (transaction->state != REF_TRANSACTION_PREPARED)
-		BUG("commit called for transaction that is not prepared");
+    if (transaction->state != REF_TRANSACTION_PREPARED)
+        BUG("commit called for transaction that is not prepared");
 
-	/* Fail if a refname appears more than once in the transaction: */
-	for (i = 0; i < transaction->nr; i++)
-		if (!(transaction->updates[i]->flags & REF_LOG_ONLY))
-			string_list_append(&affected_refnames,
-					   transaction->updates[i]->refname);
-	string_list_sort(&affected_refnames);
-	if (ref_update_reject_duplicates(&affected_refnames, err)) {
-		ret = TRANSACTION_GENERIC_ERROR;
-		goto cleanup;
-	}
+    /* Fail if a refname appears more than once in the transaction: */
+    for (i = 0; i < transaction->nr; i++)
+        if (!(transaction->updates[i]->flags & REF_LOG_ONLY))
+            string_list_append(&affected_refnames,
+                               transaction->updates[i]->refname);
+    string_list_sort(&affected_refnames);
+    if (ref_update_reject_duplicates(&affected_refnames, err))
+    {
+        ret = TRANSACTION_GENERIC_ERROR;
+        goto cleanup;
+    }
 
-	/*
-	 * It's really undefined to call this function in an active
-	 * repository or when there are existing references: we are
-	 * only locking and changing packed-refs, so (1) any
-	 * simultaneous processes might try to change a reference at
-	 * the same time we do, and (2) any existing loose versions of
-	 * the references that we are setting would have precedence
-	 * over our values. But some remote helpers create the remote
-	 * "HEAD" and "master" branches before calling this function,
-	 * so here we really only check that none of the references
-	 * that we are creating already exists.
-	 */
-	if (refs_for_each_rawref(&refs->base, ref_present,
-				 &affected_refnames))
-		BUG("initial ref transaction called with existing refs");
+    /*
+     * It's really undefined to call this function in an active
+     * repository or when there are existing references: we are
+     * only locking and changing packed-refs, so (1) any
+     * simultaneous processes might try to change a reference at
+     * the same time we do, and (2) any existing loose versions of
+     * the references that we are setting would have precedence
+     * over our values. But some remote helpers create the remote
+     * "HEAD" and "master" branches before calling this function,
+     * so here we really only check that none of the references
+     * that we are creating already exists.
+     */
+    if (refs_for_each_rawref(&refs->base, ref_present,
+                             &affected_refnames))
+        BUG("initial ref transaction called with existing refs");
 
-	packed_transaction = ref_store_transaction_begin(refs->packed_ref_store,
-							 transaction->flags, err);
-	if (!packed_transaction) {
-		ret = TRANSACTION_GENERIC_ERROR;
-		goto cleanup;
-	}
+    packed_transaction = ref_store_transaction_begin(refs->packed_ref_store,
+                                                     transaction->flags, err);
+    if (!packed_transaction)
+    {
+        ret = TRANSACTION_GENERIC_ERROR;
+        goto cleanup;
+    }
 
-	for (i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
+    for (i = 0; i < transaction->nr; i++)
+    {
+        struct ref_update *update = transaction->updates[i];
 
-		if ((update->flags & REF_HAVE_OLD) &&
-		    !is_null_oid(&update->old_oid))
-			BUG("initial ref transaction with old_sha1 set");
+        if ((update->flags & REF_HAVE_OLD) && !is_null_oid(&update->old_oid))
+            BUG("initial ref transaction with old_sha1 set");
 
-		if (refs_verify_refname_available(&refs->base, update->refname,
-						  &affected_refnames, NULL, 1, err)) {
-			ret = TRANSACTION_NAME_CONFLICT;
-			goto cleanup;
-		}
+        if (refs_verify_refname_available(&refs->base, update->refname,
+                                          &affected_refnames, NULL, 1, err))
+        {
+            ret = TRANSACTION_NAME_CONFLICT;
+            goto cleanup;
+        }
 
-		/*
-		 * packed-refs don't support symbolic refs, root refs and reflogs,
-		 * so we have to queue these references via the loose transaction.
-		 */
-		if (update->new_target ||
-		    is_root_ref(update->refname) ||
-		    (update->flags & REF_LOG_ONLY)) {
-			if (!loose_transaction) {
-				loose_transaction = ref_store_transaction_begin(&refs->base, 0, err);
-				if (!loose_transaction) {
-					ret = TRANSACTION_GENERIC_ERROR;
-					goto cleanup;
-				}
-			}
+        /*
+         * packed-refs don't support symbolic refs, root refs and reflogs,
+         * so we have to queue these references via the loose transaction.
+         */
+        if (update->new_target || is_root_ref(update->refname) || (update->flags & REF_LOG_ONLY))
+        {
+            if (!loose_transaction)
+            {
+                loose_transaction = ref_store_transaction_begin(&refs->base, 0, err);
+                if (!loose_transaction)
+                {
+                    ret = TRANSACTION_GENERIC_ERROR;
+                    goto cleanup;
+                }
+            }
 
-			if (update->flags & REF_LOG_ONLY)
-				ref_transaction_add_update(loose_transaction, update->refname,
-							   update->flags, &update->new_oid,
-							   &update->old_oid, NULL, NULL,
-							   update->committer_info, update->msg);
-			else
-				ref_transaction_add_update(loose_transaction, update->refname,
-							   update->flags & ~REF_HAVE_OLD,
-							   update->new_target ? NULL : &update->new_oid, NULL,
-							   update->new_target, NULL, update->committer_info,
-							   NULL);
-		} else {
-			ref_transaction_add_update(packed_transaction, update->refname,
-						   update->flags & ~REF_HAVE_OLD,
-						   &update->new_oid, &update->old_oid,
-						   NULL, NULL, update->committer_info, NULL);
-		}
-	}
+            if (update->flags & REF_LOG_ONLY)
+                ref_transaction_add_update(loose_transaction, update->refname,
+                                           update->flags, &update->new_oid,
+                                           &update->old_oid, NULL, NULL,
+                                           update->committer_info, update->msg);
+            else
+                ref_transaction_add_update(loose_transaction, update->refname,
+                                           update->flags & ~REF_HAVE_OLD,
+                                           update->new_target ? NULL : &update->new_oid, NULL,
+                                           update->new_target, NULL, update->committer_info,
+                                           NULL);
+        }
+        else
+        {
+            ref_transaction_add_update(packed_transaction, update->refname,
+                                       update->flags & ~REF_HAVE_OLD,
+                                       &update->new_oid, &update->old_oid,
+                                       NULL, NULL, update->committer_info, NULL);
+        }
+    }
 
-	if (packed_refs_lock(refs->packed_ref_store, 0, err) ||
-	    ref_transaction_commit(packed_transaction, err)) {
-		ret = TRANSACTION_GENERIC_ERROR;
-		goto cleanup;
-	}
-	packed_refs_unlock(refs->packed_ref_store);
+    if (packed_refs_lock(refs->packed_ref_store, 0, err) || ref_transaction_commit(packed_transaction, err))
+    {
+        ret = TRANSACTION_GENERIC_ERROR;
+        goto cleanup;
+    }
+    packed_refs_unlock(refs->packed_ref_store);
 
-	if (loose_transaction) {
-		if (ref_transaction_prepare(loose_transaction, err) ||
-		    ref_transaction_commit(loose_transaction, err)) {
-			ret = TRANSACTION_GENERIC_ERROR;
-			goto cleanup;
-		}
-	}
+    if (loose_transaction)
+    {
+        if (ref_transaction_prepare(loose_transaction, err) || ref_transaction_commit(loose_transaction, err))
+        {
+            ret = TRANSACTION_GENERIC_ERROR;
+            goto cleanup;
+        }
+    }
 
 cleanup:
-	if (loose_transaction)
-		ref_transaction_free(loose_transaction);
-	if (packed_transaction)
-		ref_transaction_free(packed_transaction);
-	transaction->state = REF_TRANSACTION_CLOSED;
-	string_list_clear(&affected_refnames, 0);
-	return ret;
+    if (loose_transaction)
+        ref_transaction_free(loose_transaction);
+    if (packed_transaction)
+        ref_transaction_free(packed_transaction);
+    transaction->state = REF_TRANSACTION_CLOSED;
+    string_list_clear(&affected_refnames, 0);
+    return ret;
 }
 
-static int files_transaction_finish(struct ref_store *ref_store,
-				    struct ref_transaction *transaction,
-				    struct strbuf *err)
+static int files_transaction_finish(struct ref_store       *ref_store,
+                                    struct ref_transaction *transaction,
+                                    struct strbuf          *err)
 {
-	struct files_ref_store *refs =
-		files_downcast(ref_store, 0, "ref_transaction_finish");
-	size_t i;
-	int ret = 0;
-	struct strbuf sb = STRBUF_INIT;
-	struct files_transaction_backend_data *backend_data;
-	struct ref_transaction *packed_transaction;
+    struct files_ref_store *refs =
+        files_downcast(ref_store, 0, "ref_transaction_finish");
+    size_t                                 i;
+    int                                    ret = 0;
+    struct strbuf                          sb  = STRBUF_INIT;
+    struct files_transaction_backend_data *backend_data;
+    struct ref_transaction                *packed_transaction;
 
+    assert(err);
 
-	assert(err);
+    if (transaction->flags & REF_TRANSACTION_FLAG_INITIAL)
+        return files_transaction_finish_initial(refs, transaction, err);
+    if (!transaction->nr)
+    {
+        transaction->state = REF_TRANSACTION_CLOSED;
+        return 0;
+    }
 
-	if (transaction->flags & REF_TRANSACTION_FLAG_INITIAL)
-		return files_transaction_finish_initial(refs, transaction, err);
-	if (!transaction->nr) {
-		transaction->state = REF_TRANSACTION_CLOSED;
-		return 0;
-	}
+    backend_data       = transaction->backend_data;
+    packed_transaction = backend_data->packed_transaction;
 
-	backend_data = transaction->backend_data;
-	packed_transaction = backend_data->packed_transaction;
+    /* Perform updates first so live commits remain referenced */
+    for (i = 0; i < transaction->nr; i++)
+    {
+        struct ref_update *update = transaction->updates[i];
+        struct ref_lock   *lock   = update->backend_data;
 
-	/* Perform updates first so live commits remain referenced */
-	for (i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
-		struct ref_lock *lock = update->backend_data;
+        if (update->flags & REF_NEEDS_COMMIT || update->flags & REF_LOG_ONLY)
+        {
+            if (parse_and_write_reflog(refs, update, lock, err))
+            {
+                ret = TRANSACTION_GENERIC_ERROR;
+                goto cleanup;
+            }
+        }
 
-		if (update->flags & REF_NEEDS_COMMIT ||
-		    update->flags & REF_LOG_ONLY) {
-			if (parse_and_write_reflog(refs, update, lock, err)) {
-				ret = TRANSACTION_GENERIC_ERROR;
-				goto cleanup;
-			}
-		}
+        /*
+         * We try creating a symlink, if that succeeds we continue to the
+         * next update. If not, we try and create a regular symref.
+         */
+        if (update->new_target && refs->prefer_symlink_refs)
+            if (!create_ref_symlink(lock, update->new_target))
+                continue;
 
-		/*
-		 * We try creating a symlink, if that succeeds we continue to the
-		 * next update. If not, we try and create a regular symref.
-		 */
-		if (update->new_target && refs->prefer_symlink_refs)
-			if (!create_ref_symlink(lock, update->new_target))
-				continue;
+        if (update->flags & REF_NEEDS_COMMIT)
+        {
+            clear_loose_ref_cache(refs);
+            if (commit_ref(lock))
+            {
+                strbuf_addf(err, "couldn't set '%s'", lock->ref_name);
+                unlock_ref(lock);
+                update->backend_data = NULL;
+                ret                  = TRANSACTION_GENERIC_ERROR;
+                goto cleanup;
+            }
+        }
+    }
 
-		if (update->flags & REF_NEEDS_COMMIT) {
-			clear_loose_ref_cache(refs);
-			if (commit_ref(lock)) {
-				strbuf_addf(err, "couldn't set '%s'", lock->ref_name);
-				unlock_ref(lock);
-				update->backend_data = NULL;
-				ret = TRANSACTION_GENERIC_ERROR;
-				goto cleanup;
-			}
-		}
-	}
+    /*
+     * Now that updates are safely completed, we can perform
+     * deletes. First delete the reflogs of any references that
+     * will be deleted, since (in the unexpected event of an
+     * error) leaving a reference without a reflog is less bad
+     * than leaving a reflog without a reference (the latter is a
+     * mildly invalid repository state):
+     */
+    for (i = 0; i < transaction->nr; i++)
+    {
+        struct ref_update *update = transaction->updates[i];
+        if (update->flags & REF_DELETING && !(update->flags & REF_LOG_ONLY) && !(update->flags & REF_IS_PRUNING))
+        {
+            strbuf_reset(&sb);
+            files_reflog_path(refs, &sb, update->refname);
+            if (!unlink_or_warn(sb.buf))
+                try_remove_empty_parents(refs, update->refname,
+                                         REMOVE_EMPTY_PARENTS_REFLOG);
+        }
+    }
 
-	/*
-	 * Now that updates are safely completed, we can perform
-	 * deletes. First delete the reflogs of any references that
-	 * will be deleted, since (in the unexpected event of an
-	 * error) leaving a reference without a reflog is less bad
-	 * than leaving a reflog without a reference (the latter is a
-	 * mildly invalid repository state):
-	 */
-	for (i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
-		if (update->flags & REF_DELETING &&
-		    !(update->flags & REF_LOG_ONLY) &&
-		    !(update->flags & REF_IS_PRUNING)) {
-			strbuf_reset(&sb);
-			files_reflog_path(refs, &sb, update->refname);
-			if (!unlink_or_warn(sb.buf))
-				try_remove_empty_parents(refs, update->refname,
-							 REMOVE_EMPTY_PARENTS_REFLOG);
-		}
-	}
+    /*
+     * Perform deletes now that updates are safely completed.
+     *
+     * First delete any packed versions of the references, while
+     * retaining the packed-refs lock:
+     */
+    if (packed_transaction)
+    {
+        ret = ref_transaction_commit(packed_transaction, err);
+        ref_transaction_free(packed_transaction);
+        packed_transaction               = NULL;
+        backend_data->packed_transaction = NULL;
+        if (ret)
+            goto cleanup;
+    }
 
-	/*
-	 * Perform deletes now that updates are safely completed.
-	 *
-	 * First delete any packed versions of the references, while
-	 * retaining the packed-refs lock:
-	 */
-	if (packed_transaction) {
-		ret = ref_transaction_commit(packed_transaction, err);
-		ref_transaction_free(packed_transaction);
-		packed_transaction = NULL;
-		backend_data->packed_transaction = NULL;
-		if (ret)
-			goto cleanup;
-	}
+    /* Now delete the loose versions of the references: */
+    for (i = 0; i < transaction->nr; i++)
+    {
+        struct ref_update *update = transaction->updates[i];
+        struct ref_lock   *lock   = update->backend_data;
 
-	/* Now delete the loose versions of the references: */
-	for (i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
-		struct ref_lock *lock = update->backend_data;
+        if (update->flags & REF_DELETING && !(update->flags & REF_LOG_ONLY))
+        {
+            update->flags |= REF_DELETED_RMDIR;
+            if (!(update->type & REF_ISPACKED) || update->type & REF_ISSYMREF)
+            {
+                /* It is a loose reference. */
+                strbuf_reset(&sb);
+                files_ref_path(refs, &sb, lock->ref_name);
+                if (unlink_or_msg(sb.buf, err))
+                {
+                    ret = TRANSACTION_GENERIC_ERROR;
+                    goto cleanup;
+                }
+            }
+        }
+    }
 
-		if (update->flags & REF_DELETING &&
-		    !(update->flags & REF_LOG_ONLY)) {
-			update->flags |= REF_DELETED_RMDIR;
-			if (!(update->type & REF_ISPACKED) ||
-			    update->type & REF_ISSYMREF) {
-				/* It is a loose reference. */
-				strbuf_reset(&sb);
-				files_ref_path(refs, &sb, lock->ref_name);
-				if (unlink_or_msg(sb.buf, err)) {
-					ret = TRANSACTION_GENERIC_ERROR;
-					goto cleanup;
-				}
-			}
-		}
-	}
-
-	clear_loose_ref_cache(refs);
+    clear_loose_ref_cache(refs);
 
 cleanup:
-	files_transaction_cleanup(refs, transaction);
+    files_transaction_cleanup(refs, transaction);
 
-	for (i = 0; i < transaction->nr; i++) {
-		struct ref_update *update = transaction->updates[i];
+    for (i = 0; i < transaction->nr; i++)
+    {
+        struct ref_update *update = transaction->updates[i];
 
-		if (update->flags & REF_DELETED_RMDIR) {
-			/*
-			 * The reference was deleted. Delete any
-			 * empty parent directories. (Note that this
-			 * can only work because we have already
-			 * removed the lockfile.)
-			 */
-			try_remove_empty_parents(refs, update->refname,
-						 REMOVE_EMPTY_PARENTS_REF);
-		}
-	}
+        if (update->flags & REF_DELETED_RMDIR)
+        {
+            /*
+             * The reference was deleted. Delete any
+             * empty parent directories. (Note that this
+             * can only work because we have already
+             * removed the lockfile.)
+             */
+            try_remove_empty_parents(refs, update->refname,
+                                     REMOVE_EMPTY_PARENTS_REF);
+        }
+    }
 
-	strbuf_release(&sb);
-	return ret;
+    strbuf_release(&sb);
+    return ret;
 }
 
-static int files_transaction_abort(struct ref_store *ref_store,
-				   struct ref_transaction *transaction,
-				   struct strbuf *err UNUSED)
+static int files_transaction_abort(struct ref_store       *ref_store,
+                                   struct ref_transaction *transaction,
+                                   struct strbuf *err      UNUSED)
 {
-	struct files_ref_store *refs =
-		files_downcast(ref_store, 0, "ref_transaction_abort");
+    struct files_ref_store *refs =
+        files_downcast(ref_store, 0, "ref_transaction_abort");
 
-	files_transaction_cleanup(refs, transaction);
-	return 0;
+    files_transaction_cleanup(refs, transaction);
+    return 0;
 }
 
-struct expire_reflog_cb {
-	reflog_expiry_should_prune_fn *should_prune_fn;
-	void *policy_cb;
-	FILE *newlog;
-	struct object_id last_kept_oid;
-	unsigned int rewrite:1,
-		     dry_run:1;
+struct expire_reflog_cb
+{
+    reflog_expiry_should_prune_fn *should_prune_fn;
+    void                          *policy_cb;
+    FILE                          *newlog;
+    struct object_id               last_kept_oid;
+    unsigned int                   rewrite:1,
+        dry_run:1;
 };
 
 static int expire_reflog_ent(struct object_id *ooid, struct object_id *noid,
-			     const char *email, timestamp_t timestamp, int tz,
-			     const char *message, void *cb_data)
+                             const char *email, timestamp_t timestamp, int tz,
+                             const char *message, void *cb_data)
 {
-	struct expire_reflog_cb *cb = cb_data;
-	reflog_expiry_should_prune_fn *fn = cb->should_prune_fn;
+    struct expire_reflog_cb       *cb = cb_data;
+    reflog_expiry_should_prune_fn *fn = cb->should_prune_fn;
 
-	if (cb->rewrite)
-		ooid = &cb->last_kept_oid;
+    if (cb->rewrite)
+        ooid = &cb->last_kept_oid;
 
-	if (fn(ooid, noid, email, timestamp, tz, message, cb->policy_cb))
-		return 0;
+    if (fn(ooid, noid, email, timestamp, tz, message, cb->policy_cb))
+        return 0;
 
-	if (cb->dry_run)
-		return 0; /* --dry-run */
+    if (cb->dry_run)
+        return 0; /* --dry-run */
 
-	fprintf(cb->newlog, "%s %s %s %"PRItime" %+05d\t%s", oid_to_hex(ooid),
-		oid_to_hex(noid), email, timestamp, tz, message);
-	oidcpy(&cb->last_kept_oid, noid);
+    fprintf(cb->newlog, "%s %s %s %" PRItime " %+05d\t%s", oid_to_hex(ooid),
+            oid_to_hex(noid), email, timestamp, tz, message);
+    oidcpy(&cb->last_kept_oid, noid);
 
-	return 0;
+    return 0;
 }
 
-static int files_reflog_expire(struct ref_store *ref_store,
-			       const char *refname,
-			       unsigned int expire_flags,
-			       reflog_expiry_prepare_fn prepare_fn,
-			       reflog_expiry_should_prune_fn should_prune_fn,
-			       reflog_expiry_cleanup_fn cleanup_fn,
-			       void *policy_cb_data)
+static int files_reflog_expire(struct ref_store             *ref_store,
+                               const char                   *refname,
+                               unsigned int                  expire_flags,
+                               reflog_expiry_prepare_fn      prepare_fn,
+                               reflog_expiry_should_prune_fn should_prune_fn,
+                               reflog_expiry_cleanup_fn      cleanup_fn,
+                               void                         *policy_cb_data)
 {
-	struct files_ref_store *refs =
-		files_downcast(ref_store, REF_STORE_WRITE, "reflog_expire");
-	struct lock_file reflog_lock = LOCK_INIT;
-	struct expire_reflog_cb cb;
-	struct ref_lock *lock;
-	struct strbuf log_file_sb = STRBUF_INIT;
-	char *log_file;
-	int status = 0;
-	struct strbuf err = STRBUF_INIT;
-	const struct object_id *oid;
+    struct files_ref_store *refs =
+        files_downcast(ref_store, REF_STORE_WRITE, "reflog_expire");
+    struct lock_file        reflog_lock = LOCK_INIT;
+    struct expire_reflog_cb cb;
+    struct ref_lock        *lock;
+    struct strbuf           log_file_sb = STRBUF_INIT;
+    char                   *log_file;
+    int                     status = 0;
+    struct strbuf           err    = STRBUF_INIT;
+    const struct object_id *oid;
 
-	memset(&cb, 0, sizeof(cb));
-	cb.rewrite = !!(expire_flags & EXPIRE_REFLOGS_REWRITE);
-	cb.dry_run = !!(expire_flags & EXPIRE_REFLOGS_DRY_RUN);
-	cb.policy_cb = policy_cb_data;
-	cb.should_prune_fn = should_prune_fn;
+    memset(&cb, 0, sizeof(cb));
+    cb.rewrite         = !!(expire_flags & EXPIRE_REFLOGS_REWRITE);
+    cb.dry_run         = !!(expire_flags & EXPIRE_REFLOGS_DRY_RUN);
+    cb.policy_cb       = policy_cb_data;
+    cb.should_prune_fn = should_prune_fn;
 
-	/*
-	 * The reflog file is locked by holding the lock on the
-	 * reference itself, plus we might need to update the
-	 * reference if --updateref was specified:
-	 */
-	lock = lock_ref_oid_basic(refs, refname, &err);
-	if (!lock) {
-		error("cannot lock ref '%s': %s", refname, err.buf);
-		strbuf_release(&err);
-		return -1;
-	}
-	oid = &lock->old_oid;
+    /*
+     * The reflog file is locked by holding the lock on the
+     * reference itself, plus we might need to update the
+     * reference if --updateref was specified:
+     */
+    lock = lock_ref_oid_basic(refs, refname, &err);
+    if (!lock)
+    {
+        error("cannot lock ref '%s': %s", refname, err.buf);
+        strbuf_release(&err);
+        return -1;
+    }
+    oid = &lock->old_oid;
 
-	/*
-	 * When refs are deleted, their reflog is deleted before the
-	 * ref itself is deleted. This is because there is no separate
-	 * lock for reflog; instead we take a lock on the ref with
-	 * lock_ref_oid_basic().
-	 *
-	 * If a race happens and the reflog doesn't exist after we've
-	 * acquired the lock that's OK. We've got nothing more to do;
-	 * We were asked to delete the reflog, but someone else
-	 * deleted it! The caller doesn't care that we deleted it,
-	 * just that it is deleted. So we can return successfully.
-	 */
-	if (!refs_reflog_exists(ref_store, refname)) {
-		unlock_ref(lock);
-		return 0;
-	}
+    /*
+     * When refs are deleted, their reflog is deleted before the
+     * ref itself is deleted. This is because there is no separate
+     * lock for reflog; instead we take a lock on the ref with
+     * lock_ref_oid_basic().
+     *
+     * If a race happens and the reflog doesn't exist after we've
+     * acquired the lock that's OK. We've got nothing more to do;
+     * We were asked to delete the reflog, but someone else
+     * deleted it! The caller doesn't care that we deleted it,
+     * just that it is deleted. So we can return successfully.
+     */
+    if (!refs_reflog_exists(ref_store, refname))
+    {
+        unlock_ref(lock);
+        return 0;
+    }
 
-	files_reflog_path(refs, &log_file_sb, refname);
-	log_file = strbuf_detach(&log_file_sb, NULL);
-	if (!cb.dry_run) {
-		/*
-		 * Even though holding $GIT_DIR/logs/$reflog.lock has
-		 * no locking implications, we use the lock_file
-		 * machinery here anyway because it does a lot of the
-		 * work we need, including cleaning up if the program
-		 * exits unexpectedly.
-		 */
-		if (hold_lock_file_for_update(&reflog_lock, log_file, 0) < 0) {
-			struct strbuf err = STRBUF_INIT;
-			unable_to_lock_message(log_file, errno, &err);
-			error("%s", err.buf);
-			strbuf_release(&err);
-			goto failure;
-		}
-		cb.newlog = fdopen_lock_file(&reflog_lock, "w");
-		if (!cb.newlog) {
-			error("cannot fdopen %s (%s)",
-			      get_lock_file_path(&reflog_lock), strerror(errno));
-			goto failure;
-		}
-	}
+    files_reflog_path(refs, &log_file_sb, refname);
+    log_file = strbuf_detach(&log_file_sb, NULL);
+    if (!cb.dry_run)
+    {
+        /*
+         * Even though holding $GIT_DIR/logs/$reflog.lock has
+         * no locking implications, we use the lock_file
+         * machinery here anyway because it does a lot of the
+         * work we need, including cleaning up if the program
+         * exits unexpectedly.
+         */
+        if (hold_lock_file_for_update(&reflog_lock, log_file, 0) < 0)
+        {
+            struct strbuf err = STRBUF_INIT;
+            unable_to_lock_message(log_file, errno, &err);
+            error("%s", err.buf);
+            strbuf_release(&err);
+            goto failure;
+        }
+        cb.newlog = fdopen_lock_file(&reflog_lock, "w");
+        if (!cb.newlog)
+        {
+            error("cannot fdopen %s (%s)",
+                  get_lock_file_path(&reflog_lock), strerror(errno));
+            goto failure;
+        }
+    }
 
-	(*prepare_fn)(refname, oid, cb.policy_cb);
-	refs_for_each_reflog_ent(ref_store, refname, expire_reflog_ent, &cb);
-	(*cleanup_fn)(cb.policy_cb);
+    (*prepare_fn)(refname, oid, cb.policy_cb);
+    refs_for_each_reflog_ent(ref_store, refname, expire_reflog_ent, &cb);
+    (*cleanup_fn)(cb.policy_cb);
 
-	if (!cb.dry_run) {
-		/*
-		 * It doesn't make sense to adjust a reference pointed
-		 * to by a symbolic ref based on expiring entries in
-		 * the symbolic reference's reflog. Nor can we update
-		 * a reference if there are no remaining reflog
-		 * entries.
-		 */
-		int update = 0;
+    if (!cb.dry_run)
+    {
+        /*
+         * It doesn't make sense to adjust a reference pointed
+         * to by a symbolic ref based on expiring entries in
+         * the symbolic reference's reflog. Nor can we update
+         * a reference if there are no remaining reflog
+         * entries.
+         */
+        int update = 0;
 
-		if ((expire_flags & EXPIRE_REFLOGS_UPDATE_REF) &&
-		    !is_null_oid(&cb.last_kept_oid)) {
-			int type;
-			const char *ref;
+        if ((expire_flags & EXPIRE_REFLOGS_UPDATE_REF) && !is_null_oid(&cb.last_kept_oid))
+        {
+            int         type;
+            const char *ref;
 
-			ref = refs_resolve_ref_unsafe(&refs->base, refname,
-						      RESOLVE_REF_NO_RECURSE,
-						      NULL, &type);
-			update = !!(ref && !(type & REF_ISSYMREF));
-		}
+            ref    = refs_resolve_ref_unsafe(&refs->base, refname,
+                                             RESOLVE_REF_NO_RECURSE,
+                                             NULL, &type);
+            update = !!(ref && !(type & REF_ISSYMREF));
+        }
 
-		if (close_lock_file_gently(&reflog_lock)) {
-			status |= error("couldn't write %s: %s", log_file,
-					strerror(errno));
-			rollback_lock_file(&reflog_lock);
-		} else if (update &&
-			   (write_in_full(get_lock_file_fd(&lock->lk),
-				oid_to_hex(&cb.last_kept_oid), refs->base.repo->hash_algo->hexsz) < 0 ||
-			    write_str_in_full(get_lock_file_fd(&lock->lk), "\n") < 0 ||
-			    close_ref_gently(lock) < 0)) {
-			status |= error("couldn't write %s",
-					get_lock_file_path(&lock->lk));
-			rollback_lock_file(&reflog_lock);
-		} else if (commit_lock_file(&reflog_lock)) {
-			status |= error("unable to write reflog '%s' (%s)",
-					log_file, strerror(errno));
-		} else if (update && commit_ref(lock)) {
-			status |= error("couldn't set %s", lock->ref_name);
-		}
-	}
-	free(log_file);
-	unlock_ref(lock);
-	return status;
+        if (close_lock_file_gently(&reflog_lock))
+        {
+            status |= error("couldn't write %s: %s", log_file,
+                            strerror(errno));
+            rollback_lock_file(&reflog_lock);
+        }
+        else if (update && (write_in_full(get_lock_file_fd(&lock->lk), oid_to_hex(&cb.last_kept_oid), refs->base.repo->hash_algo->hexsz) < 0 || write_str_in_full(get_lock_file_fd(&lock->lk), "\n") < 0 || close_ref_gently(lock) < 0))
+        {
+            status |= error("couldn't write %s",
+                            get_lock_file_path(&lock->lk));
+            rollback_lock_file(&reflog_lock);
+        }
+        else if (commit_lock_file(&reflog_lock))
+        {
+            status |= error("unable to write reflog '%s' (%s)",
+                            log_file, strerror(errno));
+        }
+        else if (update && commit_ref(lock))
+        {
+            status |= error("couldn't set %s", lock->ref_name);
+        }
+    }
+    free(log_file);
+    unlock_ref(lock);
+    return status;
 
- failure:
-	rollback_lock_file(&reflog_lock);
-	free(log_file);
-	unlock_ref(lock);
-	return -1;
+failure:
+    rollback_lock_file(&reflog_lock);
+    free(log_file);
+    unlock_ref(lock);
+    return -1;
 }
 
-static int files_ref_store_create_on_disk(struct ref_store *ref_store,
-					  int flags,
-					  struct strbuf *err UNUSED)
+static int files_ref_store_create_on_disk(struct ref_store  *ref_store,
+                                          int                flags,
+                                          struct strbuf *err UNUSED)
 {
-	struct files_ref_store *refs =
-		files_downcast(ref_store, REF_STORE_WRITE, "create");
-	struct strbuf sb = STRBUF_INIT;
+    struct files_ref_store *refs =
+        files_downcast(ref_store, REF_STORE_WRITE, "create");
+    struct strbuf sb = STRBUF_INIT;
 
-	/*
-	 * We need to create a "refs" dir in any case so that older versions of
-	 * Git can tell that this is a repository. This serves two main purposes:
-	 *
-	 * - Clients will know to stop walking the parent-directory chain when
-	 *   detecting the Git repository. Otherwise they may end up detecting
-	 *   a Git repository in a parent directory instead.
-	 *
-	 * - Instead of failing to detect a repository with unknown reference
-	 *   format altogether, old clients will print an error saying that
-	 *   they do not understand the reference format extension.
-	 */
-	strbuf_addf(&sb, "%s/refs", ref_store->gitdir);
-	safe_create_dir(sb.buf, 1);
-	adjust_shared_perm(sb.buf);
+    /*
+     * We need to create a "refs" dir in any case so that older versions of
+     * Git can tell that this is a repository. This serves two main purposes:
+     *
+     * - Clients will know to stop walking the parent-directory chain when
+     *   detecting the Git repository. Otherwise they may end up detecting
+     *   a Git repository in a parent directory instead.
+     *
+     * - Instead of failing to detect a repository with unknown reference
+     *   format altogether, old clients will print an error saying that
+     *   they do not understand the reference format extension.
+     */
+    strbuf_addf(&sb, "%s/refs", ref_store->gitdir);
+    safe_create_dir(sb.buf, 1);
+    adjust_shared_perm(sb.buf);
 
-	/*
-	 * There is no need to create directories for common refs when creating
-	 * a worktree ref store.
-	 */
-	if (!(flags & REF_STORE_CREATE_ON_DISK_IS_WORKTREE)) {
-		/*
-		 * Create .git/refs/{heads,tags}
-		 */
-		strbuf_reset(&sb);
-		files_ref_path(refs, &sb, "refs/heads");
-		safe_create_dir(sb.buf, 1);
+    /*
+     * There is no need to create directories for common refs when creating
+     * a worktree ref store.
+     */
+    if (!(flags & REF_STORE_CREATE_ON_DISK_IS_WORKTREE))
+    {
+        /*
+         * Create .git/refs/{heads,tags}
+         */
+        strbuf_reset(&sb);
+        files_ref_path(refs, &sb, "refs/heads");
+        safe_create_dir(sb.buf, 1);
 
-		strbuf_reset(&sb);
-		files_ref_path(refs, &sb, "refs/tags");
-		safe_create_dir(sb.buf, 1);
-	}
+        strbuf_reset(&sb);
+        files_ref_path(refs, &sb, "refs/tags");
+        safe_create_dir(sb.buf, 1);
+    }
 
-	strbuf_release(&sb);
-	return 0;
+    strbuf_release(&sb);
+    return 0;
 }
 
-struct remove_one_root_ref_data {
-	const char *gitdir;
-	struct strbuf *err;
+struct remove_one_root_ref_data
+{
+    const char    *gitdir;
+    struct strbuf *err;
 };
 
 static int remove_one_root_ref(const char *refname,
-			       void *cb_data)
+                               void       *cb_data)
 {
-	struct remove_one_root_ref_data *data = cb_data;
-	struct strbuf buf = STRBUF_INIT;
-	int ret = 0;
+    struct remove_one_root_ref_data *data = cb_data;
+    struct strbuf                    buf  = STRBUF_INIT;
+    int                              ret  = 0;
 
-	strbuf_addf(&buf, "%s/%s", data->gitdir, refname);
+    strbuf_addf(&buf, "%s/%s", data->gitdir, refname);
 
-	ret = unlink(buf.buf);
-	if (ret < 0)
-		strbuf_addf(data->err, "could not delete %s: %s\n",
-			    refname, strerror(errno));
+    ret = unlink(buf.buf);
+    if (ret < 0)
+        strbuf_addf(data->err, "could not delete %s: %s\n",
+                    refname, strerror(errno));
 
-	strbuf_release(&buf);
-	return ret;
+    strbuf_release(&buf);
+    return ret;
 }
 
 static int files_ref_store_remove_on_disk(struct ref_store *ref_store,
-					  struct strbuf *err)
+                                          struct strbuf    *err)
 {
-	struct files_ref_store *refs =
-		files_downcast(ref_store, REF_STORE_WRITE, "remove");
-	struct remove_one_root_ref_data data = {
-		.gitdir = refs->base.gitdir,
-		.err = err,
-	};
-	struct strbuf sb = STRBUF_INIT;
-	int ret = 0;
+    struct files_ref_store *refs =
+        files_downcast(ref_store, REF_STORE_WRITE, "remove");
+    struct remove_one_root_ref_data data = {
+        .gitdir = refs->base.gitdir,
+        .err    = err,
+    };
+    struct strbuf sb  = STRBUF_INIT;
+    int           ret = 0;
 
-	strbuf_addf(&sb, "%s/refs", refs->base.gitdir);
-	if (remove_dir_recursively(&sb, 0) < 0) {
-		strbuf_addf(err, "could not delete refs: %s",
-			    strerror(errno));
-		ret = -1;
-	}
-	strbuf_reset(&sb);
+    strbuf_addf(&sb, "%s/refs", refs->base.gitdir);
+    if (remove_dir_recursively(&sb, 0) < 0)
+    {
+        strbuf_addf(err, "could not delete refs: %s",
+                    strerror(errno));
+        ret = -1;
+    }
+    strbuf_reset(&sb);
 
-	strbuf_addf(&sb, "%s/logs", refs->base.gitdir);
-	if (remove_dir_recursively(&sb, 0) < 0) {
-		strbuf_addf(err, "could not delete logs: %s",
-			    strerror(errno));
-		ret = -1;
-	}
-	strbuf_reset(&sb);
+    strbuf_addf(&sb, "%s/logs", refs->base.gitdir);
+    if (remove_dir_recursively(&sb, 0) < 0)
+    {
+        strbuf_addf(err, "could not delete logs: %s",
+                    strerror(errno));
+        ret = -1;
+    }
+    strbuf_reset(&sb);
 
-	if (for_each_root_ref(refs, remove_one_root_ref, &data) < 0)
-		ret = -1;
+    if (for_each_root_ref(refs, remove_one_root_ref, &data) < 0)
+        ret = -1;
 
-	if (ref_store_remove_on_disk(refs->packed_ref_store, err) < 0)
-		ret = -1;
+    if (ref_store_remove_on_disk(refs->packed_ref_store, err) < 0)
+        ret = -1;
 
-	strbuf_release(&sb);
-	return ret;
+    strbuf_release(&sb);
+    return ret;
 }
 
 /*
@@ -3875,293 +3959,308 @@ static int files_ref_store_remove_on_disk(struct ref_store *ref_store,
  * the whole directory. This function is used as the callback for each
  * regular file or symlink in the directory.
  */
-typedef int (*files_fsck_refs_fn)(struct ref_store *ref_store,
-				  struct fsck_options *o,
-				  const char *refname,
-				  struct dir_iterator *iter);
+typedef int (*files_fsck_refs_fn)(struct ref_store    *ref_store,
+                                  struct fsck_options *o,
+                                  const char          *refname,
+                                  struct dir_iterator *iter);
 
-static int files_fsck_symref_target(struct fsck_options *o,
-				    struct fsck_ref_report *report,
-				    struct strbuf *referent,
-				    unsigned int symbolic_link)
+static int files_fsck_symref_target(struct fsck_options    *o,
+                                    struct fsck_ref_report *report,
+                                    struct strbuf          *referent,
+                                    unsigned int            symbolic_link)
 {
-	int is_referent_root;
-	char orig_last_byte;
-	size_t orig_len;
-	int ret = 0;
+    int    is_referent_root;
+    char   orig_last_byte;
+    size_t orig_len;
+    int    ret = 0;
 
-	orig_len = referent->len;
-	orig_last_byte = referent->buf[orig_len - 1];
-	if (!symbolic_link)
-		strbuf_rtrim(referent);
+    orig_len       = referent->len;
+    orig_last_byte = referent->buf[orig_len - 1];
+    if (!symbolic_link)
+        strbuf_rtrim(referent);
 
-	is_referent_root = is_root_ref(referent->buf);
-	if (!is_referent_root &&
-	    !starts_with(referent->buf, "refs/") &&
-	    !starts_with(referent->buf, "worktrees/")) {
-		ret = fsck_report_ref(o, report,
-				      FSCK_MSG_SYMREF_TARGET_IS_NOT_A_REF,
-				      "points to non-ref target '%s'", referent->buf);
+    is_referent_root = is_root_ref(referent->buf);
+    if (!is_referent_root && !starts_with(referent->buf, "refs/") && !starts_with(referent->buf, "worktrees/"))
+    {
+        ret = fsck_report_ref(o, report,
+                              FSCK_MSG_SYMREF_TARGET_IS_NOT_A_REF,
+                              "points to non-ref target '%s'", referent->buf);
+    }
 
-	}
+    if (!is_referent_root && check_refname_format(referent->buf, 0))
+    {
+        ret = fsck_report_ref(o, report,
+                              FSCK_MSG_BAD_REFERENT_NAME,
+                              "points to invalid refname '%s'", referent->buf);
+        goto out;
+    }
 
-	if (!is_referent_root && check_refname_format(referent->buf, 0)) {
-		ret = fsck_report_ref(o, report,
-				      FSCK_MSG_BAD_REFERENT_NAME,
-				      "points to invalid refname '%s'", referent->buf);
-		goto out;
-	}
+    if (symbolic_link)
+        goto out;
 
-	if (symbolic_link)
-		goto out;
+    if (referent->len == orig_len || (referent->len < orig_len && orig_last_byte != '\n'))
+    {
+        ret = fsck_report_ref(o, report,
+                              FSCK_MSG_REF_MISSING_NEWLINE,
+                              "misses LF at the end");
+    }
 
-	if (referent->len == orig_len ||
-	    (referent->len < orig_len && orig_last_byte != '\n')) {
-		ret = fsck_report_ref(o, report,
-				      FSCK_MSG_REF_MISSING_NEWLINE,
-				      "misses LF at the end");
-	}
-
-	if (referent->len != orig_len && referent->len != orig_len - 1) {
-		ret = fsck_report_ref(o, report,
-				      FSCK_MSG_TRAILING_REF_CONTENT,
-				      "has trailing whitespaces or newlines");
-	}
+    if (referent->len != orig_len && referent->len != orig_len - 1)
+    {
+        ret = fsck_report_ref(o, report,
+                              FSCK_MSG_TRAILING_REF_CONTENT,
+                              "has trailing whitespaces or newlines");
+    }
 
 out:
-	return ret;
+    return ret;
 }
 
-static int files_fsck_refs_content(struct ref_store *ref_store,
-				   struct fsck_options *o,
-				   const char *target_name,
-				   struct dir_iterator *iter)
+static int files_fsck_refs_content(struct ref_store    *ref_store,
+                                   struct fsck_options *o,
+                                   const char          *target_name,
+                                   struct dir_iterator *iter)
 {
-	struct strbuf ref_content = STRBUF_INIT;
-	struct strbuf abs_gitdir = STRBUF_INIT;
-	struct strbuf referent = STRBUF_INIT;
-	struct fsck_ref_report report = { 0 };
-	const char *trailing = NULL;
-	unsigned int type = 0;
-	int failure_errno = 0;
-	struct object_id oid;
-	int ret = 0;
+    struct strbuf          ref_content   = STRBUF_INIT;
+    struct strbuf          abs_gitdir    = STRBUF_INIT;
+    struct strbuf          referent      = STRBUF_INIT;
+    struct fsck_ref_report report        = { 0 };
+    const char            *trailing      = NULL;
+    unsigned int           type          = 0;
+    int                    failure_errno = 0;
+    struct object_id       oid;
+    int                    ret = 0;
 
-	report.path = target_name;
+    report.path = target_name;
 
-	if (S_ISLNK(iter->st.st_mode)) {
-		const char *relative_referent_path = NULL;
+    if (S_ISLNK(iter->st.st_mode))
+    {
+        const char *relative_referent_path = NULL;
 
-		ret = fsck_report_ref(o, &report,
-				      FSCK_MSG_SYMLINK_REF,
-				      "use deprecated symbolic link for symref");
+        ret = fsck_report_ref(o, &report,
+                              FSCK_MSG_SYMLINK_REF,
+                              "use deprecated symbolic link for symref");
 
-		strbuf_add_absolute_path(&abs_gitdir, ref_store->repo->gitdir);
-		strbuf_normalize_path(&abs_gitdir);
-		if (!is_dir_sep(abs_gitdir.buf[abs_gitdir.len - 1]))
-			strbuf_addch(&abs_gitdir, '/');
+        strbuf_add_absolute_path(&abs_gitdir, ref_store->repo->gitdir);
+        strbuf_normalize_path(&abs_gitdir);
+        if (!is_dir_sep(abs_gitdir.buf[abs_gitdir.len - 1]))
+            strbuf_addch(&abs_gitdir, '/');
 
-		strbuf_add_real_path(&ref_content, iter->path.buf);
-		skip_prefix(ref_content.buf, abs_gitdir.buf,
-			    &relative_referent_path);
+        strbuf_add_real_path(&ref_content, iter->path.buf);
+        skip_prefix(ref_content.buf, abs_gitdir.buf,
+                    &relative_referent_path);
 
-		if (relative_referent_path)
-			strbuf_addstr(&referent, relative_referent_path);
-		else
-			strbuf_addbuf(&referent, &ref_content);
+        if (relative_referent_path)
+            strbuf_addstr(&referent, relative_referent_path);
+        else
+            strbuf_addbuf(&referent, &ref_content);
 
-		ret |= files_fsck_symref_target(o, &report, &referent, 1);
-		goto cleanup;
-	}
+        ret |= files_fsck_symref_target(o, &report, &referent, 1);
+        goto cleanup;
+    }
 
-	if (strbuf_read_file(&ref_content, iter->path.buf, 0) < 0) {
-		/*
-		 * Ref file could be removed by another concurrent process. We should
-		 * ignore this error and continue to the next ref.
-		 */
-		if (errno == ENOENT)
-			goto cleanup;
+    if (strbuf_read_file(&ref_content, iter->path.buf, 0) < 0)
+    {
+        /*
+         * Ref file could be removed by another concurrent process. We should
+         * ignore this error and continue to the next ref.
+         */
+        if (errno == ENOENT)
+            goto cleanup;
 
-		ret = error_errno(_("cannot read ref file '%s'"), iter->path.buf);
-		goto cleanup;
-	}
+        ret = error_errno(_("cannot read ref file '%s'"), iter->path.buf);
+        goto cleanup;
+    }
 
-	if (parse_loose_ref_contents(ref_store->repo->hash_algo,
-				     ref_content.buf, &oid, &referent,
-				     &type, &trailing, &failure_errno)) {
-		strbuf_rtrim(&ref_content);
-		ret = fsck_report_ref(o, &report,
-				      FSCK_MSG_BAD_REF_CONTENT,
-				      "%s", ref_content.buf);
-		goto cleanup;
-	}
+    if (parse_loose_ref_contents(ref_store->repo->hash_algo,
+                                 ref_content.buf, &oid, &referent,
+                                 &type, &trailing, &failure_errno))
+    {
+        strbuf_rtrim(&ref_content);
+        ret = fsck_report_ref(o, &report,
+                              FSCK_MSG_BAD_REF_CONTENT,
+                              "%s", ref_content.buf);
+        goto cleanup;
+    }
 
-	if (!(type & REF_ISSYMREF)) {
-		if (!*trailing) {
-			ret = fsck_report_ref(o, &report,
-					      FSCK_MSG_REF_MISSING_NEWLINE,
-					      "misses LF at the end");
-			goto cleanup;
-		}
-		if (*trailing != '\n' || *(trailing + 1)) {
-			ret = fsck_report_ref(o, &report,
-					      FSCK_MSG_TRAILING_REF_CONTENT,
-					      "has trailing garbage: '%s'", trailing);
-			goto cleanup;
-		}
-	} else {
-		ret = files_fsck_symref_target(o, &report, &referent, 0);
-		goto cleanup;
-	}
+    if (!(type & REF_ISSYMREF))
+    {
+        if (!*trailing)
+        {
+            ret = fsck_report_ref(o, &report,
+                                  FSCK_MSG_REF_MISSING_NEWLINE,
+                                  "misses LF at the end");
+            goto cleanup;
+        }
+        if (*trailing != '\n' || *(trailing + 1))
+        {
+            ret = fsck_report_ref(o, &report,
+                                  FSCK_MSG_TRAILING_REF_CONTENT,
+                                  "has trailing garbage: '%s'", trailing);
+            goto cleanup;
+        }
+    }
+    else
+    {
+        ret = files_fsck_symref_target(o, &report, &referent, 0);
+        goto cleanup;
+    }
 
 cleanup:
-	strbuf_release(&ref_content);
-	strbuf_release(&referent);
-	strbuf_release(&abs_gitdir);
-	return ret;
+    strbuf_release(&ref_content);
+    strbuf_release(&referent);
+    strbuf_release(&abs_gitdir);
+    return ret;
 }
 
 static int files_fsck_refs_name(struct ref_store *ref_store UNUSED,
-				struct fsck_options *o,
-				const char *refname,
-				struct dir_iterator *iter)
+                                struct fsck_options        *o,
+                                const char                 *refname,
+                                struct dir_iterator        *iter)
 {
-	struct strbuf sb = STRBUF_INIT;
-	int ret = 0;
+    struct strbuf sb  = STRBUF_INIT;
+    int           ret = 0;
 
-	/*
-	 * Ignore the files ending with ".lock" as they may be lock files
-	 * However, do not allow bare ".lock" files.
-	 */
-	if (iter->basename[0] != '.' && ends_with(iter->basename, ".lock"))
-		goto cleanup;
+    /*
+     * Ignore the files ending with ".lock" as they may be lock files
+     * However, do not allow bare ".lock" files.
+     */
+    if (iter->basename[0] != '.' && ends_with(iter->basename, ".lock"))
+        goto cleanup;
 
-	/*
-	 * This works right now because we never check the root refs.
-	 */
-	if (check_refname_format(refname, 0)) {
-		struct fsck_ref_report report = { 0 };
+    /*
+     * This works right now because we never check the root refs.
+     */
+    if (check_refname_format(refname, 0))
+    {
+        struct fsck_ref_report report = { 0 };
 
-		report.path = refname;
-		ret = fsck_report_ref(o, &report,
-				      FSCK_MSG_BAD_REF_NAME,
-				      "invalid refname format");
-	}
+        report.path = refname;
+        ret         = fsck_report_ref(o, &report,
+                                      FSCK_MSG_BAD_REF_NAME,
+                                      "invalid refname format");
+    }
 
 cleanup:
-	strbuf_release(&sb);
-	return ret;
+    strbuf_release(&sb);
+    return ret;
 }
 
-static int files_fsck_refs_dir(struct ref_store *ref_store,
-			       struct fsck_options *o,
-			       const char *refs_check_dir,
-			       struct worktree *wt,
-			       files_fsck_refs_fn *fsck_refs_fn)
+static int files_fsck_refs_dir(struct ref_store    *ref_store,
+                               struct fsck_options *o,
+                               const char          *refs_check_dir,
+                               struct worktree     *wt,
+                               files_fsck_refs_fn  *fsck_refs_fn)
 {
-	struct strbuf refname = STRBUF_INIT;
-	struct strbuf sb = STRBUF_INIT;
-	struct dir_iterator *iter;
-	int iter_status;
-	int ret = 0;
+    struct strbuf        refname = STRBUF_INIT;
+    struct strbuf        sb      = STRBUF_INIT;
+    struct dir_iterator *iter;
+    int                  iter_status;
+    int                  ret = 0;
 
-	strbuf_addf(&sb, "%s/%s", ref_store->gitdir, refs_check_dir);
+    strbuf_addf(&sb, "%s/%s", ref_store->gitdir, refs_check_dir);
 
-	iter = dir_iterator_begin(sb.buf, 0);
-	if (!iter) {
-		ret = error_errno(_("cannot open directory %s"), sb.buf);
-		goto out;
-	}
+    iter = dir_iterator_begin(sb.buf, 0);
+    if (!iter)
+    {
+        ret = error_errno(_("cannot open directory %s"), sb.buf);
+        goto out;
+    }
 
-	while ((iter_status = dir_iterator_advance(iter)) == ITER_OK) {
-		if (S_ISDIR(iter->st.st_mode)) {
-			continue;
-		} else if (S_ISREG(iter->st.st_mode) ||
-			   S_ISLNK(iter->st.st_mode)) {
-			strbuf_reset(&refname);
+    while ((iter_status = dir_iterator_advance(iter)) == ITER_OK)
+    {
+        if (S_ISDIR(iter->st.st_mode))
+        {
+            continue;
+        }
+        else if (S_ISREG(iter->st.st_mode) || S_ISLNK(iter->st.st_mode))
+        {
+            strbuf_reset(&refname);
 
-			if (!is_main_worktree(wt))
-				strbuf_addf(&refname, "worktrees/%s/", wt->id);
-			strbuf_addf(&refname, "%s/%s", refs_check_dir,
-				    iter->relative_path);
+            if (!is_main_worktree(wt))
+                strbuf_addf(&refname, "worktrees/%s/", wt->id);
+            strbuf_addf(&refname, "%s/%s", refs_check_dir,
+                        iter->relative_path);
 
-			if (o->verbose)
-				fprintf_ln(stderr, "Checking %s", refname.buf);
+            if (o->verbose)
+                fprintf_ln(stderr, "Checking %s", refname.buf);
 
-			for (size_t i = 0; fsck_refs_fn[i]; i++) {
-				if (fsck_refs_fn[i](ref_store, o, refname.buf, iter))
-					ret = -1;
-			}
-		} else {
-			struct fsck_ref_report report = { .path = iter->basename };
-			if (fsck_report_ref(o, &report,
-					    FSCK_MSG_BAD_REF_FILETYPE,
-					    "unexpected file type"))
-				ret = -1;
-		}
-	}
+            for (size_t i = 0; fsck_refs_fn[i]; i++)
+            {
+                if (fsck_refs_fn[i](ref_store, o, refname.buf, iter))
+                    ret = -1;
+            }
+        }
+        else
+        {
+            struct fsck_ref_report report = { .path = iter->basename };
+            if (fsck_report_ref(o, &report,
+                                FSCK_MSG_BAD_REF_FILETYPE,
+                                "unexpected file type"))
+                ret = -1;
+        }
+    }
 
-	if (iter_status != ITER_DONE)
-		ret = error(_("failed to iterate over '%s'"), sb.buf);
+    if (iter_status != ITER_DONE)
+        ret = error(_("failed to iterate over '%s'"), sb.buf);
 
 out:
-	strbuf_release(&sb);
-	strbuf_release(&refname);
-	return ret;
+    strbuf_release(&sb);
+    strbuf_release(&refname);
+    return ret;
 }
 
-static int files_fsck_refs(struct ref_store *ref_store,
-			   struct fsck_options *o,
-			   struct worktree *wt)
+static int files_fsck_refs(struct ref_store    *ref_store,
+                           struct fsck_options *o,
+                           struct worktree     *wt)
 {
-	files_fsck_refs_fn fsck_refs_fn[]= {
-		files_fsck_refs_name,
-		files_fsck_refs_content,
-		NULL,
-	};
+    files_fsck_refs_fn fsck_refs_fn[] = {
+        files_fsck_refs_name,
+        files_fsck_refs_content,
+        NULL,
+    };
 
-	if (o->verbose)
-		fprintf_ln(stderr, _("Checking references consistency"));
-	return files_fsck_refs_dir(ref_store, o, "refs", wt, fsck_refs_fn);
+    if (o->verbose)
+        fprintf_ln(stderr, _("Checking references consistency"));
+    return files_fsck_refs_dir(ref_store, o, "refs", wt, fsck_refs_fn);
 }
 
-static int files_fsck(struct ref_store *ref_store,
-		      struct fsck_options *o,
-		      struct worktree *wt)
+static int files_fsck(struct ref_store    *ref_store,
+                      struct fsck_options *o,
+                      struct worktree     *wt)
 {
-	struct files_ref_store *refs =
-		files_downcast(ref_store, REF_STORE_READ, "fsck");
+    struct files_ref_store *refs =
+        files_downcast(ref_store, REF_STORE_READ, "fsck");
 
-	return files_fsck_refs(ref_store, o, wt) |
-	       refs->packed_ref_store->be->fsck(refs->packed_ref_store, o, wt);
+    return files_fsck_refs(ref_store, o, wt) | refs->packed_ref_store->be->fsck(refs->packed_ref_store, o, wt);
 }
 
 struct ref_storage_be refs_be_files = {
-	.name = "files",
-	.init = files_ref_store_init,
-	.release = files_ref_store_release,
-	.create_on_disk = files_ref_store_create_on_disk,
-	.remove_on_disk = files_ref_store_remove_on_disk,
+    .name           = "files",
+    .init           = files_ref_store_init,
+    .release        = files_ref_store_release,
+    .create_on_disk = files_ref_store_create_on_disk,
+    .remove_on_disk = files_ref_store_remove_on_disk,
 
-	.transaction_prepare = files_transaction_prepare,
-	.transaction_finish = files_transaction_finish,
-	.transaction_abort = files_transaction_abort,
+    .transaction_prepare = files_transaction_prepare,
+    .transaction_finish  = files_transaction_finish,
+    .transaction_abort   = files_transaction_abort,
 
-	.pack_refs = files_pack_refs,
-	.rename_ref = files_rename_ref,
-	.copy_ref = files_copy_ref,
+    .pack_refs  = files_pack_refs,
+    .rename_ref = files_rename_ref,
+    .copy_ref   = files_copy_ref,
 
-	.iterator_begin = files_ref_iterator_begin,
-	.read_raw_ref = files_read_raw_ref,
-	.read_symbolic_ref = files_read_symbolic_ref,
+    .iterator_begin    = files_ref_iterator_begin,
+    .read_raw_ref      = files_read_raw_ref,
+    .read_symbolic_ref = files_read_symbolic_ref,
 
-	.reflog_iterator_begin = files_reflog_iterator_begin,
-	.for_each_reflog_ent = files_for_each_reflog_ent,
-	.for_each_reflog_ent_reverse = files_for_each_reflog_ent_reverse,
-	.reflog_exists = files_reflog_exists,
-	.create_reflog = files_create_reflog,
-	.delete_reflog = files_delete_reflog,
-	.reflog_expire = files_reflog_expire,
+    .reflog_iterator_begin       = files_reflog_iterator_begin,
+    .for_each_reflog_ent         = files_for_each_reflog_ent,
+    .for_each_reflog_ent_reverse = files_for_each_reflog_ent_reverse,
+    .reflog_exists               = files_reflog_exists,
+    .create_reflog               = files_create_reflog,
+    .delete_reflog               = files_delete_reflog,
+    .reflog_expire               = files_reflog_expire,
 
-	.fsck = files_fsck,
+    .fsck = files_fsck,
 };

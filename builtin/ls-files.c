@@ -439,7 +439,7 @@ static void show_ru_info(struct index_state *istate)
         return;
     }
 
-    for_each_string_list_item(item, istate->resolve_undo)
+    for_each_string_list_item (item, istate->resolve_undo)
     {
         const char               *path = item->string;
         struct resolve_undo_info *ui   = item->util;
@@ -655,7 +655,8 @@ static int get_common_prefix_len(const char *common_prefix)
 
 static const char *const ls_files_usage[] = {
     N_("git ls-files [<options>] [<file>...]"),
-    NULL};
+    NULL
+};
 
 static int option_parse_exclude(const struct option *opt,
                                 const char *arg, int unset)
@@ -775,13 +776,12 @@ int cmd_ls_files(int                     argc,
         OPT_STRING_F(0, "format", &format, N_("format"),
                             N_("format to use for the output"),
                             PARSE_OPT_NONEG),
-        OPT_END()};
+        OPT_END()
+    };
     int ret = 0;
 
-    if (argc == 2 && !strcmp(argv[1], "-h"))
-    {
-        usage_with_options(ls_files_usage, builtin_ls_files_options);
-    }
+    show_usage_with_options_if_asked(argc, argv,
+                                     ls_files_usage, builtin_ls_files_options);
 
     prepare_repo_settings(the_repository);
     the_repository->settings.command_requires_full_index = 0;

@@ -23,9 +23,9 @@
 #include "commit-reach.h"
 
 #ifdef EXPAT_NEEDS_XMLPARSE_H
-    #include <xmlparse.h>
+ #include <xmlparse.h>
 #else
-    #include <expat.h>
+ #include <expat.h>
 #endif
 
 static const char http_push_usage[] =
@@ -37,8 +37,8 @@ enum XML_Status
     XML_STATUS_OK    = 1,
     XML_STATUS_ERROR = 0
 };
-    #define XML_STATUS_OK    1
-    #define XML_STATUS_ERROR 0
+ #define XML_STATUS_OK    1
+ #define XML_STATUS_ERROR 0
 #endif
 
 #define PREV_BUF_SIZE 4096
@@ -325,15 +325,16 @@ static void start_fetch_packed(struct transfer_request *request)
     struct transfer_request  *check_request = request_queue_head;
     struct http_pack_request *preq;
 
-	target = find_oid_pack(&request->obj->oid, repo->packs);
-	if (!target) {
-		fprintf(stderr, "Unable to fetch %s, will not be able to update server info refs\n", oid_to_hex(&request->obj->oid));
-		repo->can_update_info_refs = 0;
-		release_request(request);
-		return;
-	}
-	close_pack_index(target);
-	request->target = target;
+    target = find_oid_pack(&request->obj->oid, repo->packs);
+    if (!target)
+    {
+        fprintf(stderr, "Unable to fetch %s, will not be able to update server info refs\n", oid_to_hex(&request->obj->oid));
+        repo->can_update_info_refs = 0;
+        release_request(request);
+        return;
+    }
+    close_pack_index(target);
+    request->target = target;
 
     fprintf(stderr, "Fetching pack %s\n",
             hash_to_hex(target->hash));
@@ -753,19 +754,20 @@ static int add_send_request(struct object *obj, struct remote_lock *lock)
     /* Keep locks active */
     check_locks();
 
-	/*
-	 * Don't push the object if it's known to exist on the remote
-	 * or is already in the request queue
-	 */
-	if (remote_dir_exists[obj->oid.hash[0]] == -1)
-		get_remote_object_list(obj->oid.hash[0]);
-	if (obj->flags & (REMOTE | PUSHING))
-		return 0;
-	target = find_oid_pack(&obj->oid, repo->packs);
-	if (target) {
-		obj->flags |= REMOTE;
-		return 0;
-	}
+    /*
+     * Don't push the object if it's known to exist on the remote
+     * or is already in the request queue
+     */
+    if (remote_dir_exists[obj->oid.hash[0]] == -1)
+        get_remote_object_list(obj->oid.hash[0]);
+    if (obj->flags & (REMOTE | PUSHING))
+        return 0;
+    target = find_oid_pack(&obj->oid, repo->packs);
+    if (target)
+    {
+        obj->flags |= REMOTE;
+        return 0;
+    }
 
     obj->flags |= PUSHING;
     CALLOC_ARRAY(request, 1);
@@ -855,7 +857,7 @@ static void handle_lockprop_ctx(struct xml_ctx *ctx, int tag_closed)
 static void handle_new_lock_ctx(struct xml_ctx *ctx, int tag_closed)
 {
     struct remote_lock *lock = (struct remote_lock *)ctx->userData;
-    git_hash_ctx        hash_ctx;
+    struct git_hash_ctx hash_ctx;
     unsigned char       lock_token_hash[GIT_MAX_RAWSZ];
 
     if (tag_closed && ctx->cdata)
@@ -877,8 +879,8 @@ static void handle_new_lock_ctx(struct xml_ctx *ctx, int tag_closed)
             lock->token = xstrdup(ctx->cdata);
 
             the_hash_algo->init_fn(&hash_ctx);
-            the_hash_algo->update_fn(&hash_ctx, lock->token, strlen(lock->token));
-            the_hash_algo->final_fn(lock_token_hash, &hash_ctx);
+            git_hash_update(&hash_ctx, lock->token, strlen(lock->token));
+            git_hash_final(lock_token_hash, &hash_ctx);
 
             lock->tmpfile_suffix[0] = '_';
             memcpy(lock->tmpfile_suffix + 1, hash_to_hex(lock_token_hash), the_hash_algo->hexsz);
@@ -954,7 +956,7 @@ static struct remote_lock *lock_remote(const char *path, long timeout)
 {
     struct active_request_slot *slot;
     struct slot_results         results;
-    struct buffer               out_buffer = {STRBUF_INIT, 0};
+    struct buffer               out_buffer = { STRBUF_INIT, 0 };
     struct strbuf               in_buffer  = STRBUF_INIT;
     char                       *url;
     char                       *ep;
@@ -1225,7 +1227,6 @@ static void handle_remote_ls_ctx(struct xml_ctx *ctx, int tag_closed)
         {
             if (ls->dentry_flags & IS_DIR)
             {
-
                 /* ensure collection names end with slash */
                 str_end_url_with_slash(ls->dentry_name, &ls->dentry_name);
 
@@ -1302,7 +1303,7 @@ static void remote_ls(const char *path, int flags,
     struct active_request_slot *slot;
     struct slot_results         results;
     struct strbuf               in_buffer   = STRBUF_INIT;
-    struct buffer               out_buffer  = {STRBUF_INIT, 0};
+    struct buffer               out_buffer  = { STRBUF_INIT, 0 };
     struct curl_slist          *dav_headers = http_copy_default_headers();
     struct xml_ctx              ctx;
     struct remote_ls_ctx        ls;
@@ -1387,7 +1388,7 @@ static int locking_available(void)
     struct active_request_slot *slot;
     struct slot_results         results;
     struct strbuf               in_buffer   = STRBUF_INIT;
-    struct buffer               out_buffer  = {STRBUF_INIT, 0};
+    struct buffer               out_buffer  = { STRBUF_INIT, 0 };
     struct curl_slist          *dav_headers = http_copy_default_headers();
     struct xml_ctx              ctx;
     int                         lock_flags = 0;
@@ -1531,9 +1532,9 @@ static struct object_list **process_tree(struct tree         *tree,
 
 static int get_delta(struct rev_info *revs, struct remote_lock *lock)
 {
-	struct commit *commit;
-	struct object_list **p = &objects;
-	int count = 0;
+    struct commit       *commit;
+    struct object_list **p     = &objects;
+    int                  count = 0;
 
     while ((commit = get_revision(revs)) != NULL)
     {
@@ -1546,10 +1547,11 @@ static int get_delta(struct rev_info *revs, struct remote_lock *lock)
         }
     }
 
-	for (size_t i = 0; i < revs->pending.nr; i++) {
-		struct object_array_entry *entry = revs->pending.objects + i;
-		struct object *obj = entry->item;
-		const char *name = entry->name;
+    for (size_t i = 0; i < revs->pending.nr; i++)
+    {
+        struct object_array_entry *entry = revs->pending.objects + i;
+        struct object             *obj   = entry->item;
+        const char                *name  = entry->name;
 
         if (obj->flags & (UNINTERESTING | SEEN))
         {
@@ -1592,7 +1594,7 @@ static int update_remote(const struct object_id *oid, struct remote_lock *lock)
 {
     struct active_request_slot *slot;
     struct slot_results         results;
-    struct buffer               out_buffer = {STRBUF_INIT, 0};
+    struct buffer               out_buffer = { STRBUF_INIT, 0 };
     struct curl_slist          *dav_headers;
 
     dav_headers = get_dav_token_headers(lock, DAV_HEADER_IF);
@@ -1715,7 +1717,7 @@ static void add_remote_info_ref(struct remote_ls_ctx *ls)
 
 static void update_remote_info_refs(struct remote_lock *lock)
 {
-    struct buffer               buffer = {STRBUF_INIT, 0};
+    struct buffer               buffer = { STRBUF_INIT, 0 };
     struct active_request_slot *slot;
     struct slot_results         results;
     struct curl_slist          *dav_headers;

@@ -45,7 +45,8 @@
 
 static const char *const receive_pack_usage[] = {
     N_("git receive-pack <git-dir>"),
-    NULL};
+    NULL
+};
 
 enum deny_action
 {
@@ -116,10 +117,10 @@ static struct tmp_objdir *tmp_objdir;
 
 static struct proc_receive_ref
 {
-    unsigned int want_add : 1,
-        want_delete : 1,
-        want_modify : 1,
-        negative_ref : 1;
+    unsigned int want_add:1,
+        want_delete:1,
+        want_modify:1,
+        negative_ref:1;
     char                    *ref_prefix;
     struct proc_receive_ref *next;
 } * proc_receive_ref;
@@ -193,13 +194,13 @@ static int receive_pack_config(const char *var, const char *value,
     {
         char *path;
 
-		if (git_config_pathname(&path, var, value))
-			return -1;
-		strbuf_addf(&fsck_msg_types, "%cskiplist=%s",
-			fsck_msg_types.len ? ',' : '=', path);
-		free(path);
-		return 0;
-	}
+        if (git_config_pathname(&path, var, value))
+            return -1;
+        strbuf_addf(&fsck_msg_types, "%cskiplist=%s",
+                    fsck_msg_types.len ? ',' : '=', path);
+        free(path);
+        return 0;
+    }
 
     if (skip_prefix(var, "receive.fsck.", &msg_id))
     {
@@ -447,9 +448,9 @@ struct command
     const char             *error_string;
     char                   *error_string_owned;
     struct ref_push_report *report;
-    unsigned int            skip_update : 1,
-        did_not_exist : 1,
-        run_proc_receive : 2;
+    unsigned int            skip_update:1,
+        did_not_exist:1,
+        run_proc_receive:2;
     int              index;
     struct object_id old_oid;
     struct object_id new_oid;
@@ -675,19 +676,19 @@ static void hmac_hash(unsigned char *out,
                       const char *key_in, size_t key_len,
                       const char *text, size_t text_len)
 {
-    unsigned char key[GIT_MAX_BLKSZ];
-    unsigned char k_ipad[GIT_MAX_BLKSZ];
-    unsigned char k_opad[GIT_MAX_BLKSZ];
-    int           i;
-    git_hash_ctx  ctx;
+    unsigned char       key[GIT_MAX_BLKSZ];
+    unsigned char       k_ipad[GIT_MAX_BLKSZ];
+    unsigned char       k_opad[GIT_MAX_BLKSZ];
+    int                 i;
+    struct git_hash_ctx ctx;
 
     /* RFC 2104 2. (1) */
     memset(key, '\0', GIT_MAX_BLKSZ);
     if (the_hash_algo->blksz < key_len)
     {
         the_hash_algo->init_fn(&ctx);
-        the_hash_algo->update_fn(&ctx, key_in, key_len);
-        the_hash_algo->final_fn(key, &ctx);
+        git_hash_update(&ctx, key_in, key_len);
+        git_hash_final(key, &ctx);
     }
     else
     {
@@ -703,15 +704,15 @@ static void hmac_hash(unsigned char *out,
 
     /* RFC 2104 2. (3) & (4) */
     the_hash_algo->init_fn(&ctx);
-    the_hash_algo->update_fn(&ctx, k_ipad, sizeof(k_ipad));
-    the_hash_algo->update_fn(&ctx, text, text_len);
-    the_hash_algo->final_fn(out, &ctx);
+    git_hash_update(&ctx, k_ipad, sizeof(k_ipad));
+    git_hash_update(&ctx, text, text_len);
+    git_hash_final(out, &ctx);
 
     /* RFC 2104 2. (6) & (7) */
     the_hash_algo->init_fn(&ctx);
-    the_hash_algo->update_fn(&ctx, k_opad, sizeof(k_opad));
-    the_hash_algo->update_fn(&ctx, out, the_hash_algo->rawsz);
-    the_hash_algo->final_fn(out, &ctx);
+    git_hash_update(&ctx, k_opad, sizeof(k_opad));
+    git_hash_update(&ctx, out, the_hash_algo->rawsz);
+    git_hash_final(out, &ctx);
 }
 
 static char *prepare_push_cert_nonce(const char *path, timestamp_t stamp)
@@ -1499,7 +1500,7 @@ static int run_proc_receive_hook(struct command           *commands,
     {
         struct string_list_item *item;
 
-        for_each_string_list_item(item, push_options)
+        for_each_string_list_item (item, push_options)
         {
             code = packet_write_fmt_gently(proc.in, "%s", item->string);
             if (code)
@@ -2237,14 +2238,15 @@ static void execute_commands_non_atomic(struct command      *commands,
             continue;
         }
 
-		transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-							  0, &err);
-		if (!transaction) {
-			rp_error("%s", err.buf);
-			strbuf_reset(&err);
-			cmd->error_string = "transaction failed to start";
-			continue;
-		}
+        transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+                                                  0, &err);
+        if (!transaction)
+        {
+            rp_error("%s", err.buf);
+            strbuf_reset(&err);
+            cmd->error_string = "transaction failed to start";
+            continue;
+        }
 
         cmd->error_string = update(cmd, si);
 
@@ -2267,14 +2269,15 @@ static void execute_commands_atomic(struct command      *commands,
     struct strbuf   err            = STRBUF_INIT;
     const char     *reported_error = "atomic push failure";
 
-	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
-						  0, &err);
-	if (!transaction) {
-		rp_error("%s", err.buf);
-		strbuf_reset(&err);
-		reported_error = "transaction failed to start";
-		goto failure;
-	}
+    transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+                                              0, &err);
+    if (!transaction)
+    {
+        rp_error("%s", err.buf);
+        strbuf_reset(&err);
+        reported_error = "transaction failed to start";
+        goto failure;
+    }
 
     for (cmd = commands; cmd; cmd = cmd->next)
     {
@@ -2723,13 +2726,14 @@ static const char *unpack(int err_fd, struct shallow_info *si)
         strvec_push(&child.args, alt_shallow_file);
     }
 
-	tmp_objdir = tmp_objdir_create(the_repository, "incoming");
-	if (!tmp_objdir) {
-		if (err_fd > 0)
-			close(err_fd);
-		return "unable to create temporary object directory";
-	}
-	strvec_pushv(&child.env, tmp_objdir_env(tmp_objdir));
+    tmp_objdir = tmp_objdir_create(the_repository, "incoming");
+    if (!tmp_objdir)
+    {
+        if (err_fd > 0)
+            close(err_fd);
+        return "unable to create temporary object directory";
+    }
+    strvec_pushv(&child.env, tmp_objdir_env(tmp_objdir));
 
     /*
      * Normally we just pass the tmp_objdir environment to the child
@@ -2813,7 +2817,7 @@ static const char *unpack(int err_fd, struct shallow_info *si)
             return "index-pack fork failed";
         }
 
-        lockfile = index_pack_lockfile(child.out, NULL);
+        lockfile = index_pack_lockfile(the_repository, child.out, NULL);
         if (lockfile)
         {
             pack_lockfile = register_tempfile(lockfile);
@@ -3087,7 +3091,8 @@ int cmd_receive_pack(int                     argc,
         OPT_HIDDEN_BOOL(0, "http-backend-info-refs", &advertise_refs, NULL),
         OPT_ALIAS(0, "advertise-refs", "http-backend-info-refs"),
         OPT_HIDDEN_BOOL(0, "reject-thin-pack-for-testing", &reject_thin, NULL),
-        OPT_END()};
+        OPT_END()
+    };
 
     packet_trace_identity("receive-pack");
 
@@ -3220,22 +3225,23 @@ int cmd_receive_pack(int                     argc,
                 proc.stdout_to_stderr = 1;
                 proc.err              = use_sideband ? -1 : 0;
 
-				if (!start_command(&proc)) {
-					if (use_sideband)
-						copy_to_sideband(proc.err, -1, NULL);
-					finish_command(&proc);
-				}
-			}
-		}
-		if (auto_update_server_info)
-			update_server_info(the_repository, 0);
-		clear_shallow_info(&si);
-	}
-	if (use_sideband)
-		packet_flush(1);
-	oid_array_clear(&shallow);
-	oid_array_clear(&ref);
-	strvec_clear(&hidden_refs);
-	free((void *)push_cert_nonce);
-	return 0;
+                if (!start_command(&proc))
+                {
+                    if (use_sideband)
+                        copy_to_sideband(proc.err, -1, NULL);
+                    finish_command(&proc);
+                }
+            }
+        }
+        if (auto_update_server_info)
+            update_server_info(the_repository, 0);
+        clear_shallow_info(&si);
+    }
+    if (use_sideband)
+        packet_flush(1);
+    oid_array_clear(&shallow);
+    oid_array_clear(&ref);
+    strvec_clear(&hidden_refs);
+    free((void *)push_cert_nonce);
+    return 0;
 }

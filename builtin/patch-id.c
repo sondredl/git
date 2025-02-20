@@ -77,28 +77,29 @@ static int scan_hunk_header(const char *p, int *p_before, int *p_after)
 }
 
 static size_t get_one_patchid(struct object_id *next_oid, struct object_id *result,
-			      struct strbuf *line_buf, int stable, int verbatim)
+                              struct strbuf *line_buf, int stable, int verbatim)
 {
-	size_t patchlen = 0;
-	int found_next = 0;
-	int before = -1, after = -1;
-	int diff_is_binary = 0;
-	char pre_oid_str[GIT_MAX_HEXSZ + 1], post_oid_str[GIT_MAX_HEXSZ + 1];
-	git_hash_ctx ctx;
+    size_t              patchlen   = 0;
+    int                 found_next = 0;
+    int                 before = -1, after = -1;
+    int                 diff_is_binary = 0;
+    char                pre_oid_str[GIT_MAX_HEXSZ + 1], post_oid_str[GIT_MAX_HEXSZ + 1];
+    struct git_hash_ctx ctx;
 
     the_hash_algo->init_fn(&ctx);
     oidclr(result, the_repository->hash_algo);
 
-	while (strbuf_getwholeline(line_buf, stdin, '\n') != EOF) {
-		char *line = line_buf->buf;
-		const char *p = line;
-		size_t len;
+    while (strbuf_getwholeline(line_buf, stdin, '\n') != EOF)
+    {
+        char       *line = line_buf->buf;
+        const char *p    = line;
+        size_t      len;
 
         /* Possibly skip over the prefix added by "log" or "format-patch" */
         if (!skip_prefix(line, "commit ", &p) && !skip_prefix(line, "From ", &p) && starts_with(line, "\\ ") && 12 < strlen(line))
         {
             if (verbatim)
-                the_hash_algo->update_fn(&ctx, line, strlen(line));
+                git_hash_update(&ctx, line, strlen(line));
             continue;
         }
 
@@ -121,10 +122,10 @@ static size_t get_one_patchid(struct object_id *next_oid, struct object_id *resu
             {
                 diff_is_binary = 1;
                 before         = 0;
-                the_hash_algo->update_fn(&ctx, pre_oid_str,
-                                         strlen(pre_oid_str));
-                the_hash_algo->update_fn(&ctx, post_oid_str,
-                                         strlen(post_oid_str));
+                git_hash_update(&ctx, pre_oid_str,
+                                strlen(pre_oid_str));
+                git_hash_update(&ctx, post_oid_str,
+                                strlen(post_oid_str));
                 if (stable)
                     flush_one_hunk(result, &ctx);
                 continue;
@@ -198,7 +199,7 @@ static size_t get_one_patchid(struct object_id *next_oid, struct object_id *resu
         /* Add line to hash algo (possibly removing whitespace) */
         len = verbatim ? strlen(line) : remove_space(line);
         patchlen += len;
-        the_hash_algo->update_fn(&ctx, line, len);
+        git_hash_update(&ctx, line, len);
     }
 
     if (!found_next)
@@ -213,9 +214,9 @@ static size_t get_one_patchid(struct object_id *next_oid, struct object_id *resu
 
 static void generate_id_list(int stable, int verbatim)
 {
-	struct object_id oid, n, result;
-	size_t patchlen;
-	struct strbuf line_buf = STRBUF_INIT;
+    struct object_id oid, n, result;
+    size_t           patchlen;
+    struct strbuf    line_buf = STRBUF_INIT;
 
     oidclr(&oid, the_repository->hash_algo);
     while (!feof(stdin))
@@ -228,7 +229,8 @@ static void generate_id_list(int stable, int verbatim)
 }
 
 static const char *const patch_id_usage[] = {
-    N_("git patch-id [--stable | --unstable | --verbatim]"), NULL};
+    N_("git patch-id [--stable | --unstable | --verbatim]"), NULL
+};
 
 struct patch_id_opts
 {
@@ -261,7 +263,7 @@ int cmd_patch_id(int                     argc,
                  struct repository *repo UNUSED)
 {
     /* if nothing is set, default to unstable */
-    struct patch_id_opts config                     = {0, 0};
+    struct patch_id_opts config                     = { 0, 0 };
     int                  opts                       = 0;
     struct option        builtin_patch_id_options[] = {
                OPT_CMDMODE(0, "unstable", &opts,
@@ -270,7 +272,8 @@ int cmd_patch_id(int                     argc,
                            N_("use the stable patch-id algorithm"), 2),
                OPT_CMDMODE(0, "verbatim", &opts,
                            N_("don't strip whitespace from the patch"), 3),
-               OPT_END()};
+               OPT_END()
+    };
 
     git_config(git_patch_id_config, &config);
 

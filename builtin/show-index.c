@@ -9,8 +9,9 @@
 #include "parse-options.h"
 
 static const char *const show_index_usage[] = {
-    "git show-index [--object-format=<hash-algorithm>]",
-    NULL};
+    "git show-index [--object-format=<hash-algorithm>] < <pack-idx-file>",
+    NULL
+};
 
 int cmd_show_index(int                     argc,
                    const char            **argv,
@@ -27,7 +28,8 @@ int cmd_show_index(int                     argc,
     const struct option show_index_options[] = {
         OPT_STRING(0, "object-format", &hash_name, N_("hash-algorithm"),
                    N_("specify the hash algorithm to use")),
-        OPT_END()};
+        OPT_END()
+    };
 
     argc = parse_options(argc, argv, prefix, show_index_options, show_index_usage, 0);
 
@@ -41,16 +43,16 @@ int cmd_show_index(int                     argc,
         repo_set_hash_algo(the_repository, hash_algo);
     }
 
-	/*
-	 * Fallback to SHA1 if we are running outside of a repository.
-	 *
-	 * TODO: Figure out and implement a way to detect the hash algorithm in use by the
-	 *       the index file passed in and use that instead.
-	 */
-	if (!the_hash_algo)
-		repo_set_hash_algo(the_repository, GIT_HASH_SHA1);
+    /*
+     * Fallback to SHA1 if we are running outside of a repository.
+     *
+     * TODO: Figure out and implement a way to detect the hash algorithm in use by the
+     *       the index file passed in and use that instead.
+     */
+    if (!the_hash_algo)
+        repo_set_hash_algo(the_repository, GIT_HASH_SHA1);
 
-	hashsz = the_hash_algo->rawsz;
+    hashsz = the_hash_algo->rawsz;
 
     if (fread(top_index, 2 * 4, 1, stdin) != 1)
     {

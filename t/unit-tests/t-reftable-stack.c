@@ -83,7 +83,7 @@ static void t_read_file(void)
     char             out[1024] = "line1\n\nline2\nline3";
     int              n, err;
     char           **names  = NULL;
-    const char      *want[] = {"line1", "line2", "line3"};
+    const char      *want[] = { "line1", "line2", "line3" };
 
     check_int(fd, >, 0);
     n = write_in_full(fd, out, strlen(out));
@@ -104,7 +104,8 @@ static void t_read_file(void)
 static int write_test_ref(struct reftable_writer *wr, void *arg)
 {
     struct reftable_ref_record *ref = arg;
-    reftable_writer_set_limits(wr, ref->update_index, ref->update_index);
+    check(!reftable_writer_set_limits(wr, ref->update_index,
+                                      ref->update_index));
     return reftable_writer_add_ref(wr, ref);
 }
 
@@ -125,9 +126,9 @@ static void write_n_ref_tables(struct reftable_stack *st,
         };
         char buf[128];
 
-		snprintf(buf, sizeof(buf), "refs/heads/branch-%04"PRIuMAX, (uintmax_t)i);
-		ref.refname = buf;
-		t_reftable_set_hash(ref.value.val1, i, REFTABLE_HASH_SHA1);
+        snprintf(buf, sizeof(buf), "refs/heads/branch-%04" PRIuMAX, (uintmax_t)i);
+        ref.refname = buf;
+        t_reftable_set_hash(ref.value.val1, i, REFTABLE_HASH_SHA1);
 
         err = reftable_stack_add(st, &write_test_ref, &ref);
         check(!err);
@@ -146,7 +147,8 @@ static int write_test_log(struct reftable_writer *wr, void *arg)
 {
     struct write_log_arg *wla = arg;
 
-    reftable_writer_set_limits(wr, wla->update_index, wla->update_index);
+    check(!reftable_writer_set_limits(wr, wla->update_index,
+                                      wla->update_index));
     return reftable_writer_add_log(wr, wla->log);
 }
 
@@ -166,18 +168,18 @@ static void t_reftable_stack_add_one(void)
         .value_type   = REFTABLE_REF_SYMREF,
         .value.symref = (char *)"master",
     };
-    struct reftable_ref_record dest        = {0};
-    struct stat                stat_result = {0};
+    struct reftable_ref_record dest        = { 0 };
+    struct stat                stat_result = { 0 };
     err                                    = reftable_new_stack(&st, dir, &opts);
     check(!err);
 
     err = reftable_stack_add(st, write_test_ref, &ref);
     check(!err);
 
-	err = reftable_stack_read_ref(st, ref.refname, &dest);
-	check(!err);
-	check(reftable_ref_record_equal(&ref, &dest, REFTABLE_HASH_SIZE_SHA1));
-	check_int(st->readers_len, >, 0);
+    err = reftable_stack_read_ref(st, ref.refname, &dest);
+    check(!err);
+    check(reftable_ref_record_equal(&ref, &dest, REFTABLE_HASH_SIZE_SHA1));
+    check_int(st->readers_len, >, 0);
 
 #ifndef GIT_WINDOWS_NATIVE
     check(!reftable_buf_addstr(&scratch, dir));
@@ -207,7 +209,7 @@ static void t_reftable_stack_add_one(void)
 
 static void t_reftable_stack_uptodate(void)
 {
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st1  = NULL;
     struct reftable_stack        *st2  = NULL;
     char                         *dir  = get_tmp_dir(__LINE__);
@@ -254,7 +256,7 @@ static void t_reftable_stack_uptodate(void)
 static void t_reftable_stack_transaction_api(void)
 {
     char                         *dir  = get_tmp_dir(__LINE__);
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     int                           err;
     struct reftable_addition     *add = NULL;
@@ -265,7 +267,7 @@ static void t_reftable_stack_transaction_api(void)
         .value_type   = REFTABLE_REF_SYMREF,
         .value.symref = (char *)"master",
     };
-    struct reftable_ref_record dest = {0};
+    struct reftable_ref_record dest = { 0 };
 
     err = reftable_new_stack(&st, dir, &opts);
     check(!err);
@@ -283,10 +285,10 @@ static void t_reftable_stack_transaction_api(void)
 
     reftable_addition_destroy(add);
 
-	err = reftable_stack_read_ref(st, ref.refname, &dest);
-	check(!err);
-	check_int(REFTABLE_REF_SYMREF, ==, dest.value_type);
-	check(reftable_ref_record_equal(&ref, &dest, REFTABLE_HASH_SIZE_SHA1));
+    err = reftable_stack_read_ref(st, ref.refname, &dest);
+    check(!err);
+    check_int(REFTABLE_REF_SYMREF, ==, dest.value_type);
+    check(reftable_ref_record_equal(&ref, &dest, REFTABLE_HASH_SIZE_SHA1));
 
     reftable_ref_record_release(&dest);
     reftable_stack_destroy(st);
@@ -304,16 +306,16 @@ static void t_reftable_stack_transaction_with_reload(void)
             .refname      = (char *)"refs/heads/a",
             .update_index = 1,
             .value_type   = REFTABLE_REF_VAL1,
-            .value.val1   = {'1'},
+            .value.val1   = { '1' },
         },
         {
             .refname      = (char *)"refs/heads/b",
             .update_index = 2,
             .value_type   = REFTABLE_REF_VAL1,
-            .value.val1   = {'1'},
+            .value.val1   = { '1' },
         },
     };
-    struct reftable_ref_record ref = {0};
+    struct reftable_ref_record ref = { 0 };
 
     err = reftable_new_stack(&st1, dir, NULL);
     check(!err);
@@ -343,11 +345,12 @@ static void t_reftable_stack_transaction_with_reload(void)
     check(!err);
     reftable_addition_destroy(add);
 
-	for (size_t i = 0; i < ARRAY_SIZE(refs); i++) {
-		err = reftable_stack_read_ref(st2, refs[i].refname, &ref);
-		check(!err);
-		check(reftable_ref_record_equal(&refs[i], &ref, REFTABLE_HASH_SIZE_SHA1));
-	}
+    for (size_t i = 0; i < ARRAY_SIZE(refs); i++)
+    {
+        err = reftable_stack_read_ref(st2, refs[i].refname, &ref);
+        check(!err);
+        check(reftable_ref_record_equal(&refs[i], &ref, REFTABLE_HASH_SIZE_SHA1));
+    }
 
     reftable_ref_record_release(&ref);
     reftable_stack_destroy(st1);
@@ -358,7 +361,7 @@ static void t_reftable_stack_transaction_with_reload(void)
 static void t_reftable_stack_transaction_api_performs_auto_compaction(void)
 {
     char                         *dir  = get_tmp_dir(__LINE__);
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_addition     *add  = NULL;
     struct reftable_stack        *st   = NULL;
     size_t                        n    = 20;
@@ -418,9 +421,9 @@ static void t_reftable_stack_auto_compaction_fails_gracefully(void)
         .refname      = (char *)"refs/heads/master",
         .update_index = 1,
         .value_type   = REFTABLE_REF_VAL1,
-        .value.val1   = {0x01},
+        .value.val1   = { 0x01 },
     };
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st;
     struct reftable_buf           table_path = REFTABLE_BUF_INIT;
     char                         *dir        = get_tmp_dir(__LINE__);
@@ -466,7 +469,7 @@ static int write_error(struct reftable_writer *wr UNUSED, void *arg)
 static void t_reftable_stack_update_index_check(void)
 {
     char                         *dir  = get_tmp_dir(__LINE__);
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     int                           err;
     struct reftable_ref_record    ref1 = {
@@ -497,7 +500,7 @@ static void t_reftable_stack_update_index_check(void)
 static void t_reftable_stack_lock_failure(void)
 {
     char                         *dir  = get_tmp_dir(__LINE__);
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     int                           err, i;
 
@@ -523,8 +526,8 @@ static void t_reftable_stack_add(void)
     };
     struct reftable_stack     *st      = NULL;
     char                      *dir     = get_tmp_dir(__LINE__);
-    struct reftable_ref_record refs[2] = {0};
-    struct reftable_log_record logs[2] = {0};
+    struct reftable_ref_record refs[2] = { 0 };
+    struct reftable_log_record logs[2] = { 0 };
     struct reftable_buf        path    = REFTABLE_BUF_INIT;
     struct stat                stat_result;
     size_t                     i, N = ARRAY_SIZE(refs);
@@ -532,20 +535,21 @@ static void t_reftable_stack_add(void)
     err = reftable_new_stack(&st, dir, &opts);
     check(!err);
 
-	for (i = 0; i < N; i++) {
-		char buf[256];
-		snprintf(buf, sizeof(buf), "branch%02"PRIuMAX, (uintmax_t)i);
-		refs[i].refname = xstrdup(buf);
-		refs[i].update_index = i + 1;
-		refs[i].value_type = REFTABLE_REF_VAL1;
-		t_reftable_set_hash(refs[i].value.val1, i, REFTABLE_HASH_SHA1);
+    for (i = 0; i < N; i++)
+    {
+        char buf[256];
+        snprintf(buf, sizeof(buf), "branch%02" PRIuMAX, (uintmax_t)i);
+        refs[i].refname      = xstrdup(buf);
+        refs[i].update_index = i + 1;
+        refs[i].value_type   = REFTABLE_REF_VAL1;
+        t_reftable_set_hash(refs[i].value.val1, i, REFTABLE_HASH_SHA1);
 
-		logs[i].refname = xstrdup(buf);
-		logs[i].update_index = N + i + 1;
-		logs[i].value_type = REFTABLE_LOG_UPDATE;
-		logs[i].value.update.email = xstrdup("identity@invalid");
-		t_reftable_set_hash(logs[i].value.update.new_hash, i, REFTABLE_HASH_SHA1);
-	}
+        logs[i].refname            = xstrdup(buf);
+        logs[i].update_index       = N + i + 1;
+        logs[i].value_type         = REFTABLE_LOG_UPDATE;
+        logs[i].value.update.email = xstrdup("identity@invalid");
+        t_reftable_set_hash(logs[i].value.update.new_hash, i, REFTABLE_HASH_SHA1);
+    }
 
     for (i = 0; i < N; i++)
     {
@@ -568,23 +572,24 @@ static void t_reftable_stack_add(void)
 
     for (i = 0; i < N; i++)
     {
-        struct reftable_ref_record dest = {0};
+        struct reftable_ref_record dest = { 0 };
 
-		int err = reftable_stack_read_ref(st, refs[i].refname, &dest);
-		check(!err);
-		check(reftable_ref_record_equal(&dest, refs + i,
-						 REFTABLE_HASH_SIZE_SHA1));
-		reftable_ref_record_release(&dest);
-	}
+        int err = reftable_stack_read_ref(st, refs[i].refname, &dest);
+        check(!err);
+        check(reftable_ref_record_equal(&dest, refs + i,
+                                        REFTABLE_HASH_SIZE_SHA1));
+        reftable_ref_record_release(&dest);
+    }
 
-	for (i = 0; i < N; i++) {
-		struct reftable_log_record dest = { 0 };
-		int err = reftable_stack_read_log(st, refs[i].refname, &dest);
-		check(!err);
-		check(reftable_log_record_equal(&dest, logs + i,
-						 REFTABLE_HASH_SIZE_SHA1));
-		reftable_log_record_release(&dest);
-	}
+    for (i = 0; i < N; i++)
+    {
+        struct reftable_log_record dest = { 0 };
+        int                        err  = reftable_stack_read_log(st, refs[i].refname, &dest);
+        check(!err);
+        check(reftable_log_record_equal(&dest, logs + i,
+                                        REFTABLE_HASH_SIZE_SHA1));
+        reftable_log_record_release(&dest);
+    }
 
 #ifndef GIT_WINDOWS_NATIVE
     check(!reftable_buf_addstr(&path, dir));
@@ -618,31 +623,32 @@ static void t_reftable_stack_add(void)
 
 static void t_reftable_stack_iterator(void)
 {
-    struct reftable_write_options opts     = {0};
+    struct reftable_write_options opts     = { 0 };
     struct reftable_stack        *st       = NULL;
     char                         *dir      = get_tmp_dir(__LINE__);
-    struct reftable_ref_record    refs[10] = {0};
-    struct reftable_log_record    logs[10] = {0};
-    struct reftable_iterator      it       = {0};
+    struct reftable_ref_record    refs[10] = { 0 };
+    struct reftable_log_record    logs[10] = { 0 };
+    struct reftable_iterator      it       = { 0 };
     size_t                        N        = ARRAY_SIZE(refs), i;
     int                           err;
 
     err = reftable_new_stack(&st, dir, &opts);
     check(!err);
 
-	for (i = 0; i < N; i++) {
-		refs[i].refname = xstrfmt("branch%02"PRIuMAX, (uintmax_t)i);
-		refs[i].update_index = i + 1;
-		refs[i].value_type = REFTABLE_REF_VAL1;
-		t_reftable_set_hash(refs[i].value.val1, i, REFTABLE_HASH_SHA1);
+    for (i = 0; i < N; i++)
+    {
+        refs[i].refname      = xstrfmt("branch%02" PRIuMAX, (uintmax_t)i);
+        refs[i].update_index = i + 1;
+        refs[i].value_type   = REFTABLE_REF_VAL1;
+        t_reftable_set_hash(refs[i].value.val1, i, REFTABLE_HASH_SHA1);
 
-		logs[i].refname = xstrfmt("branch%02"PRIuMAX, (uintmax_t)i);
-		logs[i].update_index = i + 1;
-		logs[i].value_type = REFTABLE_LOG_UPDATE;
-		logs[i].value.update.email = xstrdup("johndoe@invalid");
-		logs[i].value.update.message = xstrdup("commit\n");
-		t_reftable_set_hash(logs[i].value.update.new_hash, i, REFTABLE_HASH_SHA1);
-	}
+        logs[i].refname              = xstrfmt("branch%02" PRIuMAX, (uintmax_t)i);
+        logs[i].update_index         = i + 1;
+        logs[i].value_type           = REFTABLE_LOG_UPDATE;
+        logs[i].value.update.email   = xstrdup("johndoe@invalid");
+        logs[i].value.update.message = xstrdup("commit\n");
+        t_reftable_set_hash(logs[i].value.update.new_hash, i, REFTABLE_HASH_SHA1);
+    }
 
     for (i = 0; i < N; i++)
     {
@@ -665,16 +671,16 @@ static void t_reftable_stack_iterator(void)
     reftable_iterator_seek_ref(&it, refs[0].refname);
     for (i = 0;; i++)
     {
-        struct reftable_ref_record ref = {0};
+        struct reftable_ref_record ref = { 0 };
 
-		err = reftable_iterator_next_ref(&it, &ref);
-		if (err > 0)
-			break;
-		check(!err);
-		check(reftable_ref_record_equal(&ref, &refs[i], REFTABLE_HASH_SIZE_SHA1));
-		reftable_ref_record_release(&ref);
-	}
-	check_int(i, ==, N);
+        err = reftable_iterator_next_ref(&it, &ref);
+        if (err > 0)
+            break;
+        check(!err);
+        check(reftable_ref_record_equal(&ref, &refs[i], REFTABLE_HASH_SIZE_SHA1));
+        reftable_ref_record_release(&ref);
+    }
+    check_int(i, ==, N);
 
     reftable_iterator_destroy(&it);
 
@@ -684,16 +690,16 @@ static void t_reftable_stack_iterator(void)
     reftable_iterator_seek_log(&it, logs[0].refname);
     for (i = 0;; i++)
     {
-        struct reftable_log_record log = {0};
+        struct reftable_log_record log = { 0 };
 
-		err = reftable_iterator_next_log(&it, &log);
-		if (err > 0)
-			break;
-		check(!err);
-		check(reftable_log_record_equal(&log, &logs[i], REFTABLE_HASH_SIZE_SHA1));
-		reftable_log_record_release(&log);
-	}
-	check_int(i, ==, N);
+        err = reftable_iterator_next_log(&it, &log);
+        if (err > 0)
+            break;
+        check(!err);
+        check(reftable_log_record_equal(&log, &logs[i], REFTABLE_HASH_SIZE_SHA1));
+        reftable_log_record_release(&log);
+    }
+    check_int(i, ==, N);
 
     reftable_stack_destroy(st);
     reftable_iterator_destroy(&it);
@@ -719,8 +725,8 @@ static void t_reftable_stack_log_normalize(void)
         .value_type   = REFTABLE_LOG_UPDATE,
         .value        = {
                    .update = {
-                       .new_hash = {1},
-                       .old_hash = {2},
+                       .new_hash = { 1 },
+                       .old_hash = { 2 },
             },
         },
     };
@@ -764,48 +770,52 @@ static void t_reftable_stack_log_normalize(void)
 static void t_reftable_stack_tombstone(void)
 {
     char                         *dir  = get_tmp_dir(__LINE__);
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     int                           err;
-    struct reftable_ref_record    refs[2] = {0};
-    struct reftable_log_record    logs[2] = {0};
+    struct reftable_ref_record    refs[2] = { 0 };
+    struct reftable_log_record    logs[2] = { 0 };
     size_t                        i, N = ARRAY_SIZE(refs);
-    struct reftable_ref_record    dest     = {0};
-    struct reftable_log_record    log_dest = {0};
+    struct reftable_ref_record    dest     = { 0 };
+    struct reftable_log_record    log_dest = { 0 };
 
     err = reftable_new_stack(&st, dir, &opts);
     check(!err);
 
-	/* even entries add the refs, odd entries delete them. */
-	for (i = 0; i < N; i++) {
-		const char *buf = "branch";
-		refs[i].refname = xstrdup(buf);
-		refs[i].update_index = i + 1;
-		if (i % 2 == 0) {
-			refs[i].value_type = REFTABLE_REF_VAL1;
-			t_reftable_set_hash(refs[i].value.val1, i,
-					    REFTABLE_HASH_SHA1);
-		}
+    /* even entries add the refs, odd entries delete them. */
+    for (i = 0; i < N; i++)
+    {
+        const char *buf      = "branch";
+        refs[i].refname      = xstrdup(buf);
+        refs[i].update_index = i + 1;
+        if (i % 2 == 0)
+        {
+            refs[i].value_type = REFTABLE_REF_VAL1;
+            t_reftable_set_hash(refs[i].value.val1, i,
+                                REFTABLE_HASH_SHA1);
+        }
 
-		logs[i].refname = xstrdup(buf);
-		/*
-		 * update_index is part of the key so should be constant.
-		 * The value itself should be less than the writer's upper
-		 * limit.
-		 */
-		logs[i].update_index = 1;
-		if (i % 2 == 0) {
-			logs[i].value_type = REFTABLE_LOG_UPDATE;
-			t_reftable_set_hash(logs[i].value.update.new_hash, i,
-					    REFTABLE_HASH_SHA1);
-			logs[i].value.update.email =
-				xstrdup("identity@invalid");
-		}
-	}
-	for (i = 0; i < N; i++) {
-		int err = reftable_stack_add(st, write_test_ref, &refs[i]);
-		check(!err);
-	}
+        logs[i].refname = xstrdup(buf);
+        /*
+         * update_index is part of the key so should be constant.
+         * The value itself should be less than the writer's upper
+         * limit.
+         */
+        logs[i].update_index = 1;
+        if (i % 2 == 0)
+        {
+            logs[i].value_type = REFTABLE_LOG_UPDATE;
+            t_reftable_set_hash(logs[i].value.update.new_hash, i,
+                                REFTABLE_HASH_SHA1);
+            logs[i].value.update.email =
+                xstrdup("identity@invalid");
+        }
+    }
+    for (i = 0; i < N; i++)
+    {
+        int err = reftable_stack_add(st, write_test_ref, &refs[i]);
+        check(!err);
+    }
 
     for (i = 0; i < N; i++)
     {
@@ -849,21 +859,21 @@ static void t_reftable_stack_tombstone(void)
 static void t_reftable_stack_hash_id(void)
 {
     char                         *dir  = get_tmp_dir(__LINE__);
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     int                           err;
 
-	struct reftable_ref_record ref = {
-		.refname = (char *) "master",
-		.value_type = REFTABLE_REF_SYMREF,
-		.value.symref = (char *) "target",
-		.update_index = 1,
-	};
-	struct reftable_write_options opts32 = { .hash_id = REFTABLE_HASH_SHA256 };
-	struct reftable_stack *st32 = NULL;
-	struct reftable_write_options opts_default = { 0 };
-	struct reftable_stack *st_default = NULL;
-	struct reftable_ref_record dest = { 0 };
+    struct reftable_ref_record ref = {
+        .refname      = (char *)"master",
+        .value_type   = REFTABLE_REF_SYMREF,
+        .value.symref = (char *)"target",
+        .update_index = 1,
+    };
+    struct reftable_write_options opts32       = { .hash_id = REFTABLE_HASH_SHA256 };
+    struct reftable_stack        *st32         = NULL;
+    struct reftable_write_options opts_default = { 0 };
+    struct reftable_stack        *st_default   = NULL;
+    struct reftable_ref_record    dest         = { 0 };
 
     err = reftable_new_stack(&st, dir, &opts);
     check(!err);
@@ -882,16 +892,16 @@ static void t_reftable_stack_hash_id(void)
     err = reftable_stack_read_ref(st_default, "master", &dest);
     check(!err);
 
-	check(reftable_ref_record_equal(&ref, &dest, REFTABLE_HASH_SIZE_SHA1));
-	reftable_ref_record_release(&dest);
-	reftable_stack_destroy(st);
-	reftable_stack_destroy(st_default);
-	clear_dir(dir);
+    check(reftable_ref_record_equal(&ref, &dest, REFTABLE_HASH_SIZE_SHA1));
+    reftable_ref_record_release(&dest);
+    reftable_stack_destroy(st);
+    reftable_stack_destroy(st_default);
+    clear_dir(dir);
 }
 
 static void t_suggest_compaction_segment(void)
 {
-    uint64_t       sizes[] = {512, 64, 17, 16, 9, 9, 9, 16, 2, 16};
+    uint64_t       sizes[] = { 512, 64, 17, 16, 9, 9, 9, 16, 2, 16 };
     struct segment min =
         suggest_compaction_segment(sizes, ARRAY_SIZE(sizes), 2);
     check_int(min.start, ==, 1);
@@ -900,7 +910,7 @@ static void t_suggest_compaction_segment(void)
 
 static void t_suggest_compaction_segment_nothing(void)
 {
-    uint64_t       sizes[] = {64, 32, 16, 8, 4, 2};
+    uint64_t       sizes[] = { 64, 32, 16, 8, 4, 2 };
     struct segment result =
         suggest_compaction_segment(sizes, ARRAY_SIZE(sizes), 2);
     check_int(result.start, ==, result.end);
@@ -909,15 +919,15 @@ static void t_suggest_compaction_segment_nothing(void)
 static void t_reflog_expire(void)
 {
     char                             *dir      = get_tmp_dir(__LINE__);
-    struct reftable_write_options     opts     = {0};
+    struct reftable_write_options     opts     = { 0 };
     struct reftable_stack            *st       = NULL;
-    struct reftable_log_record        logs[20] = {0};
+    struct reftable_log_record        logs[20] = { 0 };
     size_t                            i, N = ARRAY_SIZE(logs) - 1;
     int                               err;
     struct reftable_log_expiry_config expiry = {
         .time = 10,
     };
-    struct reftable_log_record log = {0};
+    struct reftable_log_record log = { 0 };
 
     err = reftable_new_stack(&st, dir, &opts);
     check(!err);
@@ -927,14 +937,14 @@ static void t_reflog_expire(void)
         char buf[256];
         snprintf(buf, sizeof(buf), "branch%02" PRIuMAX, (uintmax_t)i);
 
-		logs[i].refname = xstrdup(buf);
-		logs[i].update_index = i;
-		logs[i].value_type = REFTABLE_LOG_UPDATE;
-		logs[i].value.update.time = i;
-		logs[i].value.update.email = xstrdup("identity@invalid");
-		t_reftable_set_hash(logs[i].value.update.new_hash, i,
-				    REFTABLE_HASH_SHA1);
-	}
+        logs[i].refname            = xstrdup(buf);
+        logs[i].update_index       = i;
+        logs[i].value_type         = REFTABLE_LOG_UPDATE;
+        logs[i].value.update.time  = i;
+        logs[i].value.update.email = xstrdup("identity@invalid");
+        t_reftable_set_hash(logs[i].value.update.new_hash, i,
+                            REFTABLE_HASH_SHA1);
+    }
 
     for (i = 1; i <= N; i++)
     {
@@ -978,13 +988,13 @@ static void t_reflog_expire(void)
 
 static int write_nothing(struct reftable_writer *wr, void *arg UNUSED)
 {
-    reftable_writer_set_limits(wr, 1, 1);
+    check(!reftable_writer_set_limits(wr, 1, 1));
     return 0;
 }
 
 static void t_empty_add(void)
 {
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     int                           err;
     char                         *dir = get_tmp_dir(__LINE__);
@@ -1130,7 +1140,7 @@ static void t_reftable_stack_auto_compaction_with_locked_tables(void)
 
 static void t_reftable_stack_add_performs_auto_compaction(void)
 {
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st   = NULL;
     char                         *dir  = get_tmp_dir(__LINE__);
     int                           err;
@@ -1215,7 +1225,7 @@ static void t_reftable_stack_compaction_with_locked_tables(void)
 
 static void t_reftable_stack_compaction_concurrent(void)
 {
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st1 = NULL, *st2 = NULL;
     char                         *dir = get_tmp_dir(__LINE__);
     int                           err;
@@ -1248,7 +1258,7 @@ static void unclean_stack_close(struct reftable_stack *st)
 
 static void t_reftable_stack_compaction_concurrent_clean(void)
 {
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st1 = NULL, *st2 = NULL, *st3 = NULL;
     char                         *dir = get_tmp_dir(__LINE__);
     int                           err;
@@ -1282,10 +1292,10 @@ static void t_reftable_stack_compaction_concurrent_clean(void)
 
 static void t_reftable_stack_read_across_reload(void)
 {
-    struct reftable_write_options opts = {0};
+    struct reftable_write_options opts = { 0 };
     struct reftable_stack        *st1 = NULL, *st2 = NULL;
-    struct reftable_ref_record    rec = {0};
-    struct reftable_iterator      it  = {0};
+    struct reftable_ref_record    rec = { 0 };
+    struct reftable_iterator      it  = { 0 };
     char                         *dir = get_tmp_dir(__LINE__);
     int                           err;
 
@@ -1331,10 +1341,10 @@ static void t_reftable_stack_read_across_reload(void)
 
 static void t_reftable_stack_reload_with_missing_table(void)
 {
-    struct reftable_write_options opts       = {0};
+    struct reftable_write_options opts       = { 0 };
     struct reftable_stack        *st         = NULL;
-    struct reftable_ref_record    rec        = {0};
-    struct reftable_iterator      it         = {0};
+    struct reftable_ref_record    rec        = { 0 };
+    struct reftable_iterator      it         = { 0 };
     struct reftable_buf           table_path = REFTABLE_BUF_INIT, content = REFTABLE_BUF_INIT;
     char                         *dir = get_tmp_dir(__LINE__);
     int                           err;
@@ -1389,11 +1399,57 @@ static void t_reftable_stack_reload_with_missing_table(void)
     clear_dir(dir);
 }
 
+static int write_limits_after_ref(struct reftable_writer *wr, void *arg)
+{
+    struct reftable_ref_record *ref = arg;
+    check(!reftable_writer_set_limits(wr, ref->update_index, ref->update_index));
+    check(!reftable_writer_add_ref(wr, ref));
+    return reftable_writer_set_limits(wr, ref->update_index, ref->update_index);
+}
+
+static void t_reftable_invalid_limit_updates(void)
+{
+    struct reftable_ref_record ref = {
+        .refname      = (char *)"HEAD",
+        .update_index = 1,
+        .value_type   = REFTABLE_REF_SYMREF,
+        .value.symref = (char *)"master",
+    };
+    struct reftable_write_options opts = {
+        .default_permissions = 0660,
+    };
+    struct reftable_addition *add = NULL;
+    char                     *dir = get_tmp_dir(__LINE__);
+    struct reftable_stack    *st  = NULL;
+    int                       err;
+
+    err = reftable_new_stack(&st, dir, &opts);
+    check(!err);
+
+    reftable_addition_destroy(add);
+
+    err = reftable_stack_new_addition(&add, st, 0);
+    check(!err);
+
+    /*
+     * write_limits_after_ref also updates the update indexes after adding
+     * the record. This should cause an err to be returned, since the limits
+     * must be set at the start.
+     */
+    err = reftable_addition_add(add, write_limits_after_ref, &ref);
+    check_int(err, ==, REFTABLE_API_ERROR);
+
+    reftable_addition_destroy(add);
+    reftable_stack_destroy(st);
+    clear_dir(dir);
+}
+
 int cmd_main(int argc UNUSED, const char *argv[] UNUSED)
 {
     TEST(t_empty_add(), "empty addition to stack");
     TEST(t_read_file(), "read_lines works");
     TEST(t_reflog_expire(), "expire reflog entries");
+    TEST(t_reftable_invalid_limit_updates(), "prevent limit updates after adding records");
     TEST(t_reftable_stack_add(), "add multiple refs and logs to stack");
     TEST(t_reftable_stack_add_one(), "add a single ref record to stack");
     TEST(t_reftable_stack_add_performs_auto_compaction(), "addition to stack triggers auto-compaction");

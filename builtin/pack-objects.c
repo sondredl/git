@@ -219,7 +219,8 @@ static inline void oe_set_delta_size(struct packing_data *pack,
 static const char *pack_usage[] = {
     N_("git pack-objects --stdout [<options>] [< <ref-list> | < <object-list>]"),
     N_("git pack-objects [<options>] <base-name> [< <ref-list> | < <object-list>]"),
-    NULL};
+    NULL
+};
 
 static struct pack_idx_entry **written_list;
 static uint32_t                nr_result, nr_written, nr_seen;
@@ -305,6 +306,45 @@ struct configured_exclusion
 static struct oidmap configured_exclusions;
 
 static struct oidset excluded_by_config;
+static int           name_hash_version = -1;
+
+/**
+ * Check whether the name_hash_version chosen by user input is appropriate,
+ * and also validate whether it is compatible with other features.
+ */
+static void validate_name_hash_version(void)
+{
+    if (name_hash_version < 1 || name_hash_version > 2)
+        die(_("invalid --name-hash-version option: %d"), name_hash_version);
+    if (write_bitmap_index && name_hash_version != 1)
+    {
+        warning(_("currently, --write-bitmap-index requires --name-hash-version=1"));
+        name_hash_version = 1;
+    }
+}
+
+static inline uint32_t pack_name_hash_fn(const char *name)
+{
+    static int seen_version = -1;
+
+    if (seen_version < 0)
+        seen_version = name_hash_version;
+    else if (seen_version != name_hash_version)
+        BUG("name hash version changed from %d to %d mid-process",
+            seen_version, name_hash_version);
+
+    switch (name_hash_version)
+    {
+        case 1:
+            return pack_name_hash(name);
+
+        case 2:
+            return pack_name_hash_v2((const unsigned char *)name);
+
+        default:
+            BUG("invalid name-hash version: %d", name_hash_version);
+    }
+}
 
 /*
  * stats
@@ -1322,65 +1362,67 @@ static void write_reused_pack_one(struct packed_git *reuse_packfile,
 }
 
 static size_t write_reused_pack_verbatim(struct bitmapped_pack *reuse_packfile,
-					 struct hashfile *out,
-					 struct pack_window **w_curs)
+                                         struct hashfile       *out,
+                                         struct pack_window   **w_curs)
 {
-	size_t pos = 0;
-	size_t end;
+    size_t pos = 0;
+    size_t end;
 
-	if (reuse_packfile->bitmap_pos) {
-		/*
-		 * We can't reuse whole chunks verbatim out of
-		 * non-preferred packs since we can't guarantee that
-		 * all duplicate objects were resolved in favor of
-		 * that pack.
-		 *
-		 * Even if we have a whole eword_t worth of bits that
-		 * could be reused, there may be objects between the
-		 * objects corresponding to the first and last bit of
-		 * that word which were selected from a different
-		 * pack, causing us to send duplicate or unwanted
-		 * objects.
-		 *
-		 * Handle non-preferred packs from within
-		 * write_reused_pack(), which inspects and reuses
-		 * individual bits.
-		 */
-		return reuse_packfile->bitmap_pos / BITS_IN_EWORD;
-	}
+    if (reuse_packfile->bitmap_pos)
+    {
+        /*
+         * We can't reuse whole chunks verbatim out of
+         * non-preferred packs since we can't guarantee that
+         * all duplicate objects were resolved in favor of
+         * that pack.
+         *
+         * Even if we have a whole eword_t worth of bits that
+         * could be reused, there may be objects between the
+         * objects corresponding to the first and last bit of
+         * that word which were selected from a different
+         * pack, causing us to send duplicate or unwanted
+         * objects.
+         *
+         * Handle non-preferred packs from within
+         * write_reused_pack(), which inspects and reuses
+         * individual bits.
+         */
+        return reuse_packfile->bitmap_pos / BITS_IN_EWORD;
+    }
 
-	/*
-	 * Only read through the last word whose bits all correspond
-	 * to objects in the given packfile, since we must stop at a
-	 * word boundary.
-	 *
-	 * If there is no whole word to read (i.e. the packfile
-	 * contains fewer than BITS_IN_EWORD objects), then we'll
-	 * inspect bits one-by-one in write_reused_pack().
-	 */
-	end = reuse_packfile->bitmap_nr / BITS_IN_EWORD;
-	if (reuse_packfile_bitmap->word_alloc < end)
-		BUG("fewer words than expected in reuse_packfile_bitmap");
+    /*
+     * Only read through the last word whose bits all correspond
+     * to objects in the given packfile, since we must stop at a
+     * word boundary.
+     *
+     * If there is no whole word to read (i.e. the packfile
+     * contains fewer than BITS_IN_EWORD objects), then we'll
+     * inspect bits one-by-one in write_reused_pack().
+     */
+    end = reuse_packfile->bitmap_nr / BITS_IN_EWORD;
+    if (reuse_packfile_bitmap->word_alloc < end)
+        BUG("fewer words than expected in reuse_packfile_bitmap");
 
-	while (pos < end && reuse_packfile_bitmap->words[pos] == (eword_t)~0)
-		pos++;
+    while (pos < end && reuse_packfile_bitmap->words[pos] == (eword_t)~0)
+        pos++;
 
-	if (pos) {
-		off_t to_write;
+    if (pos)
+    {
+        off_t to_write;
 
-		written = (pos * BITS_IN_EWORD);
-		to_write = pack_pos_to_offset(reuse_packfile->p, written)
-			- sizeof(struct pack_header);
+        written  = (pos * BITS_IN_EWORD);
+        to_write = pack_pos_to_offset(reuse_packfile->p, written)
+                   - sizeof(struct pack_header);
 
-		/* We're recording one chunk, not one object. */
-		record_reused_object(sizeof(struct pack_header), 0);
-		hashflush(out);
-		copy_pack_data(out, reuse_packfile->p, w_curs,
-			sizeof(struct pack_header), to_write);
+        /* We're recording one chunk, not one object. */
+        record_reused_object(sizeof(struct pack_header), 0);
+        hashflush(out);
+        copy_pack_data(out, reuse_packfile->p, w_curs,
+                       sizeof(struct pack_header), to_write);
 
-		display_progress(progress_state, written);
-	}
-	return pos;
+        display_progress(progress_state, written);
+    }
+    return pos;
 }
 
 static void write_reused_pack(struct bitmapped_pack *reuse_packfile,
@@ -1391,8 +1433,8 @@ static void write_reused_pack(struct bitmapped_pack *reuse_packfile,
     off_t               pack_start = hashfile_total(f) - sizeof(struct pack_header);
     struct pack_window *w_curs     = NULL;
 
-	if (allow_ofs_delta)
-		i = write_reused_pack_verbatim(reuse_packfile, f, &w_curs);
+    if (allow_ofs_delta)
+        i = write_reused_pack_verbatim(reuse_packfile, f, &w_curs);
 
     for (; i < reuse_packfile_bitmap->word_alloc; ++i)
     {
@@ -1492,11 +1534,11 @@ static void write_pack_file(void)
     time_t                last_mtime   = 0;
     struct object_entry **write_order;
 
-	if (progress > pack_to_stdout)
-		progress_state = start_progress(the_repository,
-						_("Writing objects"), nr_result);
-	ALLOC_ARRAY(written_list, to_pack.nr_objects);
-	write_order = compute_write_order();
+    if (progress > pack_to_stdout)
+        progress_state = start_progress(the_repository,
+                                        _("Writing objects"), nr_result);
+    ALLOC_ARRAY(written_list, to_pack.nr_objects);
+    write_order = compute_write_order();
 
     do
     {
@@ -1565,15 +1607,14 @@ static void write_pack_file(void)
              */
 
             int fd = finalize_hashfile(f, hash, FSYNC_COMPONENT_PACK, 0);
-            fixup_pack_header_footer(fd, hash, pack_tmp_name,
-                                     nr_written, hash, offset);
+            fixup_pack_header_footer(the_hash_algo, fd, hash,
+                                     pack_tmp_name, nr_written,
+                                     hash, offset);
             close(fd);
             if (write_bitmap_index)
             {
                 if (write_bitmap_index != WRITE_BITMAP_QUIET)
-                {
                     warning(_(no_split_warning));
-                }
                 write_bitmap_index = 0;
             }
         }
@@ -1628,9 +1669,10 @@ static void write_pack_file(void)
                 pack_idx_opts.flags |= WRITE_MTIMES;
             }
 
-            stage_tmp_packfiles(&tmpname, pack_tmp_name,
-                                written_list, nr_written,
-                                &to_pack, &pack_idx_opts, hash,
+            stage_tmp_packfiles(the_hash_algo, &tmpname,
+                                pack_tmp_name, written_list,
+                                nr_written, &to_pack,
+                                &pack_idx_opts, hash,
                                 &idx_tmp_name);
 
             if (write_bitmap_index)
@@ -1801,13 +1843,13 @@ static int want_found_object(const struct object_id *oid, int exclude,
             flags |= IN_CORE_KEEP_PACKS;
         }
 
-		if (ignore_packed_keep_on_disk && p->pack_keep)
-			return 0;
-		if (ignore_packed_keep_in_core && p->pack_keep_in_core)
-			return 0;
-		if (has_object_kept_pack(p->repo, oid, flags))
-			return 0;
-	}
+        if (ignore_packed_keep_on_disk && p->pack_keep)
+            return 0;
+        if (ignore_packed_keep_in_core && p->pack_keep_in_core)
+            return 0;
+        if (has_object_kept_pack(p->repo, oid, flags))
+            return 0;
+    }
 
     /*
      * At this point we know definitively that either we don't care about
@@ -1831,10 +1873,10 @@ static int want_object_in_pack_one(struct packed_git      *p,
 {
     off_t offset;
 
-	if (p == *found_pack)
-		offset = *found_offset;
-	else
-		offset = find_pack_entry_one(oid, p);
+    if (p == *found_pack)
+        offset = *found_offset;
+    else
+        offset = find_pack_entry_one(oid, p);
 
     if (offset)
     {
@@ -1905,7 +1947,7 @@ static int want_object_in_pack(const struct object_id *oid,
         }
     }
 
-    list_for_each(pos, get_packed_git_mru(the_repository))
+    list_for_each (pos, get_packed_git_mru(the_repository))
     {
         struct packed_git *p = list_entry(pos, struct packed_git, mru);
         want                 = want_object_in_pack_one(p, oid, exclude, found_pack, found_offset);
@@ -2008,7 +2050,7 @@ static int add_object_entry(const struct object_id *oid, enum object_type type,
         return 0;
     }
 
-    create_object_entry(oid, type, pack_name_hash(name),
+    create_object_entry(oid, type, pack_name_hash_fn(name),
                         exclude, name && no_try_delta(name),
                         found_pack, found_offset);
     return 1;
@@ -2263,7 +2305,7 @@ static void add_preferred_base_object(const char *name)
 {
     struct pbase_tree *it;
     size_t             cmplen;
-    unsigned           hash = pack_name_hash(name);
+    unsigned           hash = pack_name_hash_fn(name);
 
     if (!num_preferred_base || check_pbase_path(hash))
     {
@@ -2433,7 +2475,7 @@ static void check_object(struct object_entry *entry, uint32_t object_index)
 {
     unsigned long      canonical_size;
     enum object_type   type;
-    struct object_info oi = {.typep = &type, .sizep = &canonical_size};
+    struct object_info oi = { .typep = &type, .sizep = &canonical_size };
 
     if (IN_PACK(entry))
     {
@@ -2849,10 +2891,10 @@ static void get_object_details(void)
     uint32_t              i;
     struct object_entry **sorted_by_offset;
 
-	if (progress)
-		progress_state = start_progress(the_repository,
-						_("Counting objects"),
-						to_pack.nr_objects);
+    if (progress)
+        progress_state = start_progress(the_repository,
+                                        _("Counting objects"),
+                                        to_pack.nr_objects);
 
     CALLOC_ARRAY(sorted_by_offset, to_pack.nr_objects);
     for (i = 0; i < to_pack.nr_objects; i++)
@@ -3850,17 +3892,17 @@ static void prepare_pack(int window, int depth)
     {
         unsigned nr_done = 0;
 
-		if (progress)
-			progress_state = start_progress(the_repository,
-							_("Compressing objects"),
-							nr_deltas);
-		QSORT(delta_list, n, type_size_sort);
-		ll_find_deltas(delta_list, n, window+1, depth, &nr_done);
-		stop_progress(&progress_state);
-		if (nr_done != nr_deltas)
-			die(_("inconsistency with delta count"));
-	}
-	free(delta_list);
+        if (progress)
+            progress_state = start_progress(the_repository,
+                                            _("Compressing objects"),
+                                            nr_deltas);
+        QSORT(delta_list, n, type_size_sort);
+        ll_find_deltas(delta_list, n, window + 1, depth, &nr_done);
+        stop_progress(&progress_state);
+        if (nr_done != nr_deltas)
+            die(_("inconsistency with delta count"));
+    }
+    free(delta_list);
 }
 
 static int git_pack_config(const char *k, const char *v,
@@ -4099,7 +4141,7 @@ static void show_object_pack_hint(struct object *object, const char *name,
      * here using a now in order to perhaps improve the delta selection
      * process.
      */
-    oe->hash         = pack_name_hash(name);
+    oe->hash         = pack_name_hash_fn(name);
     oe->no_try_delta = name && no_try_delta(name);
 
     stdin_packs_hints_nr++;
@@ -4200,7 +4242,7 @@ static void read_packs_list_from_stdin(void)
      * bad case here, we don't need to report the first/last one,
      * or all of them.
      */
-    for_each_string_list_item(item, &include_packs)
+    for_each_string_list_item (item, &include_packs)
     {
         struct packed_git *p = item->util;
         if (!p)
@@ -4218,7 +4260,7 @@ static void read_packs_list_from_stdin(void)
      * kept in-core so that later calls to add_object_entry()
      * discards any objects that are also found in excluded packs.
      */
-    for_each_string_list_item(item, &exclude_packs)
+    for_each_string_list_item (item, &exclude_packs)
     {
         struct packed_git *p = item->util;
         if (!p)
@@ -4235,7 +4277,7 @@ static void read_packs_list_from_stdin(void)
      */
     QSORT(include_packs.items, include_packs.nr, pack_mtime_cmp);
 
-    for_each_string_list_item(item, &include_packs)
+    for_each_string_list_item (item, &include_packs)
     {
         struct packed_git *p = item->util;
         for_each_object_in_pack(p,
@@ -4276,16 +4318,14 @@ static void add_cruft_object_entry(const struct object_id *oid, enum object_type
     {
         if (name)
         {
-            entry->hash         = pack_name_hash(name);
+            entry->hash         = pack_name_hash_fn(name);
             entry->no_try_delta = no_try_delta(name);
         }
     }
     else
     {
         if (!want_object_in_pack(oid, 0, &pack, &offset))
-        {
             return;
-        }
         if (!pack && type == OBJ_BLOB && !has_loose_object(oid))
         {
             /*
@@ -4304,7 +4344,7 @@ static void add_cruft_object_entry(const struct object_id *oid, enum object_type
             return;
         }
 
-        entry = create_object_entry(oid, type, pack_name_hash(name),
+        entry = create_object_entry(oid, type, pack_name_hash_fn(name),
                                     0, name && no_try_delta(name),
                                     pack, offset);
     }
@@ -4337,7 +4377,7 @@ static void show_cruft_commit(struct commit *commit, void *data)
 
 static int cruft_include_check_obj(struct object *obj, void *data UNUSED)
 {
-	return !has_object_kept_pack(to_pack.repo, &obj->oid, IN_CORE_KEEP_PACKS);
+    return !has_object_kept_pack(to_pack.repo, &obj->oid, IN_CORE_KEEP_PACKS);
 }
 
 static int cruft_include_check(struct commit *commit, void *data)
@@ -4356,7 +4396,7 @@ static void set_cruft_mtime(const struct object *object,
 static void mark_pack_kept_in_core(struct string_list *packs, unsigned keep)
 {
     struct string_list_item *item = NULL;
-    for_each_string_list_item(item, packs)
+    for_each_string_list_item (item, packs)
     {
         struct packed_git *p = item->util;
         if (!p)
@@ -4372,9 +4412,9 @@ static void add_objects_in_unpacked_packs(void);
 
 static void enumerate_cruft_objects(void)
 {
-	if (progress)
-		progress_state = start_progress(the_repository,
-						_("Enumerating cruft objects"), 0);
+    if (progress)
+        progress_state = start_progress(the_repository,
+                                        _("Enumerating cruft objects"), 0);
 
     add_objects_in_unpacked_packs();
     add_unreachable_loose_objects();
@@ -4399,12 +4439,12 @@ static void enumerate_and_traverse_cruft_objects(struct string_list *fresh_packs
 
     revs.ignore_missing_links = 1;
 
-	if (progress)
-		progress_state = start_progress(the_repository,
-						_("Enumerating cruft objects"), 0);
-	ret = add_unseen_recent_objects_to_traversal(&revs, cruft_expiration,
-						     set_cruft_mtime, 1);
-	stop_progress(&progress_state);
+    if (progress)
+        progress_state = start_progress(the_repository,
+                                        _("Enumerating cruft objects"), 0);
+    ret = add_unseen_recent_objects_to_traversal(&revs, cruft_expiration,
+                                                 set_cruft_mtime, 1);
+    stop_progress(&progress_state);
 
     if (ret)
     {
@@ -4421,13 +4461,13 @@ static void enumerate_and_traverse_cruft_objects(struct string_list *fresh_packs
     }
     mark_pack_kept_in_core(fresh_packs, 1);
 
-	if (prepare_revision_walk(&revs))
-		die(_("revision walk setup failed"));
-	if (progress)
-		progress_state = start_progress(the_repository,
-						_("Traversing cruft objects"), 0);
-	nr_seen = 0;
-	traverse_commit_list(&revs, show_cruft_commit, show_cruft_object, NULL);
+    if (prepare_revision_walk(&revs))
+        die(_("revision walk setup failed"));
+    if (progress)
+        progress_state = start_progress(the_repository,
+                                        _("Traversing cruft objects"), 0);
+    nr_seen = 0;
+    traverse_commit_list(&revs, show_cruft_commit, show_cruft_object, NULL);
 
     stop_progress(&progress_state);
 }
@@ -4615,13 +4655,12 @@ static void show_object__ma_allow_promisor(struct object *obj, const char *name,
 {
     assert(arg_missing_action == MA_ALLOW_PROMISOR);
 
-	/*
-	 * Quietly ignore EXPECTED missing objects.  This avoids problems with
-	 * staging them now and getting an odd error later.
-	 */
-	if (!has_object(the_repository, &obj->oid, 0) &&
-	    is_promisor_object(to_pack.repo, &obj->oid))
-		return;
+    /*
+     * Quietly ignore EXPECTED missing objects.  This avoids problems with
+     * staging them now and getting an odd error later.
+     */
+    if (!has_object(the_repository, &obj->oid, 0) && is_promisor_object(to_pack.repo, &obj->oid))
+        return;
 
     show_object(obj, name, data);
 }
@@ -4700,14 +4739,11 @@ static int add_object_in_unpacked_pack(const struct object_id *oid,
 
 static void add_objects_in_unpacked_packs(void)
 {
-	if (for_each_packed_object(to_pack.repo,
-				   add_object_in_unpacked_pack,
-				   NULL,
-				   FOR_EACH_OBJECT_PACK_ORDER |
-				   FOR_EACH_OBJECT_LOCAL_ONLY |
-				   FOR_EACH_OBJECT_SKIP_IN_CORE_KEPT_PACKS |
-				   FOR_EACH_OBJECT_SKIP_ON_DISK_KEPT_PACKS))
-		die(_("cannot open pack index"));
+    if (for_each_packed_object(to_pack.repo,
+                               add_object_in_unpacked_pack,
+                               NULL,
+                               FOR_EACH_OBJECT_PACK_ORDER | FOR_EACH_OBJECT_LOCAL_ONLY | FOR_EACH_OBJECT_SKIP_IN_CORE_KEPT_PACKS | FOR_EACH_OBJECT_SKIP_ON_DISK_KEPT_PACKS))
+        die(_("cannot open pack index"));
 }
 
 static int add_loose_object(const struct object_id *oid, const char *path,
@@ -4762,21 +4798,21 @@ static int has_sha1_pack_kept_or_nonlocal(const struct object_id *oid)
 
     p = (last_found != (void *)1) ? last_found : get_all_packs(the_repository);
 
-	while (p) {
-		if ((!p->pack_local || p->pack_keep ||
-				p->pack_keep_in_core) &&
-			find_pack_entry_one(oid, p)) {
-			last_found = p;
-			return 1;
-		}
-		if (p == last_found)
-			p = get_all_packs(the_repository);
-		else
-			p = p->next;
-		if (p == last_found)
-			p = p->next;
-	}
-	return 0;
+    while (p)
+    {
+        if ((!p->pack_local || p->pack_keep || p->pack_keep_in_core) && find_pack_entry_one(oid, p))
+        {
+            last_found = p;
+            return 1;
+        }
+        if (p == last_found)
+            p = get_all_packs(the_repository);
+        else
+            p = p->next;
+        if (p == last_found)
+            p = p->next;
+    }
+    return 0;
 }
 
 /*
@@ -4860,14 +4896,21 @@ static int get_object_list_from_bitmap(struct rev_info *revs)
         return -1;
     }
 
+    /*
+     * For now, force the name-hash version to be 1 since that
+     * is the version implied by the bitmap format. Later, the
+     * format can include this version explicitly in its format,
+     * allowing readers to know the version that was used during
+     * the bitmap write.
+     */
+    name_hash_version = 1;
+
     if (pack_options_allow_reuse())
-    {
         reuse_partial_packfile_from_bitmap(bitmap_git,
                                            &reuse_packfiles,
                                            &reuse_packfiles_nr,
                                            &reuse_packfile_bitmap,
                                            allow_pack_reuse == MULTI_PACK_REUSE);
-    }
 
     if (reuse_packfiles)
     {
@@ -4933,7 +4976,7 @@ static void mark_bitmap_preferred_tips(void)
         return;
     }
 
-    for_each_string_list_item(item, preferred_tips)
+    for_each_string_list_item (item, preferred_tips)
     {
         refs_for_each_ref_in(get_main_ref_store(the_repository),
                              item->string, mark_bitmap_preferred_tip,
@@ -5179,20 +5222,21 @@ static int option_parse_cruft_expiration(const struct option *opt UNUSED,
 
 static int is_not_in_promisor_pack_obj(struct object *obj, void *data UNUSED)
 {
-	struct object_info info = OBJECT_INFO_INIT;
-	if (oid_object_info_extended(the_repository, &obj->oid, &info, 0))
-		BUG("should_include_obj should only be called on existing objects");
-	return info.whence != OI_PACKED || !info.u.packed.pack->pack_promisor;
+    struct object_info info = OBJECT_INFO_INIT;
+    if (oid_object_info_extended(the_repository, &obj->oid, &info, 0))
+        BUG("should_include_obj should only be called on existing objects");
+    return info.whence != OI_PACKED || !info.u.packed.pack->pack_promisor;
 }
 
-static int is_not_in_promisor_pack(struct commit *commit, void *data) {
-	return is_not_in_promisor_pack_obj((struct object *) commit, data);
+static int is_not_in_promisor_pack(struct commit *commit, void *data)
+{
+    return is_not_in_promisor_pack_obj((struct object *)commit, data);
 }
 
-int cmd_pack_objects(int argc,
-		     const char **argv,
-		     const char *prefix,
-		     struct repository *repo UNUSED)
+int cmd_pack_objects(int                     argc,
+                     const char            **argv,
+                     const char             *prefix,
+                     struct repository *repo UNUSED)
 {
     int                                use_internal_rev_list = 0;
     int                                shallow               = 0;
@@ -5207,112 +5251,114 @@ int cmd_pack_objects(int argc,
     struct list_objects_filter_options filter_options =
         LIST_OBJECTS_FILTER_INIT;
 
-	struct option pack_objects_options[] = {
-		OPT_CALLBACK_F('q', "quiet", &progress, NULL,
-			       N_("do not show progress meter"),
-			       PARSE_OPT_NOARG, option_parse_quiet),
-		OPT_SET_INT(0, "progress", &progress,
-			    N_("show progress meter"), 1),
-		OPT_SET_INT(0, "all-progress", &progress,
-			    N_("show progress meter during object writing phase"), 2),
-		OPT_BOOL(0, "all-progress-implied",
-			 &all_progress_implied,
-			 N_("similar to --all-progress when progress meter is shown")),
-		OPT_CALLBACK_F(0, "index-version", &pack_idx_opts, N_("<version>[,<offset>]"),
-		  N_("write the pack index file in the specified idx format version"),
-		  PARSE_OPT_NONEG, option_parse_index_version),
-		OPT_MAGNITUDE(0, "max-pack-size", &pack_size_limit,
-			      N_("maximum size of each output pack file")),
-		OPT_BOOL(0, "local", &local,
-			 N_("ignore borrowed objects from alternate object store")),
-		OPT_BOOL(0, "incremental", &incremental,
-			 N_("ignore packed objects")),
-		OPT_INTEGER(0, "window", &window,
-			    N_("limit pack window by objects")),
-		OPT_MAGNITUDE(0, "window-memory", &window_memory_limit,
-			      N_("limit pack window by memory in addition to object limit")),
-		OPT_INTEGER(0, "depth", &depth,
-			    N_("maximum length of delta chain allowed in the resulting pack")),
-		OPT_BOOL(0, "reuse-delta", &reuse_delta,
-			 N_("reuse existing deltas")),
-		OPT_BOOL(0, "reuse-object", &reuse_object,
-			 N_("reuse existing objects")),
-		OPT_BOOL(0, "delta-base-offset", &allow_ofs_delta,
-			 N_("use OFS_DELTA objects")),
-		OPT_INTEGER(0, "threads", &delta_search_threads,
-			    N_("use threads when searching for best delta matches")),
-		OPT_BOOL(0, "non-empty", &non_empty,
-			 N_("do not create an empty pack output")),
-		OPT_BOOL(0, "revs", &use_internal_rev_list,
-			 N_("read revision arguments from standard input")),
-		OPT_SET_INT_F(0, "unpacked", &rev_list_unpacked,
-			      N_("limit the objects to those that are not yet packed"),
-			      1, PARSE_OPT_NONEG),
-		OPT_SET_INT_F(0, "all", &rev_list_all,
-			      N_("include objects reachable from any reference"),
-			      1, PARSE_OPT_NONEG),
-		OPT_SET_INT_F(0, "reflog", &rev_list_reflog,
-			      N_("include objects referred by reflog entries"),
-			      1, PARSE_OPT_NONEG),
-		OPT_SET_INT_F(0, "indexed-objects", &rev_list_index,
-			      N_("include objects referred to by the index"),
-			      1, PARSE_OPT_NONEG),
-		OPT_BOOL(0, "stdin-packs", &stdin_packs,
-			 N_("read packs from stdin")),
-		OPT_BOOL(0, "stdout", &pack_to_stdout,
-			 N_("output pack to stdout")),
-		OPT_BOOL(0, "include-tag", &include_tag,
-			 N_("include tag objects that refer to objects to be packed")),
-		OPT_BOOL(0, "keep-unreachable", &keep_unreachable,
-			 N_("keep unreachable objects")),
-		OPT_BOOL(0, "pack-loose-unreachable", &pack_loose_unreachable,
-			 N_("pack loose unreachable objects")),
-		OPT_CALLBACK_F(0, "unpack-unreachable", NULL, N_("time"),
-		  N_("unpack unreachable objects newer than <time>"),
-		  PARSE_OPT_OPTARG, option_parse_unpack_unreachable),
-		OPT_BOOL(0, "cruft", &cruft, N_("create a cruft pack")),
-		OPT_CALLBACK_F(0, "cruft-expiration", NULL, N_("time"),
-		  N_("expire cruft objects older than <time>"),
-		  PARSE_OPT_OPTARG, option_parse_cruft_expiration),
-		OPT_BOOL(0, "sparse", &sparse,
-			 N_("use the sparse reachability algorithm")),
-		OPT_BOOL(0, "thin", &thin,
-			 N_("create thin packs")),
-		OPT_BOOL(0, "shallow", &shallow,
-			 N_("create packs suitable for shallow fetches")),
-		OPT_BOOL(0, "honor-pack-keep", &ignore_packed_keep_on_disk,
-			 N_("ignore packs that have companion .keep file")),
-		OPT_STRING_LIST(0, "keep-pack", &keep_pack_list, N_("name"),
-				N_("ignore this pack")),
-		OPT_INTEGER(0, "compression", &pack_compression_level,
-			    N_("pack compression level")),
-		OPT_BOOL(0, "keep-true-parents", &grafts_keep_true_parents,
-			 N_("do not hide commits by grafts")),
-		OPT_BOOL(0, "use-bitmap-index", &use_bitmap_index,
-			 N_("use a bitmap index if available to speed up counting objects")),
-		OPT_SET_INT(0, "write-bitmap-index", &write_bitmap_index,
-			    N_("write a bitmap index together with the pack index"),
-			    WRITE_BITMAP_TRUE),
-		OPT_SET_INT_F(0, "write-bitmap-index-quiet",
-			      &write_bitmap_index,
-			      N_("write a bitmap index if possible"),
-			      WRITE_BITMAP_QUIET, PARSE_OPT_HIDDEN),
-		OPT_PARSE_LIST_OBJECTS_FILTER(&filter_options),
-		OPT_CALLBACK_F(0, "missing", NULL, N_("action"),
-		  N_("handling for missing objects"), PARSE_OPT_NONEG,
-		  option_parse_missing_action),
-		OPT_BOOL(0, "exclude-promisor-objects", &exclude_promisor_objects,
-			 N_("do not pack objects in promisor packfiles")),
-		OPT_BOOL(0, "exclude-promisor-objects-best-effort",
-			 &exclude_promisor_objects_best_effort,
-			 N_("implies --missing=allow-any")),
-		OPT_BOOL(0, "delta-islands", &use_delta_islands,
-			 N_("respect islands during delta compression")),
-		OPT_STRING_LIST(0, "uri-protocol", &uri_protocols,
-				N_("protocol"),
-				N_("exclude any configured uploadpack.blobpackfileuri with this protocol")),
-		OPT_END(),
-	};
+    struct option pack_objects_options[] = {
+        OPT_CALLBACK_F('q', "quiet", &progress, NULL,
+                       N_("do not show progress meter"),
+                       PARSE_OPT_NOARG, option_parse_quiet),
+        OPT_SET_INT(0, "progress", &progress,
+                    N_("show progress meter"), 1),
+        OPT_SET_INT(0, "all-progress", &progress,
+                    N_("show progress meter during object writing phase"), 2),
+        OPT_BOOL(0, "all-progress-implied",
+                 &all_progress_implied,
+                 N_("similar to --all-progress when progress meter is shown")),
+        OPT_CALLBACK_F(0, "index-version", &pack_idx_opts, N_("<version>[,<offset>]"),
+                       N_("write the pack index file in the specified idx format version"),
+                       PARSE_OPT_NONEG, option_parse_index_version),
+        OPT_MAGNITUDE(0, "max-pack-size", &pack_size_limit,
+                      N_("maximum size of each output pack file")),
+        OPT_BOOL(0, "local", &local,
+                 N_("ignore borrowed objects from alternate object store")),
+        OPT_BOOL(0, "incremental", &incremental,
+                 N_("ignore packed objects")),
+        OPT_INTEGER(0, "window", &window,
+                    N_("limit pack window by objects")),
+        OPT_MAGNITUDE(0, "window-memory", &window_memory_limit,
+                      N_("limit pack window by memory in addition to object limit")),
+        OPT_INTEGER(0, "depth", &depth,
+                    N_("maximum length of delta chain allowed in the resulting pack")),
+        OPT_BOOL(0, "reuse-delta", &reuse_delta,
+                 N_("reuse existing deltas")),
+        OPT_BOOL(0, "reuse-object", &reuse_object,
+                 N_("reuse existing objects")),
+        OPT_BOOL(0, "delta-base-offset", &allow_ofs_delta,
+                 N_("use OFS_DELTA objects")),
+        OPT_INTEGER(0, "threads", &delta_search_threads,
+                    N_("use threads when searching for best delta matches")),
+        OPT_BOOL(0, "non-empty", &non_empty,
+                 N_("do not create an empty pack output")),
+        OPT_BOOL(0, "revs", &use_internal_rev_list,
+                 N_("read revision arguments from standard input")),
+        OPT_SET_INT_F(0, "unpacked", &rev_list_unpacked,
+                      N_("limit the objects to those that are not yet packed"),
+                      1, PARSE_OPT_NONEG),
+        OPT_SET_INT_F(0, "all", &rev_list_all,
+                      N_("include objects reachable from any reference"),
+                      1, PARSE_OPT_NONEG),
+        OPT_SET_INT_F(0, "reflog", &rev_list_reflog,
+                      N_("include objects referred by reflog entries"),
+                      1, PARSE_OPT_NONEG),
+        OPT_SET_INT_F(0, "indexed-objects", &rev_list_index,
+                      N_("include objects referred to by the index"),
+                      1, PARSE_OPT_NONEG),
+        OPT_BOOL(0, "stdin-packs", &stdin_packs,
+                 N_("read packs from stdin")),
+        OPT_BOOL(0, "stdout", &pack_to_stdout,
+                 N_("output pack to stdout")),
+        OPT_BOOL(0, "include-tag", &include_tag,
+                 N_("include tag objects that refer to objects to be packed")),
+        OPT_BOOL(0, "keep-unreachable", &keep_unreachable,
+                 N_("keep unreachable objects")),
+        OPT_BOOL(0, "pack-loose-unreachable", &pack_loose_unreachable,
+                 N_("pack loose unreachable objects")),
+        OPT_CALLBACK_F(0, "unpack-unreachable", NULL, N_("time"),
+                       N_("unpack unreachable objects newer than <time>"),
+                       PARSE_OPT_OPTARG, option_parse_unpack_unreachable),
+        OPT_BOOL(0, "cruft", &cruft, N_("create a cruft pack")),
+        OPT_CALLBACK_F(0, "cruft-expiration", NULL, N_("time"),
+                       N_("expire cruft objects older than <time>"),
+                       PARSE_OPT_OPTARG, option_parse_cruft_expiration),
+        OPT_BOOL(0, "sparse", &sparse,
+                 N_("use the sparse reachability algorithm")),
+        OPT_BOOL(0, "thin", &thin,
+                 N_("create thin packs")),
+        OPT_BOOL(0, "shallow", &shallow,
+                 N_("create packs suitable for shallow fetches")),
+        OPT_BOOL(0, "honor-pack-keep", &ignore_packed_keep_on_disk,
+                 N_("ignore packs that have companion .keep file")),
+        OPT_STRING_LIST(0, "keep-pack", &keep_pack_list, N_("name"),
+                        N_("ignore this pack")),
+        OPT_INTEGER(0, "compression", &pack_compression_level,
+                    N_("pack compression level")),
+        OPT_BOOL(0, "keep-true-parents", &grafts_keep_true_parents,
+                 N_("do not hide commits by grafts")),
+        OPT_BOOL(0, "use-bitmap-index", &use_bitmap_index,
+                 N_("use a bitmap index if available to speed up counting objects")),
+        OPT_SET_INT(0, "write-bitmap-index", &write_bitmap_index,
+                    N_("write a bitmap index together with the pack index"),
+                    WRITE_BITMAP_TRUE),
+        OPT_SET_INT_F(0, "write-bitmap-index-quiet",
+                      &write_bitmap_index,
+                      N_("write a bitmap index if possible"),
+                      WRITE_BITMAP_QUIET, PARSE_OPT_HIDDEN),
+        OPT_PARSE_LIST_OBJECTS_FILTER(&filter_options),
+        OPT_CALLBACK_F(0, "missing", NULL, N_("action"),
+                       N_("handling for missing objects"), PARSE_OPT_NONEG,
+                       option_parse_missing_action),
+        OPT_BOOL(0, "exclude-promisor-objects", &exclude_promisor_objects,
+                 N_("do not pack objects in promisor packfiles")),
+        OPT_BOOL(0, "exclude-promisor-objects-best-effort",
+                 &exclude_promisor_objects_best_effort,
+                 N_("implies --missing=allow-any")),
+        OPT_BOOL(0, "delta-islands", &use_delta_islands,
+                 N_("respect islands during delta compression")),
+        OPT_STRING_LIST(0, "uri-protocol", &uri_protocols,
+                        N_("protocol"),
+                        N_("exclude any configured uploadpack.blobpackfileuri with this protocol")),
+        OPT_INTEGER(0, "name-hash-version", &name_hash_version,
+                    N_("use the specified name-hash function to group similar objects")),
+        OPT_END(),
+    };
 
     if (DFS_NUM_STATES > (1 << OE_DFS_STATE_BITS))
     {
@@ -5412,21 +5458,24 @@ int cmd_pack_objects(int argc,
         strvec_push(&rp, "--unpacked");
     }
 
-	if (exclude_promisor_objects && exclude_promisor_objects_best_effort)
-		die(_("options '%s' and '%s' cannot be used together"),
-		    "--exclude-promisor-objects", "--exclude-promisor-objects-best-effort");
-	if (exclude_promisor_objects) {
-		use_internal_rev_list = 1;
-		fetch_if_missing = 0;
-		strvec_push(&rp, "--exclude-promisor-objects");
-	} else if (exclude_promisor_objects_best_effort) {
-		use_internal_rev_list = 1;
-		fetch_if_missing = 0;
-		option_parse_missing_action(NULL, "allow-any", 0);
-		/* revs configured below */
-	}
-	if (unpack_unreachable || keep_unreachable || pack_loose_unreachable)
-		use_internal_rev_list = 1;
+    if (exclude_promisor_objects && exclude_promisor_objects_best_effort)
+        die(_("options '%s' and '%s' cannot be used together"),
+            "--exclude-promisor-objects", "--exclude-promisor-objects-best-effort");
+    if (exclude_promisor_objects)
+    {
+        use_internal_rev_list = 1;
+        fetch_if_missing      = 0;
+        strvec_push(&rp, "--exclude-promisor-objects");
+    }
+    else if (exclude_promisor_objects_best_effort)
+    {
+        use_internal_rev_list = 1;
+        fetch_if_missing      = 0;
+        option_parse_missing_action(NULL, "allow-any", 0);
+        /* revs configured below */
+    }
+    if (unpack_unreachable || keep_unreachable || pack_loose_unreachable)
+        use_internal_rev_list = 1;
 
     if (!reuse_object)
     {
@@ -5530,10 +5579,13 @@ int cmd_pack_objects(int argc,
         write_bitmap_index = 0;
     }
 
+    if (name_hash_version < 0)
+        name_hash_version = (int)git_env_ulong("GIT_TEST_NAME_HASH_VERSION", 1);
+
+    validate_name_hash_version();
+
     if (use_delta_islands)
-    {
         strvec_push(&rp, "--topo-order");
-    }
 
     if (progress && all_progress_implied)
     {
@@ -5578,38 +5630,46 @@ int cmd_pack_objects(int argc,
                         the_repository);
     prepare_packing_data(the_repository, &to_pack);
 
-	if (progress && !cruft)
-		progress_state = start_progress(the_repository,
-						_("Enumerating objects"), 0);
-	if (stdin_packs) {
-		/* avoids adding objects in excluded packs */
-		ignore_packed_keep_in_core = 1;
-		read_packs_list_from_stdin();
-		if (rev_list_unpacked)
-			add_unreachable_loose_objects();
-	} else if (cruft) {
-		read_cruft_objects();
-	} else if (!use_internal_rev_list) {
-		read_object_list_from_stdin();
-	} else {
-		struct rev_info revs;
+    if (progress && !cruft)
+        progress_state = start_progress(the_repository,
+                                        _("Enumerating objects"), 0);
+    if (stdin_packs)
+    {
+        /* avoids adding objects in excluded packs */
+        ignore_packed_keep_in_core = 1;
+        read_packs_list_from_stdin();
+        if (rev_list_unpacked)
+            add_unreachable_loose_objects();
+    }
+    else if (cruft)
+    {
+        read_cruft_objects();
+    }
+    else if (!use_internal_rev_list)
+    {
+        read_object_list_from_stdin();
+    }
+    else
+    {
+        struct rev_info revs;
 
-		repo_init_revisions(the_repository, &revs, NULL);
-		list_objects_filter_copy(&revs.filter, &filter_options);
-		if (exclude_promisor_objects_best_effort) {
-			revs.include_check = is_not_in_promisor_pack;
-			revs.include_check_obj = is_not_in_promisor_pack_obj;
-		}
-		get_object_list(&revs, rp.nr, rp.v);
-		release_revisions(&revs);
-	}
-	cleanup_preferred_base();
-	if (include_tag && nr_result)
-		refs_for_each_tag_ref(get_main_ref_store(the_repository),
-				      add_ref_tag, NULL);
-	stop_progress(&progress_state);
-	trace2_region_leave("pack-objects", "enumerate-objects",
-			    the_repository);
+        repo_init_revisions(the_repository, &revs, NULL);
+        list_objects_filter_copy(&revs.filter, &filter_options);
+        if (exclude_promisor_objects_best_effort)
+        {
+            revs.include_check     = is_not_in_promisor_pack;
+            revs.include_check_obj = is_not_in_promisor_pack_obj;
+        }
+        get_object_list(&revs, rp.nr, rp.v);
+        release_revisions(&revs);
+    }
+    cleanup_preferred_base();
+    if (include_tag && nr_result)
+        refs_for_each_tag_ref(get_main_ref_store(the_repository),
+                              add_ref_tag, NULL);
+    stop_progress(&progress_state);
+    trace2_region_leave("pack-objects", "enumerate-objects",
+                        the_repository);
 
     if (non_empty && !nr_result)
     {

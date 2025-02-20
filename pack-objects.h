@@ -93,32 +93,32 @@ struct object_entry
     off_t                 in_pack_offset;
     uint32_t              hash; /* name hint hash */
     unsigned              size_ : OE_SIZE_BITS;
-    unsigned              size_valid : 1;
+    unsigned              size_valid:1;
     uint32_t              delta_idx;                /* delta base object */
     uint32_t              delta_child_idx;          /* deltified objects who bases me */
     uint32_t              delta_sibling_idx;        /* other deltified objects who
                                                      * uses the same base as me
                                                      */
     unsigned      delta_size_ : OE_DELTA_SIZE_BITS; /* delta data size (uncompressed) */
-    unsigned      delta_size_valid : 1;
+    unsigned      delta_size_valid:1;
     unsigned char in_pack_header_size;
     unsigned      in_pack_idx : OE_IN_PACK_BITS; /* already in pack */
     unsigned      z_delta_size : OE_Z_DELTA_BITS;
-    unsigned      type_valid : 1;
-    unsigned      no_try_delta : 1;
+    unsigned      type_valid:1;
+    unsigned      no_try_delta:1;
     unsigned      type_ : TYPE_BITS;
     unsigned      in_pack_type : TYPE_BITS; /* could be delta */
 
-    unsigned preferred_base : 1; /*
-                                  * we do not pack this, but is available
-                                  * to be used as the base object to delta
-                                  * objects against.
-                                  */
-    unsigned tagged : 1;         /* near the very tip of refs */
-    unsigned filled : 1;         /* assigned write-order */
+    unsigned preferred_base:1; /*
+                                * we do not pack this, but is available
+                                * to be used as the base object to delta
+                                * objects against.
+                                */
+    unsigned tagged:1;         /* near the very tip of refs */
+    unsigned filled:1;         /* assigned write-order */
     unsigned dfs_state : OE_DFS_STATE_BITS;
     unsigned depth : OE_DEPTH_BITS;
-    unsigned ext_base : 1; /* delta_idx points outside packlist */
+    unsigned ext_base:1; /* delta_idx points outside packlist */
 };
 
 struct packing_data
@@ -214,6 +214,38 @@ static inline uint32_t pack_name_hash(const char *name)
         hash = (hash >> 2) + (c << 24);
     }
     return hash;
+}
+
+static inline uint32_t pack_name_hash_v2(const unsigned char *name)
+{
+    uint32_t hash = 0, base = 0, c;
+
+    if (!name)
+        return 0;
+
+    while ((c = *name++))
+    {
+        if (isspace(c))
+            continue;
+        if (c == '/')
+        {
+            base = (base >> 6) ^ hash;
+            hash = 0;
+        }
+        else
+        {
+            /*
+             * 'c' is only a single byte. Reverse it and move
+             * it to the top of the hash, moving the rest to
+             * less-significant bits.
+             */
+            c    = (c & 0xF0) >> 4 | (c & 0x0F) << 4;
+            c    = (c & 0xCC) >> 2 | (c & 0x33) << 2;
+            c    = (c & 0xAA) >> 1 | (c & 0x55) << 1;
+            hash = (hash >> 2) + (c << 24);
+        }
+    }
+    return (base >> 6) ^ hash;
 }
 
 static inline enum object_type oe_type(const struct object_entry *e)
